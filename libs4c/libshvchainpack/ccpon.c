@@ -595,7 +595,7 @@ eonumb:
 	return n;
 }
 
-static int parse_ISO_DateTime(const uint8_t *s, long len, struct tm *tm, int *msec, int *utc_offset)
+static int get_date_time(const uint8_t *s, long len, struct tm *tm, int *msec, int *utc_offset)
 {
 	tm->tm_year = 0;
 	tm->tm_mon = 0;
@@ -607,12 +607,6 @@ static int parse_ISO_DateTime(const uint8_t *s, long len, struct tm *tm, int *ms
 
 	*msec = 0;
 	*utc_offset = 0;
-
-	// yyyy-mm-ddThh:MM:ss.zzz+150
-	//   19---------------^
-	//   23-------------------^
-	if(len < 19)
-		return CCPON_RC_BUFFER_UNDERFLOW;
 
 	const uint8_t *p = s;
 	const uint8_t *end = s + len;
@@ -656,7 +650,7 @@ static int parse_ISO_DateTime(const uint8_t *s, long len, struct tm *tm, int *ms
 	p += n;
 	if(p < end) {
 		if(*p == '.') {
-			if(len < 23)
+			if(end - p < 4)
 				return CCPON_RC_BUFFER_UNDERFLOW;
 			p++;
 			n = get_int(p, 3, &val);
@@ -683,6 +677,8 @@ static int parse_ISO_DateTime(const uint8_t *s, long len, struct tm *tm, int *ms
 					*utc_offset = (int)(60 * val);
 				else if(rest == 4)
 					*utc_offset = (int)(60 * (val / 100) + (val % 100));
+				if(b == '-')
+					*utc_offset = -*utc_offset;
 				p += n;
 			}
 
@@ -708,6 +704,7 @@ static long ccpon_unpack_string(ccpon_unpack_context* unpack_context)
 	uint8_t* p1 = unpack_context->current;
 	uint8_t* p = unpack_context->current;
 
+	UNPACK_ASSERT_SPACE2(1, 0);
 	/* not a string */
 	if (*p != '"')
 		UNPACK_ERROR2(CCPON_RC_MALFORMED_INPUT, 0)
@@ -788,14 +785,15 @@ void ccpon_unpack_next (ccpon_unpack_context* unpack_context)
 		UNPACK_ASSERT_SPACE(1);
 		if(*p != '"')
 			UNPACK_ERROR(CCPON_RC_MALFORMED_INPUT)
+		unpack_context->current--;
 		if(ccpon_unpack_string(unpack_context) == 0)
-		return;
-		uint8_t *start = p + 1;
+			return;
 		long len = unpack_context->current - p - 2;
+		p++;
 		struct tm tm;
 		int msec;
 		int utc_offset;
-		int n = parse_ISO_DateTime(start, len, &tm, &msec, &utc_offset);
+		int n = get_date_time(p, len, &tm, &msec, &utc_offset);
 		if(n < 0)
 			UNPACK_ERROR(n)
 		int64_t epoch_msec = ccpon_timegm(&tm) * 1000;
@@ -860,12 +858,16 @@ void ccpon_unpack_next (ccpon_unpack_context* unpack_context)
 			uint8_t is_decimal: 1;
 			uint8_t is_double: 1;
 			uint8_t is_uint: 1;
+			uint8_t is_neg: 1;
 		} flags;
 		flags.is_decimal = 0;
 		flags.is_double = 0;
 		flags.is_uint = 0;
+		flags.is_neg = 0;
 
-		unpack_context->current--;
+		flags.is_neg = *p == '-';
+		if(!flags.is_neg)
+			unpack_context->current--;
 		int n = ccpon_unpack_assert_int(unpack_context, &mantisa);
 		if(n < 0)
 			UNPACK_ERROR(n)
@@ -907,7 +909,7 @@ void ccpon_unpack_next (ccpon_unpack_context* unpack_context)
 				mantisa *= 10;
 			mantisa += decimals;
 			unpack_context->item.type = CCPON_ITEM_DECIMAL;
-			unpack_context->item.as.Decimal.mantisa = mantisa;
+			unpack_context->item.as.Decimal.mantisa = flags.is_neg? -mantisa: mantisa;
 			unpack_context->item.as.Decimal.dec_places = dec_cnt;
 		}
 		else if(flags.is_double) {
@@ -915,19 +917,25 @@ void ccpon_unpack_next (ccpon_unpack_context* unpack_context)
 			for (int i = 0; i < dec_cnt; ++i)
 				d /= 10;
 			d += mantisa;
-			for (int i=0; i<exponent; i++)
-				d *= 10;
+			if(exponent < 0) {
+				for (int i=0; i>exponent; i--)
+					d /= 10;
+			}
+			else {
+				for (int i=0; i<exponent; i++)
+					d *= 10;
+			}
 			unpack_context->item.type = CCPON_ITEM_DOUBLE;
-			unpack_context->item.as.Double = d;
+			unpack_context->item.as.Double = flags.is_neg? -d: d;
 		}
 		else if(flags.is_uint) {
 			unpack_context->item.type = CCPON_ITEM_UINT;
-			unpack_context->item.as.UInt = mantisa;
+			unpack_context->item.as.UInt = mantisa;;
 
 		}
 		else {
 			unpack_context->item.type = CCPON_ITEM_INT;
-			unpack_context->item.as.Int = mantisa;
+			unpack_context->item.as.Int = flags.is_neg? -mantisa: mantisa;;
 		}
 		unpack_context->err_no = CCPON_RC_OK;
 		break;
