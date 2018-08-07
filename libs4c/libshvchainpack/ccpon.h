@@ -48,8 +48,8 @@ int ccpon_pack_context_init (ccpon_pack_context* pack_context, void *data, unsig
 
 void ccpon_pack_null (ccpon_pack_context* pack_context);
 void ccpon_pack_boolean (ccpon_pack_context* pack_context, bool b);
-void ccpon_pack_signed (ccpon_pack_context* pack_context, int64_t i);
-void ccpon_pack_unsigned (ccpon_pack_context* pack_context, uint64_t i);
+void ccpon_pack_int (ccpon_pack_context* pack_context, int64_t i);
+void ccpon_pack_uint (ccpon_pack_context* pack_context, uint64_t i);
 void ccpon_pack_double (ccpon_pack_context* pack_context, double d);
 void ccpon_pack_decimal (ccpon_pack_context* pack_context, int64_t i, int dec_places);
 void ccpon_pack_str (ccpon_pack_context* pack_context, const char* s, unsigned l);
@@ -85,7 +85,7 @@ typedef enum
 	CCPON_ITEM_DOUBLE,
 	CCPON_ITEM_DECIMAL,
 	CCPON_ITEM_STRING,
-	CCPON_ITEM_BLOB,
+	//CCPON_ITEM_BLOB,
 	CCPON_ITEM_LIST,
 	CCPON_ITEM_ARRAY,
 	CCPON_ITEM_MAP,
@@ -97,14 +97,24 @@ typedef enum
 	CCPON_ITEM_CONTAINER_END,
 } ccpon_item_types;
 
-enum ccpon_string_format {CCPON_STRING_FORMAT_INVALID = 0, CCPON_STRING_FORMAT_ESCAPED, CCPON_STRING_FORMAT_HEX};
+enum ccpon_string_format {CCPON_STRING_FORMAT_INVALID = 0, CCPON_STRING_FORMAT_UTF8_ESCAPED, CCPON_STRING_FORMAT_HEX};
+enum ccpon_string_unpack_escape_stage {CCPON_STRING_ESC_NONE = 0, CCPON_STRING_ESC_FOUND, CCPON_STRING_ESC_OCTAL, CCPON_STRING_ESC_HEX, CCPON_STRING_ESC_U16};
 
 typedef struct {
-	const void* start;
+	const uint8_t* start;
 	int length;
-	enum ccpon_string_format string_format;
-} ccpon_blob;
+	enum ccpon_string_format format;
+	struct {
+		//uint16_t escaped_val;
+		uint8_t escaped_len;
+		uint8_t begin: 1;
+		//uint8_t middle: 1;
+		uint8_t end: 1;
+		uint8_t escape_stage: 3;
+	} parse_status;
+} ccpon_string;
 
+void ccpon_string_init(ccpon_string *str_it);
 
 typedef struct {
 	uint32_t size;
@@ -124,8 +134,8 @@ typedef struct {
 	ccpon_item_types type;
 	union
 	{
-		ccpon_blob String;
-		ccpon_blob Blob;
+		ccpon_string String;
+		ccpon_string Blob;
 		ccpon_date_time DateTime;
 		ccpon_decimal Decimal;
 		uint64_t UInt;

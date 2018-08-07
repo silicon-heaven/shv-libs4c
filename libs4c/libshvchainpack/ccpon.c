@@ -32,18 +32,18 @@
 // see http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap04.html#tag_04_15
 // see https://stackoverflow.com/questions/16647819/timegm-cross-platform
 // see https://www.boost.org/doc/libs/1_62_0/boost/chrono/io/time_point_io.hpp
-static int is_leap(int y)
+static inline int is_leap(int y)
 {
 	return (y % 4) == 0 && ((y % 100) != 0 || (y % 400) == 0);
 }
 
-static int32_t days_from_0(int32_t year)
+static inline int32_t days_from_0(int32_t year)
 {
 	year--;
 	return 365 * year + (year / 400) - (year/100) + (year / 4);
 }
 
-static int32_t days_from_1970(int32_t year)
+static inline int32_t days_from_1970(int32_t year)
 {
 	static int32_t days_from_0_to_1970 = 0;
 	if(days_from_0_to_1970 == 0)
@@ -51,7 +51,7 @@ static int32_t days_from_1970(int32_t year)
 	return days_from_0(year) - days_from_0_to_1970;
 }
 
-static int days_from_1jan(int year, int month, int mday)
+static inline int days_from_1jan(int year, int month, int mday)
 {
 	static const int days[2][12] =
 	{
@@ -153,7 +153,7 @@ int ccpon_pack_context_init (ccpon_pack_context* pack_context, void *data, unsig
 /*  Packing routines  --------------------------------------------------------------------------------  */
 
 
-void ccpon_pack_unsigned(ccpon_pack_context* pack_context, uint64_t i)
+void ccpon_pack_uint(ccpon_pack_context* pack_context, uint64_t i)
 {
 	if (pack_context->return_code)
 		return;
@@ -161,7 +161,7 @@ void ccpon_pack_unsigned(ccpon_pack_context* pack_context, uint64_t i)
 	// at least 21 characters for 64-bit types.
 	static const unsigned LEN = 32;
 	char str[LEN];
-	int n = snprintf(str, LEN, "%lud", i);
+	int n = snprintf(str, LEN, "%luu", i);
 	if(n < 0) {
 		pack_context->err_no = CCPON_RC_LOGICAL_ERROR;
 		return;
@@ -173,7 +173,7 @@ void ccpon_pack_unsigned(ccpon_pack_context* pack_context, uint64_t i)
 }
 
 
-void ccpon_pack_signed(ccpon_pack_context* pack_context, int64_t i)
+void ccpon_pack_int(ccpon_pack_context* pack_context, int64_t i)
 {
 	if (pack_context->return_code)
 		return;
@@ -452,15 +452,9 @@ void ccpon_pack_blob(ccpon_pack_context* pack_context, const void* v, unsigned l
     return;                                             \
 }
 
-#define UNPACK_ERROR2(error_code, ret_val)              \
-{                                                       \
-    unpack_context->item.type = CCPON_ITEM_INVALID;        \
-    unpack_context->err_no = error_code;           \
-    return ret_val;                                             \
-}
-
-uint8_t* ccpon_unpack_assert_space(ccpon_unpack_context* unpack_context, unsigned more)
+uint8_t* ccpon_unpack_assert_byte(ccpon_unpack_context* unpack_context)
 {
+	int more = 1;
 	uint8_t* p = unpack_context->current;
 	uint8_t* nyp = p + more;
 	if (nyp > unpack_context->end) {
@@ -482,24 +476,17 @@ uint8_t* ccpon_unpack_assert_space(ccpon_unpack_context* unpack_context, unsigne
 	return p;
 }
 
-#define UNPACK_ASSERT_SPACE(more)              \
+#define UNPACK_ASSERT_BYTE()              \
 {                                                       \
-    p = ccpon_unpack_assert_space(unpack_context, more);        \
+    p = ccpon_unpack_assert_byte(unpack_context);        \
     if(!p)           \
         return;                                             \
-}
-
-#define UNPACK_ASSERT_SPACE2(more, ret)              \
-{                                                       \
-    p = ccpon_unpack_assert_space(unpack_context, more);        \
-    if(!p)           \
-        return ret;                                             \
 }
 
 uint8_t* ccpon_unpack_skip_blank(ccpon_unpack_context* unpack_context)
 {
 	while(1) {
-		uint8_t* p = ccpon_unpack_assert_space(unpack_context, 1);
+		uint8_t* p = ccpon_unpack_assert_byte(unpack_context);
 		if(!p)
 			return p;
 		if(*p > ' ')
@@ -507,13 +494,13 @@ uint8_t* ccpon_unpack_skip_blank(ccpon_unpack_context* unpack_context)
 	}
 }
 
-static int ccpon_unpack_assert_int(ccpon_unpack_context* unpack_context, int64_t *p_val)
+static int unpack_int(ccpon_unpack_context* unpack_context, int64_t *p_val)
 {
 	uint8_t *p1 = unpack_context->current;
 	int64_t val = 0;
 	int neg = 0;
 	for (int n=0; ; n++) {
-		uint8_t *p = ccpon_unpack_assert_space(unpack_context, 1);
+		uint8_t *p = ccpon_unpack_assert_byte(unpack_context);
 		if(!p)
 			goto eonumb;
 		uint8_t b = *p;
@@ -552,7 +539,7 @@ eonumb:
 		*p_val = val;
 	return (int)(unpack_context->current - p1);
 }
-
+/*
 static int get_int(const uint8_t *s, long len, int64_t *val)
 {
 	int64_t ret = 0;
@@ -594,8 +581,8 @@ eonumb:
 		*val = ret;
 	return n;
 }
-
-static int get_date_time(const uint8_t *s, long len, struct tm *tm, int *msec, int *utc_offset)
+*/
+static void unpack_date_time(ccpon_unpack_context *unpack_context, struct tm *tm, int *msec, int *utc_offset)
 {
 	tm->tm_year = 0;
 	tm->tm_mon = 0;
@@ -608,83 +595,91 @@ static int get_date_time(const uint8_t *s, long len, struct tm *tm, int *msec, i
 	*msec = 0;
 	*utc_offset = 0;
 
-	const uint8_t *p = s;
-	const uint8_t *end = s + len;
+	uint8_t *p;
 
 	int64_t val;
-	int n = get_int(p, 4, &val);
+	int n = unpack_int(unpack_context, &val);
 	if(n < 0)
-		return n;
+		return;
 	tm->tm_year = (int)val - 1900;
 
-	p += n+1;
-	n = get_int(p, 2, &val);
+	UNPACK_ASSERT_BYTE();
+
+	n = unpack_int(unpack_context, &val);
 	if(n < 0)
-		return n;
+		return;
 	tm->tm_mon = (int)val - 1;
 
-	p += n+1;
-	n = get_int(p, 2, &val);
+	UNPACK_ASSERT_BYTE();
+
+	n = unpack_int(unpack_context, &val);
 	if(n < 0)
-		return n;
+		return;
 	tm->tm_mday = (int)val;
 
-	p += n+1;
-	n = get_int(p, 2, &val);
+	UNPACK_ASSERT_BYTE();
+
+	n = unpack_int(unpack_context, &val);
 	if(n < 0)
-		return n;
+		return;
 	tm->tm_hour = (int)val;
 
-	p += n+1;
-	n = get_int(p, 2, &val);
+	UNPACK_ASSERT_BYTE();
+
+	n = unpack_int(unpack_context, &val);
 	if(n < 0)
-		return n;
+		return;
 	tm->tm_min = (int)val;
 
-	p += n+1;
-	n = get_int(p, 2, &val);
+	UNPACK_ASSERT_BYTE();
+
+	n = unpack_int(unpack_context, &val);
 	if(n < 0)
-		return n;
+		return;
 	tm->tm_sec = (int)val;
 
-	p += n;
-	if(p < end) {
+	p = ccpon_unpack_assert_byte(unpack_context);
+	if(p) {
 		if(*p == '.') {
-			if(end - p < 4)
-				return CCPON_RC_BUFFER_UNDERFLOW;
-			p++;
-			n = get_int(p, 3, &val);
+			n = unpack_int(unpack_context, &val);
 			if(n < 0)
-				return n;
+				return;
 			*msec = (int)val;
-			p += n;
+			p = ccpon_unpack_assert_byte(unpack_context);
 		}
-		if(p < end) {
+		if(p) {
 			uint8_t b = *p;
 			if(b == 'Z') {
 				// UTC time
 			}
 			else if(b == '+' || b == '-') {
 				// UTC time
-				p++;
-				int rest = (int)(end - p);
-				if(!(rest == 2 || rest == 4))
-					return CCPON_RC_MALFORMED_INPUT;
-				n = get_int(p, rest, &val);
+				n = unpack_int(unpack_context, &val);
 				if(n < 0)
-					return n;
-				if(rest == 2)
+					return;
+				if(!(n == 2 || n == 4))
+					UNPACK_ERROR(CCPON_RC_MALFORMED_INPUT);
+				if(n == 2)
 					*utc_offset = (int)(60 * val);
-				else if(rest == 4)
+				else if(n == 4)
 					*utc_offset = (int)(60 * (val / 100) + (val % 100));
 				if(b == '-')
 					*utc_offset = -*utc_offset;
 				p += n;
 			}
-
+			else {
+				// unget unused char
+				unpack_context->current--;
+			}
 		}
 	}
-	return (int)(p - s);
+	unpack_context->err_no = CCPON_RC_OK;
+	unpack_context->item.type = CCPON_ITEM_DATE_TIME;
+	int64_t epoch_msec = ccpon_timegm(tm) * 1000;
+	ccpon_date_time *it = &unpack_context->item.as.DateTime;
+	epoch_msec += *msec;
+	it->msecs_since_epoch = epoch_msec;
+	it->minutes_from_utc = *utc_offset;
 }
 
 void ccpon_unpack_context_init (ccpon_unpack_context* unpack_context, const void *data, unsigned long length, ccpon_unpack_underflow_handler huu)
@@ -699,43 +694,131 @@ void ccpon_unpack_context_init (ccpon_unpack_context* unpack_context, const void
 
 /*  Unpacking routines  ----------------------------------------------------------  */
 
-static long ccpon_unpack_string(ccpon_unpack_context* unpack_context)
+void ccpon_string_init(ccpon_string *str_it)
 {
-	uint8_t* p1 = unpack_context->current;
-	uint8_t* p = unpack_context->current;
+	str_it->start = 0;
+	str_it->length = 0;
+	str_it->parse_status.begin = 0;
+	//str_it->parse_status.middle = 0;
+	str_it->parse_status.end = 0;
+	str_it->parse_status.escape_stage = CCPON_STRING_ESC_NONE;
+}
 
+static inline int is_octal(uint8_t b)
+{
+	return b >= '0' && b <= '7';
+}
+
+static inline int is_hex(uint8_t b)
+{
+	return (b >= '0' && b <= '9')
+			|| (b >= 'a' && b <= 'f')
+			|| (b >= 'A' && b <= 'F');
+}
+
+static void ccpon_unpack_string(ccpon_unpack_context* unpack_context)
+{
+	if(unpack_context->item.type != CCPON_ITEM_STRING)
+		UNPACK_ERROR(CCPON_RC_LOGICAL_ERROR);
+	/*
 	UNPACK_ASSERT_SPACE2(1, 0);
-	/* not a string */
-	if (*p != '"')
-		UNPACK_ERROR2(CCPON_RC_MALFORMED_INPUT, 0)
 
-	while (true) {
+
+	if(!it_str->parse_status.begin) {
+		if (*p != '"')
+			return CCPON_RC_MALFORMED_INPUT; // not a string
+		it_str->parse_status.begin = 1;
+	}
+
+
+	if(!it_str->parse_status.begin && !it_str->parse_status.middle) {
 		UNPACK_ASSERT_SPACE2(1, 0);
-
-		if (*p == '\\') {
-			UNPACK_ASSERT_SPACE2(1, 0);
-
-			switch (*p)
-			{
-			case 'x':
-				// \xNN sequence
-				UNPACK_ASSERT_SPACE2(2, 0);
-				break;
-			case 'u':
-				// UTF-16 literal
-				// \xNNNN sequence
-				UNPACK_ASSERT_SPACE2(4, 0);
-				break;
-			default:
-				// \c sequence
-				break;
+		// not a string
+		if (*p != '"')
+			return CCPON_RC_MALFORMED_INPUT;
+		it_str->parse_status.begin = 1;
+	}
+	*/
+	ccpon_string *it = &unpack_context->item.as.String;
+	it->start = unpack_context->current;
+	for (; unpack_context->current < unpack_context->end; unpack_context->current++) {
+		uint8_t *p = unpack_context->current;
+		if(it->parse_status.escape_stage == CCPON_STRING_ESC_NONE) {
+			if (*p == '"') {
+				if(it->parse_status.begin) {
+					// end of string
+					unpack_context->current++;
+					it->parse_status.end = 1;
+					it->length = (p - it->start);
+					return;
+				}
+				else {
+					// begin of string
+					it->parse_status.begin = 1;
+					it->start = p+1;
+					//continue;
+				}
+			}
+			else if (*p == '\\') {
+				it->parse_status.escape_stage = CCPON_STRING_ESC_FOUND;
+				//it->parse_status.escaped_val = 0;
+				it->parse_status.escaped_len = 0;
 			}
 		}
-		else if (*p == '"') {
-			break;
+		else if(it->parse_status.escape_stage == CCPON_STRING_ESC_FOUND) {
+			if(is_octal(*p)) {
+				it->parse_status.escape_stage = CCPON_STRING_ESC_NONE;
+				it->parse_status.escaped_len++;
+				//it->parse_status.escaped_val = (*p - '0');
+			}
+			else if(*p == 'x') {
+				it->parse_status.escape_stage = CCPON_STRING_ESC_HEX;
+			}
+			else if(*p == 'u') {
+				it->parse_status.escape_stage = CCPON_STRING_ESC_U16;
+			}
+			else {
+				it->parse_status.escape_stage = CCPON_STRING_ESC_NONE;
+			}
+		}
+		else if(it->parse_status.escape_stage == CCPON_STRING_ESC_OCTAL) {
+			if(is_octal(*p)) {
+				it->parse_status.escaped_len++;
+				/// according to https://en.cppreference.com/w/cpp/language/escape we should take up to 3
+				if(it->parse_status.escaped_len == 3)
+					it->parse_status.escape_stage = CCPON_STRING_ESC_NONE;
+			}
+			else {
+				it->parse_status.escape_stage = CCPON_STRING_ESC_NONE;
+				// non OCTAL char, examine this char again
+				unpack_context->current--;
+			}
+		}
+		else if(it->parse_status.escape_stage == CCPON_STRING_ESC_HEX) {
+			/// according to https://en.cppreference.com/w/cpp/language/escape we should take chars until they are HEX
+			/// but we take up to 2, since longer sequence cannot fit uint8_t
+			if(is_hex(*p)) {
+				//it->parse_status.escaped_val = 16 * it->parse_status.escaped_val + ((*p <= '9')? *p-'0': (*p <= 'f')? *p-'f': *p-'F');
+				it->parse_status.escaped_len++;
+				if(it->parse_status.escaped_len == 2)
+					it->parse_status.escape_stage = CCPON_STRING_ESC_NONE;
+			}
+			else {
+				it->parse_status.escape_stage = CCPON_STRING_ESC_NONE;
+				// non HEX char, examine this char again
+				unpack_context->current--;
+			}
+		}
+		else if(it->parse_status.escape_stage == CCPON_STRING_ESC_U16) {
+			/// take any 4
+			it->parse_status.escaped_len++;
+			if(it->parse_status.escaped_len == 4)
+				it->parse_status.escape_stage = CCPON_STRING_ESC_NONE;
+		}
+		else {
+			UNPACK_ERROR(CCPON_RC_LOGICAL_ERROR);
 		}
 	}
-	return unpack_context->current - p1;
 }
 
 void ccpon_unpack_next (ccpon_unpack_context* unpack_context)
@@ -743,7 +826,19 @@ void ccpon_unpack_next (ccpon_unpack_context* unpack_context)
 	if (unpack_context->err_no)
 		return;
 
-	uint8_t* p = ccpon_unpack_skip_blank(unpack_context);
+	uint8_t *p;
+	if(unpack_context->item.type == CCPON_ITEM_STRING) {
+		ccpon_string *str_it = &unpack_context->item.as.String;
+		if(!str_it->parse_status.end) {
+			UNPACK_ASSERT_BYTE();
+			ccpon_unpack_string(unpack_context);
+			return;
+		}
+	}
+
+	unpack_context->item.type = CCPON_ITEM_INVALID;
+
+	p = ccpon_unpack_skip_blank(unpack_context);
 	if(!p)
 		return;
 
@@ -768,73 +863,61 @@ void ccpon_unpack_next (ccpon_unpack_context* unpack_context)
 		unpack_context->item.type = CCPON_ITEM_LIST;
 		break;
 	case 'i': {
-		UNPACK_ASSERT_SPACE(1);
+		UNPACK_ASSERT_BYTE();
 		if(*p != '{')
 			UNPACK_ERROR(CCPON_RC_MALFORMED_INPUT)
 		unpack_context->item.type = CCPON_ITEM_IMAP;
 		break;
 	}
 	case 'a': {
-		UNPACK_ASSERT_SPACE(1);
+		UNPACK_ASSERT_BYTE();
 		if(*p != '[')
 			UNPACK_ERROR(CCPON_RC_MALFORMED_INPUT)
 		unpack_context->item.type = CCPON_ITEM_ARRAY;
 		break;
 	}
 	case 'd': {
-		UNPACK_ASSERT_SPACE(1);
-		if(*p != '"')
+		UNPACK_ASSERT_BYTE();
+		if(!p || *p != '"')
 			UNPACK_ERROR(CCPON_RC_MALFORMED_INPUT)
-		unpack_context->current--;
-		if(ccpon_unpack_string(unpack_context) == 0)
-			return;
-		long len = unpack_context->current - p - 2;
-		p++;
 		struct tm tm;
 		int msec;
 		int utc_offset;
-		int n = get_date_time(p, len, &tm, &msec, &utc_offset);
-		if(n < 0)
-			UNPACK_ERROR(n)
-		int64_t epoch_msec = ccpon_timegm(&tm) * 1000;
-		epoch_msec += msec;
-		unpack_context->item.type = CCPON_ITEM_DATE_TIME;
-		unpack_context->item.as.DateTime.msecs_since_epoch = epoch_msec;
-		unpack_context->item.as.DateTime.minutes_from_utc = utc_offset;
+		unpack_date_time(unpack_context, &tm, &msec, &utc_offset);
+		UNPACK_ASSERT_BYTE();
+		if(!p || *p != '"')
+			UNPACK_ERROR(CCPON_RC_MALFORMED_INPUT)
 		break;
 	}
 	case 'x': {
-		UNPACK_ASSERT_SPACE(1);
-		if(*p != '"')
-			UNPACK_ERROR(CCPON_RC_MALFORMED_INPUT)
-		if(ccpon_unpack_string(unpack_context) == 0)
-		return;
-		unpack_context->item.type = CCPON_ITEM_BLOB;
-		unpack_context->item.as.String.start = p + 1;
-		unpack_context->item.as.String.length = (int)(unpack_context->current - p - 2);
-		unpack_context->item.as.String.string_format = CCPON_STRING_FORMAT_HEX;
-		break;
-	}
-	case 'b': {
-		UNPACK_ASSERT_SPACE(1);
-		if(*p != '"')
-			UNPACK_ERROR(CCPON_RC_MALFORMED_INPUT)
-		if(ccpon_unpack_string(unpack_context) == 0)
-		return;
-		unpack_context->item.type = CCPON_ITEM_BLOB;
-		unpack_context->item.as.String.start = p + 1;
-		unpack_context->item.as.String.length = (int)(unpack_context->current - p - 2);
-		unpack_context->item.as.String.string_format = CCPON_STRING_FORMAT_ESCAPED;
-		break;
-	}
-	case '"': {
-		uint8_t* p1 = unpack_context->current;
-		if(ccpon_unpack_string(unpack_context) == 0)
-			return;
+		UNPACK_ASSERT_BYTE();
 		unpack_context->item.type = CCPON_ITEM_STRING;
-		unpack_context->item.as.String.start = p1 + 1;
-		unpack_context->item.as.String.length = (int)(unpack_context->current - p1 - 2);
-		unpack_context->item.as.String.string_format = CCPON_STRING_FORMAT_ESCAPED;
+		ccpon_string *str_it = &unpack_context->item.as.String;
+		ccpon_string_init(str_it);
+		str_it->format = CCPON_STRING_FORMAT_HEX;
+		ccpon_unpack_string(unpack_context);
+		break;
+	}
+	/*
+	case 'b': {
+		UNPACK_ASSERT_BYTE();
+		if(*p != '"')
+			UNPACK_ERROR(CCPON_RC_MALFORMED_INPUT)
+		if(ccpon_unpack_string(unpack_context) == 0)
+		return;
+		unpack_context->item.type = CCPON_ITEM_BLOB;
+		unpack_context->item.as.String.start = p + 1;
+		unpack_context->item.as.String.length = (int)(unpack_context->current - p - 2);
+		unpack_context->item.as.String.format = CCPON_STRING_FORMAT_UTF8_ESCAPED;
+		break;
+	}
+	*/
+	case '"': {
+		unpack_context->item.type = CCPON_ITEM_STRING;
+		ccpon_string *str_it = &unpack_context->item.as.String;
+		ccpon_string_init(str_it);
+		str_it->format = CCPON_STRING_FORMAT_UTF8_ESCAPED;
+		ccpon_unpack_string(unpack_context);
 		break;
 	}
 	case '0':
@@ -868,10 +951,10 @@ void ccpon_unpack_next (ccpon_unpack_context* unpack_context)
 		flags.is_neg = *p == '-';
 		if(!flags.is_neg)
 			unpack_context->current--;
-		int n = ccpon_unpack_assert_int(unpack_context, &mantisa);
+		int n = unpack_int(unpack_context, &mantisa);
 		if(n < 0)
 			UNPACK_ERROR(n)
-		p = ccpon_unpack_assert_space(unpack_context, 1);
+		p = ccpon_unpack_assert_byte(unpack_context);
 		while(p) {
 			if(*p == CCPON_C_UNSIGNED_END) {
 				flags.is_uint = 1;
@@ -879,11 +962,11 @@ void ccpon_unpack_next (ccpon_unpack_context* unpack_context)
 			}
 			if(*p == '.') {
 				flags.is_double = 1;
-				n = ccpon_unpack_assert_int(unpack_context, &decimals);
+				n = unpack_int(unpack_context, &decimals);
 				if(n < 0)
 					UNPACK_ERROR(n)
 				dec_cnt = n;
-				p = ccpon_unpack_assert_space(unpack_context, 1);
+				p = ccpon_unpack_assert_byte(unpack_context);
 				if(!p)
 					break;
 				if(*p == CCPON_C_DECIMAL_END) {
@@ -893,7 +976,7 @@ void ccpon_unpack_next (ccpon_unpack_context* unpack_context)
 			}
 			if(*p == 'e' || *p == 'E') {
 				flags.is_double = 1;
-				n = ccpon_unpack_assert_int(unpack_context, &exponent);
+				n = unpack_int(unpack_context, &exponent);
 				if(n < 0)
 					UNPACK_ERROR(n)
 				break;
@@ -942,7 +1025,4 @@ void ccpon_unpack_next (ccpon_unpack_context* unpack_context)
 	}
 	}
 }
-
-/* end cwpack.c */
-
 
