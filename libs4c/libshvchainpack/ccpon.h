@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <time.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,24 +29,28 @@ typedef enum
 	//#define CCPON_RC_ILLEGAL_CALL -7
 	//#define CCPON_RC_STOPPED -9
 } ccpon_error_codes;
-/******************************* P A C K **********************************/
 
+
+time_t ccpon_timegm(struct tm *tm);
+void ccpon_gmtime(int64_t epoch_sec, struct tm *tm);
+
+/******************************* P A C K **********************************/
 
 struct ccpon_pack_context;
 
-typedef int (*ccpon_pack_overflow_handler)(struct ccpon_pack_context*, unsigned long);
+typedef size_t (*ccpon_pack_overflow_handler)(struct ccpon_pack_context*, size_t);
 
 typedef struct ccpon_pack_context {
 	uint8_t* start;
 	uint8_t* current;
 	uint8_t* end;
-	int return_code;
+	//int return_code;
 	int err_no; /* handlers can save error here */
 	ccpon_pack_overflow_handler handle_pack_overflow;
 } ccpon_pack_context;
 
 
-int ccpon_pack_context_init (ccpon_pack_context* pack_context, void *data, unsigned long length, ccpon_pack_overflow_handler hpo);
+void ccpon_pack_context_init(ccpon_pack_context* pack_context, void *data, size_t length, ccpon_pack_overflow_handler hpo);
 
 void ccpon_pack_null (ccpon_pack_context* pack_context);
 void ccpon_pack_boolean (ccpon_pack_context* pack_context, bool b);
@@ -53,8 +59,8 @@ void ccpon_pack_uint (ccpon_pack_context* pack_context, uint64_t i);
 void ccpon_pack_double (ccpon_pack_context* pack_context, double d);
 void ccpon_pack_decimal (ccpon_pack_context* pack_context, int64_t i, int dec_places);
 void ccpon_pack_str (ccpon_pack_context* pack_context, const char* s, unsigned l);
-void ccpon_pack_blob (ccpon_pack_context* pack_context, const void *v, unsigned l);
-void ccpon_pack_date_time (ccpon_pack_context* pack_context, int64_t epoch_msecs);
+//void ccpon_pack_blob (ccpon_pack_context* pack_context, const void *v, unsigned l);
+void ccpon_pack_date_time (ccpon_pack_context* pack_context, int64_t epoch_msecs, int min_from_utc);
 
 void ccpon_pack_array_begin (ccpon_pack_context* pack_context);
 void ccpon_pack_array_end (ccpon_pack_context* pack_context);
@@ -71,6 +77,10 @@ void ccpon_pack_imap_end (ccpon_pack_context* pack_context);
 void ccpon_pack_meta_begin (ccpon_pack_context* pack_context);
 void ccpon_pack_meta_end (ccpon_pack_context* pack_context);
 
+void ccpon_pack_copy_str (ccpon_pack_context* pack_context, const void *str, size_t len);
+
+void ccpon_pack_field_delim (ccpon_pack_context* pack_context);
+void ccpon_pack_key_delim (ccpon_pack_context* pack_context);
 
 /***************************** U N P A C K ********************************/
 
@@ -95,22 +105,29 @@ typedef enum
 	//CCPON_ITEM_KEY_DELIM,
 	//CCPON_ITEM_FIELD_DELIM,
 	CCPON_ITEM_CONTAINER_END,
+	/*
+	CCPON_ITEM_ARRAY_END,
+	CCPON_ITEM_MAP_END,
+	CCPON_ITEM_IMAP_END,
+	CCPON_ITEM_META_END,
+	*/
 } ccpon_item_types;
 
 enum ccpon_string_format {CCPON_STRING_FORMAT_INVALID = 0, CCPON_STRING_FORMAT_UTF8_ESCAPED, CCPON_STRING_FORMAT_HEX};
-enum ccpon_string_unpack_escape_stage {CCPON_STRING_ESC_NONE = 0, CCPON_STRING_ESC_FOUND, CCPON_STRING_ESC_OCTAL, CCPON_STRING_ESC_HEX, CCPON_STRING_ESC_U16};
+//enum ccpon_string_unpack_escape_stage {CCPON_STRING_ESC_NONE = 0, CCPON_STRING_ESC_FOUND, CCPON_STRING_ESC_OCTAL, CCPON_STRING_ESC_HEX, CCPON_STRING_ESC_U16};
 
 typedef struct {
 	const uint8_t* start;
-	int length;
+	size_t length;
 	enum ccpon_string_format format;
 	struct {
-		//uint16_t escaped_val;
-		uint8_t escaped_len;
-		uint8_t begin: 1;
+		uint16_t chunk_cnt;
+		//uint8_t escaped_len;
+		//uint8_t begin: 1;
 		//uint8_t middle: 1;
-		uint8_t end: 1;
-		uint8_t escape_stage: 3;
+		uint8_t last_chunk: 1;
+		uint8_t in_escape: 1;
+		//uint8_t escape_stage: 3;
 	} parse_status;
 } ccpon_string;
 
@@ -148,7 +165,7 @@ typedef struct {
 
 struct ccpon_unpack_context;
 
-typedef int (*ccpon_unpack_underflow_handler)(struct ccpon_unpack_context*, unsigned long);
+typedef size_t (*ccpon_unpack_underflow_handler)(struct ccpon_unpack_context*, size_t);
 
 typedef struct ccpon_unpack_context {
 	ccpon_item item;
@@ -162,7 +179,7 @@ typedef struct ccpon_unpack_context {
 
 
 
-void ccpon_unpack_context_init(ccpon_unpack_context* unpack_context, const void* data, unsigned long length, ccpon_unpack_underflow_handler huu);
+void ccpon_unpack_context_init(ccpon_unpack_context* unpack_context, uint8_t* data, size_t length, ccpon_unpack_underflow_handler huu);
 
 void ccpon_unpack_next (ccpon_unpack_context* unpack_context);
 void ccpon_skip_items (ccpon_unpack_context* unpack_context, long item_count);

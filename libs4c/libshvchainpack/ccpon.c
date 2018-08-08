@@ -22,7 +22,6 @@
 
 #include <string.h>
 #include <stdio.h>
-#include <time.h>
 #include <math.h>
 
 #include "ccpon.h"
@@ -62,7 +61,7 @@ static inline int days_from_1jan(int year, int month, int mday)
 	return days[is_leap(year)][month] + mday - 1;
 }
 
-static time_t ccpon_timegm(struct tm *tm)
+time_t ccpon_timegm(struct tm *tm)
 {
 	time_t res = 0;
 	int year = tm->tm_year + 1900;
@@ -78,21 +77,77 @@ static time_t ccpon_timegm(struct tm *tm)
 	res += tm->tm_sec;
 	return res;
 }
+
+// Returns year/month/day triple in civil calendar
+// Preconditions:  z is number of days since 1970-01-01 and is in the range:
+//                   [numeric_limits<Int>::min(), numeric_limits<Int>::max()-719468].
+static void civil_from_days(long z, int *py, unsigned *pm, unsigned *pd)
+{
+	int y;
+	unsigned m;
+	unsigned d;
+	z += 719468;
+	const long era = (z >= 0 ? z : z - 146096) / 146097;
+	const unsigned doe = (z - era * 146097);          // [0, 146096]
+	const unsigned yoe = (doe - doe/1460 + doe/36524 - doe/146096) / 365;  // [0, 399]
+	y = ((long)yoe) + era * 400;
+	const unsigned doy = doe - (365*yoe + yoe/4 - yoe/100);                // [0, 365]
+	const unsigned mp = (5*doy + 2)/153;                                   // [0, 11]
+	d = doy - (153*mp+2)/5 + 1;                             // [1, 31]
+	m = mp + (mp < 10 ? 3 : -9);                            // [1, 12]
+	y += (m <= 2);
+	--m;
+	if(py)
+		*py = y;
+	if(pm)
+		*pm = m;
+	if(pd)
+		*pd = d;
+}
+
+void ccpon_gmtime(int64_t epoch_sec, struct tm *tm)
+{
+
+	if (!tm)
+		return;
+
+	const long seconds_in_day = 3600 * 24;
+	long days_since_epoch = (epoch_sec / seconds_in_day);
+	long hms = epoch_sec - seconds_in_day * days_since_epoch;
+	if (hms < 0) {
+		days_since_epoch -= 1;
+		hms = seconds_in_day + hms;
+	}
+
+	int32_t y;
+	unsigned m, d;
+	civil_from_days(days_since_epoch, &y, &m, &d);
+	tm->tm_year = y - 1900;
+	tm->tm_mon = m;
+	tm->tm_mday = d;
+
+	tm->tm_hour = hms / 3600;
+	const int ms = hms % 3600;
+	tm->tm_min = ms / 60;
+	tm->tm_sec = ms % 60;
+
+	tm->tm_isdst = -1;
+}
 //#endif
 
-uint8_t* ccpon_pack_reserve_space(ccpon_pack_context* pack_context, unsigned long more)
+uint8_t* ccpon_pack_reserve_space(ccpon_pack_context* pack_context, size_t more)
 {
 	uint8_t* p = pack_context->current;
 	uint8_t* nyp = p + more;
 	if (nyp > pack_context->end) {
 		if (!pack_context->handle_pack_overflow) {
-			pack_context->return_code = CCPON_RC_BUFFER_OVERFLOW;
-			return 0;
+			pack_context->err_no = CCPON_RC_BUFFER_OVERFLOW;
+			return NULL;
 		}
-		int rc = pack_context->handle_pack_overflow (pack_context, (unsigned long)(more));
-		if (rc) {
-			pack_context->return_code = rc;
-			return 0;
+		size_t sz = pack_context->handle_pack_overflow (pack_context, more);
+		if (sz < more) {
+			pack_context->err_no = CCPON_RC_BUFFER_OVERFLOW;
+			return NULL;
 		}
 		p = pack_context->current;
 		nyp = p + more;
@@ -140,14 +195,13 @@ static void	*memcpy(void *dst, const void *src, size_t n)
 #endif
 
 /*******************************   P A C K   **********************************/
-int ccpon_pack_context_init (ccpon_pack_context* pack_context, void *data, unsigned long length, ccpon_pack_overflow_handler hpo)
+void ccpon_pack_context_init (ccpon_pack_context* pack_context, void *data, size_t length, ccpon_pack_overflow_handler hpo)
 {
 	pack_context->start = pack_context->current = (uint8_t*)data;
 	pack_context->end = pack_context->start + length;
 	pack_context->err_no = 0;
 	pack_context->handle_pack_overflow = hpo;
-	pack_context->return_code = CCPON_RC_OK;
-	return pack_context->return_code;
+	pack_context->err_no = CCPON_RC_OK;
 }
 
 /*  Packing routines  --------------------------------------------------------------------------------  */
@@ -155,7 +209,7 @@ int ccpon_pack_context_init (ccpon_pack_context* pack_context, void *data, unsig
 
 void ccpon_pack_uint(ccpon_pack_context* pack_context, uint64_t i)
 {
-	if (pack_context->return_code)
+	if (pack_context->err_no)
 		return;
 
 	// at least 21 characters for 64-bit types.
@@ -166,16 +220,13 @@ void ccpon_pack_uint(ccpon_pack_context* pack_context, uint64_t i)
 		pack_context->err_no = CCPON_RC_LOGICAL_ERROR;
 		return;
 	}
-	uint8_t *p = ccpon_pack_reserve_space(pack_context, (unsigned)n);
-	if(p) {
-		memcpy(p, str, (unsigned)n);
-	}
+	ccpon_pack_copy_str(pack_context, str, n);
 }
 
 
 void ccpon_pack_int(ccpon_pack_context* pack_context, int64_t i)
 {
-	if (pack_context->return_code)
+	if (pack_context->err_no)
 		return;
 
 	// at least 21 characters for 64-bit types.
@@ -186,15 +237,55 @@ void ccpon_pack_int(ccpon_pack_context* pack_context, int64_t i)
 		pack_context->err_no = CCPON_RC_LOGICAL_ERROR;
 		return;
 	}
-	uint8_t *p = ccpon_pack_reserve_space(pack_context, (unsigned)n);
-	if(p) {
-		memcpy(p, str, (unsigned)n);
+	ccpon_pack_copy_str(pack_context, str, n);
+}
+
+void ccpon_pack_decimal(ccpon_pack_context *pack_context, int64_t i, int dec_places)
+{
+	if (pack_context->err_no)
+		return;
+
+	// at least 21 characters for 64-bit types.
+	static const int LEN = 32;
+	char str[LEN];
+	int n = snprintf(str, LEN, "%ld", i);
+	if(n < 0) {
+		pack_context->err_no = CCPON_RC_LOGICAL_ERROR;
+		return;
 	}
+	if(dec_places < 0) {
+		pack_context->err_no = CCPON_RC_LOGICAL_ERROR;
+		return;
+	}
+	static const int BUFFLEN = 256;
+	char buff[BUFFLEN];
+	int ix;
+	char *pc = buff + BUFFLEN - 1;
+	for(ix = 0; ix < n; ix++) {
+		if(ix < dec_places) {
+			if(ix < n)
+				*pc-- = str[n - ix - 1];
+			else
+				*pc-- = '0';
+		}
+		else if(ix >= dec_places) {
+			if(ix == dec_places)
+				*pc-- = '.';
+			if(ix < n) {
+				*pc-- = str[n - ix - 1];
+			}
+			else {
+				*pc-- = '0';
+				break;
+			}
+		}
+	}
+	ccpon_pack_copy_str(pack_context, pc, buff + BUFFLEN - pc);
 }
 
 void ccpon_pack_double(ccpon_pack_context* pack_context, double d)
 {
-	if (pack_context->return_code)
+	if (pack_context->err_no)
 		return;
 
 	// at least 21 characters for 64-bit types.
@@ -226,9 +317,41 @@ void ccpon_pack_double(ccpon_pack_context* pack_context, double d)
 	}
 }
 
+void ccpon_pack_date_time(ccpon_pack_context *pack_context, int64_t epoch_msecs, int min_from_utc)
+{
+	struct tm tm;
+	ccpon_gmtime(epoch_msecs / 1000, &tm);
+	static const unsigned LEN = 32;
+	char str[LEN];
+	int n = snprintf(str, LEN, "%04d-%02d-%02d %02d:%02d:%02d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+	if(n > 0)
+		ccpon_pack_copy_str(pack_context, str, n);
+	int msec = epoch_msecs % 1000;
+	if(msec > 0) {
+		n = snprintf(str, LEN, ".%03d", msec);
+		if(n > 0)
+			ccpon_pack_copy_str(pack_context, str, n);
+	}
+	if(min_from_utc == 0) {
+		ccpon_pack_copy_str(pack_context, "Z", 1);
+	}
+	else {
+		if(min_from_utc < 0) {
+			ccpon_pack_copy_str(pack_context, "-", 1);
+			min_from_utc = -min_from_utc;
+		}
+		else {
+			ccpon_pack_copy_str(pack_context, "+", 1);
+		}
+		n = snprintf(str, LEN, "%02d%02d", min_from_utc/60, min_from_utc%60);
+		if(n > 0)
+			ccpon_pack_copy_str(pack_context, str, n);
+	}
+}
+
 void ccpon_pack_null(ccpon_pack_context* pack_context)
 {
-	if (pack_context->return_code)
+	if (pack_context->err_no)
 		return;
 	uint8_t *p = ccpon_pack_reserve_space(pack_context, sizeof(CCPON_STR_NULL));
 	if(p) {
@@ -238,7 +361,7 @@ void ccpon_pack_null(ccpon_pack_context* pack_context)
 
 static void ccpon_pack_true (ccpon_pack_context* pack_context)
 {
-	if (pack_context->return_code)
+	if (pack_context->err_no)
 		return;
 	uint8_t *p = ccpon_pack_reserve_space(pack_context, sizeof(CCPON_STR_TRUE));
 	if(p) {
@@ -248,7 +371,7 @@ static void ccpon_pack_true (ccpon_pack_context* pack_context)
 
 static void ccpon_pack_false (ccpon_pack_context* pack_context)
 {
-	if (pack_context->return_code)
+	if (pack_context->err_no)
 		return;
 	uint8_t *p = ccpon_pack_reserve_space(pack_context, sizeof(CCPON_STR_FALSE));
 	if(p) {
@@ -258,7 +381,7 @@ static void ccpon_pack_false (ccpon_pack_context* pack_context)
 
 void ccpon_pack_boolean(ccpon_pack_context* pack_context, bool b)
 {
-	if (pack_context->return_code)
+	if (pack_context->err_no)
 		return;
 
 	if(b)
@@ -267,10 +390,9 @@ void ccpon_pack_boolean(ccpon_pack_context* pack_context, bool b)
 		ccpon_pack_false(pack_context);
 }
 
-
 void ccpon_pack_array_begin(ccpon_pack_context* pack_context)
 {
-	if (pack_context->return_code)
+	if (pack_context->err_no)
 		return;
 
 	uint8_t *p = ccpon_pack_reserve_space(pack_context, sizeof(CCPON_STR_ARRAY_BEGIN));
@@ -281,7 +403,7 @@ void ccpon_pack_array_begin(ccpon_pack_context* pack_context)
 
 void ccpon_pack_array_end(ccpon_pack_context *pack_context)
 {
-	if (pack_context->return_code)
+	if (pack_context->err_no)
 		return;
 
 	uint8_t *p = ccpon_pack_reserve_space(pack_context, 1);
@@ -292,7 +414,7 @@ void ccpon_pack_array_end(ccpon_pack_context *pack_context)
 
 void ccpon_pack_list_begin(ccpon_pack_context *pack_context)
 {
-	if (pack_context->return_code)
+	if (pack_context->err_no)
 		return;
 
 	uint8_t *p = ccpon_pack_reserve_space(pack_context, 1);
@@ -303,7 +425,7 @@ void ccpon_pack_list_begin(ccpon_pack_context *pack_context)
 
 void ccpon_pack_list_end(ccpon_pack_context *pack_context)
 {
-	if (pack_context->return_code)
+	if (pack_context->err_no)
 		return;
 
 	uint8_t *p = ccpon_pack_reserve_space(pack_context, 1);
@@ -314,7 +436,7 @@ void ccpon_pack_list_end(ccpon_pack_context *pack_context)
 
 void ccpon_pack_map_begin(ccpon_pack_context *pack_context)
 {
-	if (pack_context->return_code)
+	if (pack_context->err_no)
 		return;
 
 	uint8_t *p = ccpon_pack_reserve_space(pack_context, 1);
@@ -325,7 +447,7 @@ void ccpon_pack_map_begin(ccpon_pack_context *pack_context)
 
 void ccpon_pack_map_end(ccpon_pack_context *pack_context)
 {
-	if (pack_context->return_code)
+	if (pack_context->err_no)
 		return;
 
 	uint8_t *p = ccpon_pack_reserve_space(pack_context, 1);
@@ -336,7 +458,7 @@ void ccpon_pack_map_end(ccpon_pack_context *pack_context)
 
 void ccpon_pack_imap_begin(ccpon_pack_context* pack_context)
 {
-	if (pack_context->return_code)
+	if (pack_context->err_no)
 		return;
 
 	uint8_t *p = ccpon_pack_reserve_space(pack_context, sizeof(CCPON_STR_IMAP_BEGIN));
@@ -347,7 +469,7 @@ void ccpon_pack_imap_begin(ccpon_pack_context* pack_context)
 
 void ccpon_pack_imap_end(ccpon_pack_context *pack_context)
 {
-	if (pack_context->return_code)
+	if (pack_context->err_no)
 		return;
 
 	uint8_t *p = ccpon_pack_reserve_space(pack_context, 1);
@@ -358,7 +480,7 @@ void ccpon_pack_imap_end(ccpon_pack_context *pack_context)
 
 void ccpon_pack_meta_begin(ccpon_pack_context *pack_context)
 {
-	if (pack_context->return_code)
+	if (pack_context->err_no)
 		return;
 
 	uint8_t *p = ccpon_pack_reserve_space(pack_context, 1);
@@ -369,7 +491,7 @@ void ccpon_pack_meta_begin(ccpon_pack_context *pack_context)
 
 void ccpon_pack_meta_end(ccpon_pack_context *pack_context)
 {
-	if (pack_context->return_code)
+	if (pack_context->err_no)
 		return;
 
 	uint8_t *p = ccpon_pack_reserve_space(pack_context, 1);
@@ -378,9 +500,25 @@ void ccpon_pack_meta_end(ccpon_pack_context *pack_context)
 	}
 }
 
+void ccpon_pack_copy_str(ccpon_pack_context *pack_context, const void *str, size_t len)
+{
+	size_t copied = 0;
+	while (pack_context->err_no == CCPON_RC_OK && copied < len) {
+		uint8_t *p = ccpon_pack_reserve_space(pack_context, len);
+		if(!p)
+			break;
+		size_t buff_size = pack_context->current - p;
+		size_t rest = len - copied;
+		if(rest > buff_size)
+			rest = buff_size;
+		memcpy(p, ((const char*)str) + copied, rest);
+		copied += rest;
+	}
+}
+
 static uint8_t* ccpon_pack_blob_data_escaped(ccpon_pack_context* pack_context, const void* v, unsigned l)
 {
-	if (pack_context->return_code)
+	if (pack_context->err_no)
 		return 0;
 	uint8_t *p = ccpon_pack_reserve_space(pack_context, 4*l);
 	if(p) {
@@ -395,7 +533,7 @@ static uint8_t* ccpon_pack_blob_data_escaped(ccpon_pack_context* pack_context, c
 			case '\r': *p++ = '\\'; *p++ = 'r'; break;
 			case '\t': *p++ = '\\'; *p++ = 't'; break;
 			default: {
-				if (ch <= 0x1f) {
+				if (ch < ' ') {
 					int n = snprintf((char*)p, 4, "\\x%02x", ch);
 					p += n;
 				}
@@ -413,7 +551,7 @@ static uint8_t* ccpon_pack_blob_data_escaped(ccpon_pack_context* pack_context, c
 
 void ccpon_pack_str(ccpon_pack_context* pack_context, const char* s, unsigned l)
 {
-	if (pack_context->return_code)
+	if (pack_context->err_no)
 		return;
 	uint8_t *p = ccpon_pack_reserve_space(pack_context, 1);
 	if(p) {
@@ -426,10 +564,10 @@ void ccpon_pack_str(ccpon_pack_context* pack_context, const char* s, unsigned l)
 		}
 	}
 }
-
+/*
 void ccpon_pack_blob(ccpon_pack_context* pack_context, const void* v, unsigned l)
 {
-	if (pack_context->return_code)
+	if (pack_context->err_no)
 		return;
 	uint8_t *p = ccpon_pack_reserve_space(pack_context, sizeof (CCPON_STR_ESC_BLOB_BEGIN) - 1);
 	if(p) {
@@ -442,7 +580,7 @@ void ccpon_pack_blob(ccpon_pack_context* pack_context, const void* v, unsigned l
 		}
 	}
 }
-
+*/
 /*******************************   U N P A C K   **********************************/
 
 #define UNPACK_ERROR(error_code)                        \
@@ -454,7 +592,7 @@ void ccpon_pack_blob(ccpon_pack_context* pack_context, const void* v, unsigned l
 
 uint8_t* ccpon_unpack_assert_byte(ccpon_unpack_context* unpack_context)
 {
-	int more = 1;
+	size_t more = 1;
 	uint8_t* p = unpack_context->current;
 	uint8_t* nyp = p + more;
 	if (nyp > unpack_context->end) {
@@ -463,9 +601,9 @@ uint8_t* ccpon_unpack_assert_byte(ccpon_unpack_context* unpack_context)
 			//unpack_context->item.type = CCPON_ITEM_INVALID;
 			return NULL;
 		}
-		int rc = unpack_context->handle_unpack_underflow (unpack_context, more);
-		if (rc != CCPON_RC_OK) {
-			unpack_context->err_no = rc;
+		size_t sz = unpack_context->handle_unpack_underflow (unpack_context, more);
+		if (sz < more) {
+			unpack_context->err_no = CCPON_RC_BUFFER_UNDERFLOW;
 			//unpack_context->item.type = CCPON_ITEM_INVALID;
 			return NULL;
 		}
@@ -499,7 +637,8 @@ static int unpack_int(ccpon_unpack_context* unpack_context, int64_t *p_val)
 	uint8_t *p1 = unpack_context->current;
 	int64_t val = 0;
 	int neg = 0;
-	for (int n=0; ; n++) {
+	int n = 0;
+	for (; ; n++) {
 		uint8_t *p = ccpon_unpack_assert_byte(unpack_context);
 		if(!p)
 			goto eonumb;
@@ -537,7 +676,7 @@ eonumb:
 		val = -val;
 	if(p_val)
 		*p_val = val;
-	return (int)(unpack_context->current - p1);
+	return n;
 }
 /*
 static int get_int(const uint8_t *s, long len, int64_t *val)
@@ -682,9 +821,9 @@ static void unpack_date_time(ccpon_unpack_context *unpack_context, struct tm *tm
 	it->minutes_from_utc = *utc_offset;
 }
 
-void ccpon_unpack_context_init (ccpon_unpack_context* unpack_context, const void *data, unsigned long length, ccpon_unpack_underflow_handler huu)
+void ccpon_unpack_context_init (ccpon_unpack_context* unpack_context, uint8_t *data, size_t length, ccpon_unpack_underflow_handler huu)
 {
-	unpack_context->start = unpack_context->current = (uint8_t*)data;
+	unpack_context->start = unpack_context->current = data;
 	unpack_context->end = unpack_context->start + length;
 	unpack_context->err_no = CCPON_RC_OK;
 	unpack_context->handle_unpack_underflow = huu;
@@ -698,10 +837,12 @@ void ccpon_string_init(ccpon_string *str_it)
 {
 	str_it->start = 0;
 	str_it->length = 0;
-	str_it->parse_status.begin = 0;
+	//str_it->parse_status.begin = 0;
 	//str_it->parse_status.middle = 0;
-	str_it->parse_status.end = 0;
-	str_it->parse_status.escape_stage = CCPON_STRING_ESC_NONE;
+	str_it->parse_status.chunk_cnt = 0;
+	str_it->parse_status.last_chunk = 0;
+	str_it->parse_status.in_escape = 0;
+	//str_it->parse_status.escape_stage = CCPON_STRING_ESC_NONE;
 }
 
 static inline int is_octal(uint8_t b)
@@ -715,46 +856,28 @@ static inline int is_hex(uint8_t b)
 			|| (b >= 'a' && b <= 'f')
 			|| (b >= 'A' && b <= 'F');
 }
-
+#ifdef UNPACK_WITH_GET_ESCAPED_VALUES
 static void ccpon_unpack_string(ccpon_unpack_context* unpack_context)
 {
 	if(unpack_context->item.type != CCPON_ITEM_STRING)
 		UNPACK_ERROR(CCPON_RC_LOGICAL_ERROR);
-	/*
-	UNPACK_ASSERT_SPACE2(1, 0);
 
-
-	if(!it_str->parse_status.begin) {
-		if (*p != '"')
-			return CCPON_RC_MALFORMED_INPUT; // not a string
-		it_str->parse_status.begin = 1;
-	}
-
-
-	if(!it_str->parse_status.begin && !it_str->parse_status.middle) {
-		UNPACK_ASSERT_SPACE2(1, 0);
-		// not a string
-		if (*p != '"')
-			return CCPON_RC_MALFORMED_INPUT;
-		it_str->parse_status.begin = 1;
-	}
-	*/
 	ccpon_string *it = &unpack_context->item.as.String;
-	it->start = unpack_context->current;
+	uint8_t *p1 = unpack_context->current;
+	it->start = p1;
 	for (; unpack_context->current < unpack_context->end; unpack_context->current++) {
 		uint8_t *p = unpack_context->current;
 		if(it->parse_status.escape_stage == CCPON_STRING_ESC_NONE) {
 			if (*p == '"') {
-				if(it->parse_status.begin) {
+				if(it->parse_status.chunk_cnt || p > p1) {
 					// end of string
 					unpack_context->current++;
-					it->parse_status.end = 1;
+					it->parse_status.last_chunk = 1;
 					it->length = (p - it->start);
-					return;
 				}
 				else {
 					// begin of string
-					it->parse_status.begin = 1;
+					//it->parse_status.begin = 1;
 					it->start = p+1;
 					//continue;
 				}
@@ -819,8 +942,48 @@ static void ccpon_unpack_string(ccpon_unpack_context* unpack_context)
 			UNPACK_ERROR(CCPON_RC_LOGICAL_ERROR);
 		}
 	}
+	it->parse_status.chunk_cnt++;
 }
+#else
+static void ccpon_unpack_string(ccpon_unpack_context* unpack_context)
+{
+	if(unpack_context->item.type != CCPON_ITEM_STRING)
+		UNPACK_ERROR(CCPON_RC_LOGICAL_ERROR);
 
+	ccpon_string *it = &unpack_context->item.as.String;
+	uint8_t *p1 = unpack_context->current;
+	it->start = p1;
+	for (; unpack_context->current < unpack_context->end; unpack_context->current++) {
+		uint8_t *p = unpack_context->current;
+		if(!it->parse_status.in_escape) {
+			if (*p == '"') {
+				if(it->parse_status.chunk_cnt || p > p1) {
+					// end of string
+					unpack_context->current++;
+					it->parse_status.last_chunk = 1;
+					it->length = (p - it->start);
+					break;
+				}
+				else {
+					// begin of string
+					//it->parse_status.begin = 1;
+					it->start = p+1;
+					//continue;
+				}
+			}
+			else if (*p == '\\') {
+				it->parse_status.in_escape = 1;
+				//it->parse_status.escaped_val = 0;
+				//it->parse_status.escaped_len = 0;
+			}
+		}
+		else {
+			it->parse_status.in_escape = 0;
+		}
+	}
+	it->parse_status.chunk_cnt++;
+}
+#endif
 void ccpon_unpack_next (ccpon_unpack_context* unpack_context)
 {
 	if (unpack_context->err_no)
@@ -829,8 +992,9 @@ void ccpon_unpack_next (ccpon_unpack_context* unpack_context)
 	uint8_t *p;
 	if(unpack_context->item.type == CCPON_ITEM_STRING) {
 		ccpon_string *str_it = &unpack_context->item.as.String;
-		if(!str_it->parse_status.end) {
+		if(!str_it->parse_status.last_chunk) {
 			UNPACK_ASSERT_BYTE();
+			unpack_context->current--;
 			ccpon_unpack_string(unpack_context);
 			return;
 		}
@@ -854,7 +1018,11 @@ void ccpon_unpack_next (ccpon_unpack_context* unpack_context)
 		break;
 	case CCPON_C_MAP_END:
 	case CCPON_C_LIST_END:
+	case CCPON_C_META_END:
 		unpack_context->item.type = CCPON_ITEM_CONTAINER_END;
+		break;
+	case CCPON_C_META_BEGIN:
+		unpack_context->item.type = CCPON_ITEM_META;
 		break;
 	case CCPON_C_MAP_BEGIN:
 		unpack_context->item.type = CCPON_ITEM_MAP;
@@ -917,6 +1085,7 @@ void ccpon_unpack_next (ccpon_unpack_context* unpack_context)
 		ccpon_string *str_it = &unpack_context->item.as.String;
 		ccpon_string_init(str_it);
 		str_it->format = CCPON_STRING_FORMAT_UTF8_ESCAPED;
+		unpack_context->current--;
 		ccpon_unpack_string(unpack_context);
 		break;
 	}
@@ -1024,5 +1193,15 @@ void ccpon_unpack_next (ccpon_unpack_context* unpack_context)
 		break;
 	}
 	}
+}
+
+void ccpon_pack_field_delim(ccpon_pack_context *pack_context)
+{
+	ccpon_pack_copy_str(pack_context, ",", 1);
+}
+
+void ccpon_pack_key_delim(ccpon_pack_context *pack_context)
+{
+	ccpon_pack_copy_str(pack_context, ":", 1);
 }
 
