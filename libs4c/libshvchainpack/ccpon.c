@@ -634,7 +634,6 @@ uint8_t* ccpon_unpack_skip_blank(ccpon_unpack_context* unpack_context)
 
 static int unpack_int(ccpon_unpack_context* unpack_context, int64_t *p_val)
 {
-	uint8_t *p1 = unpack_context->current;
 	int64_t val = 0;
 	int neg = 0;
 	int n = 0;
@@ -845,6 +844,7 @@ void ccpon_string_init(ccpon_string *str_it)
 	//str_it->parse_status.escape_stage = CCPON_STRING_ESC_NONE;
 }
 
+#ifdef UNPACK_WITH_GET_ESCAPED_VALUES
 static inline int is_octal(uint8_t b)
 {
 	return b >= '0' && b <= '7';
@@ -856,7 +856,7 @@ static inline int is_hex(uint8_t b)
 			|| (b >= 'a' && b <= 'f')
 			|| (b >= 'A' && b <= 'F');
 }
-#ifdef UNPACK_WITH_GET_ESCAPED_VALUES
+
 static void ccpon_unpack_string(ccpon_unpack_context* unpack_context)
 {
 	if(unpack_context->item.type != CCPON_ITEM_STRING)
