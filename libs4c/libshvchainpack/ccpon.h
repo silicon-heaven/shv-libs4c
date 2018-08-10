@@ -113,21 +113,22 @@ typedef enum
 	*/
 } ccpon_item_types;
 
-enum ccpon_string_format {CCPON_STRING_FORMAT_INVALID = 0, CCPON_STRING_FORMAT_UTF8_ESCAPED, CCPON_STRING_FORMAT_HEX};
+//enum ccpon_string_format {CCPON_STRING_FORMAT_INVALID = 0, CCPON_STRING_FORMAT_UTF8_ESCAPED, CCPON_STRING_FORMAT_HEX};
 //enum ccpon_string_unpack_escape_stage {CCPON_STRING_ESC_NONE = 0, CCPON_STRING_ESC_FOUND, CCPON_STRING_ESC_OCTAL, CCPON_STRING_ESC_HEX, CCPON_STRING_ESC_U16};
 
 typedef struct {
 	const uint8_t* start;
 	size_t length;
-	enum ccpon_string_format format;
+	//enum ccpon_string_format format;
 	struct {
 		uint16_t chunk_cnt;
+		char escape_seq[2];
+		//uint8_t escaped_val;
 		//uint8_t escaped_len;
 		//uint8_t begin: 1;
-		//uint8_t middle: 1;
+		uint8_t string_entered: 1;
 		uint8_t last_chunk: 1;
-		uint8_t in_escape: 1;
-		//uint8_t escape_stage: 3;
+		//uint8_t in_escape: 1;
 	} parse_status;
 } ccpon_string;
 

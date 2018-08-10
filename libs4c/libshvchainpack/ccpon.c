@@ -834,17 +834,18 @@ void ccpon_unpack_context_init (ccpon_unpack_context* unpack_context, uint8_t *d
 
 void ccpon_string_init(ccpon_string *str_it)
 {
-	str_it->start = 0;
+	str_it->start = NULL;
 	str_it->length = 0;
 	//str_it->parse_status.begin = 0;
 	//str_it->parse_status.middle = 0;
 	str_it->parse_status.chunk_cnt = 0;
 	str_it->parse_status.last_chunk = 0;
-	str_it->parse_status.in_escape = 0;
-	//str_it->parse_status.escape_stage = CCPON_STRING_ESC_NONE;
+	//str_it->parse_status.escaped_len = 0;
+	str_it->parse_status.string_entered = 0;
+	str_it->parse_status.escape_seq[0] = 0;
 }
 
-#ifdef UNPACK_WITH_GET_ESCAPED_VALUES
+/*
 static inline int is_octal(uint8_t b)
 {
 	return b >= '0' && b <= '7';
@@ -856,39 +857,69 @@ static inline int is_hex(uint8_t b)
 			|| (b >= 'a' && b <= 'f')
 			|| (b >= 'A' && b <= 'F');
 }
-
+*/
 static void ccpon_unpack_string(ccpon_unpack_context* unpack_context)
 {
 	if(unpack_context->item.type != CCPON_ITEM_STRING)
 		UNPACK_ERROR(CCPON_RC_LOGICAL_ERROR);
 
 	ccpon_string *it = &unpack_context->item.as.String;
-	uint8_t *p1 = unpack_context->current;
-	it->start = p1;
+	it->length = 0;
+	it->start = unpack_context->current;
 	for (; unpack_context->current < unpack_context->end; unpack_context->current++) {
 		uint8_t *p = unpack_context->current;
-		if(it->parse_status.escape_stage == CCPON_STRING_ESC_NONE) {
+		if(*p == '\\') {
+			if(it->length > 0) {
+				// finish current chunk, esc sequence wil have own, because it can be in 2 buffers
+				//unpack_context->current--;
+				return;
+			}
+			UNPACK_ASSERT_BYTE();
+			it->parse_status.escape_seq[0] = '\\';
+			UNPACK_ASSERT_BYTE();
+			if(!p)
+				return;
+			/*
+			switch (*p) {
+			case '\\': it->parse_status.escape_seq[1] = '\\'; break;
+			case '"' : it->parse_status.escape_seq[1] = '"'; break;
+			case 'b': it->parse_status.escape_seq[1] = '\b'; break;
+			case 'f': it->parse_status.escape_seq[1] = '\f'; break;
+			case 'n': it->parse_status.escape_seq[1] = '\n'; break;
+			case 'r': it->parse_status.escape_seq[1] = '\r'; break;
+			case 't': it->parse_status.escape_seq[1] = '\t'; break;
+			case '0': it->parse_status.escape_seq[1] = '\0'; break;
+			default: it->parse_status.escape_seq[1] = *p; break;
+			}
+			*/
+			it->parse_status.escape_seq[1] = *p;
+			it->start = (const uint8_t*)it->parse_status.escape_seq;
+			it->length = 2;
+			break;
+		}
+		else {
 			if (*p == '"') {
-				if(it->parse_status.chunk_cnt || p > p1) {
+				if(!it->parse_status.string_entered) {
+					// begin of string
+					it->start = p+1;
+					it->parse_status.string_entered = 1;
+				}
+				else {
 					// end of string
 					unpack_context->current++;
 					it->parse_status.last_chunk = 1;
-					it->length = (p - it->start);
-				}
-				else {
-					// begin of string
-					//it->parse_status.begin = 1;
-					it->start = p+1;
-					//continue;
+					break;
 				}
 			}
-			else if (*p == '\\') {
-				it->parse_status.escape_stage = CCPON_STRING_ESC_FOUND;
-				//it->parse_status.escaped_val = 0;
-				it->parse_status.escaped_len = 0;
+			else {
+				it->length++;
 			}
 		}
-		else if(it->parse_status.escape_stage == CCPON_STRING_ESC_FOUND) {
+	}
+	it->parse_status.chunk_cnt++;
+}
+
+#if 0
 			if(is_octal(*p)) {
 				it->parse_status.escape_stage = CCPON_STRING_ESC_NONE;
 				it->parse_status.escaped_len++;
@@ -941,10 +972,6 @@ static void ccpon_unpack_string(ccpon_unpack_context* unpack_context)
 		else {
 			UNPACK_ERROR(CCPON_RC_LOGICAL_ERROR);
 		}
-	}
-	it->parse_status.chunk_cnt++;
-}
-#else
 static void ccpon_unpack_string(ccpon_unpack_context* unpack_context)
 {
 	if(unpack_context->item.type != CCPON_ITEM_STRING)
@@ -1057,6 +1084,7 @@ void ccpon_unpack_next (ccpon_unpack_context* unpack_context)
 			UNPACK_ERROR(CCPON_RC_MALFORMED_INPUT)
 		break;
 	}
+		/*
 	case 'x': {
 		UNPACK_ASSERT_BYTE();
 		unpack_context->item.type = CCPON_ITEM_STRING;
@@ -1066,7 +1094,6 @@ void ccpon_unpack_next (ccpon_unpack_context* unpack_context)
 		ccpon_unpack_string(unpack_context);
 		break;
 	}
-	/*
 	case 'b': {
 		UNPACK_ASSERT_BYTE();
 		if(*p != '"')
@@ -1084,7 +1111,7 @@ void ccpon_unpack_next (ccpon_unpack_context* unpack_context)
 		unpack_context->item.type = CCPON_ITEM_STRING;
 		ccpon_string *str_it = &unpack_context->item.as.String;
 		ccpon_string_init(str_it);
-		str_it->format = CCPON_STRING_FORMAT_UTF8_ESCAPED;
+		//str_it->format = CCPON_STRING_FORMAT_UTF8_ESCAPED;
 		unpack_context->current--;
 		ccpon_unpack_string(unpack_context);
 		break;
