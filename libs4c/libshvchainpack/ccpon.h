@@ -129,7 +129,7 @@ typedef struct {
 	union
 	{
 		ccpon_string String;
-		ccpon_string Blob;
+		//ccpon_string Blob;
 		ccpon_date_time DateTime;
 		ccpon_decimal Decimal;
 		uint64_t UInt;

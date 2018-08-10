@@ -131,11 +131,12 @@ uint8_t* ccpon_pack_reserve_space(ccpon_pack_context* pack_context, size_t more)
 	return p;
 }
 
-const char CCPON_STR_NULL[] = "null";
-const char CCPON_STR_TRUE[] = "true";
-const char CCPON_STR_FALSE[] = "false";
-const char CCPON_STR_IMAP_BEGIN[] = "i{";
-const char CCPON_STR_ARRAY_BEGIN[] = "a[";
+static const char CCPON_STR_NULL[] = "null";
+static const char CCPON_STR_TRUE[] = "true";
+static const char CCPON_STR_FALSE[] = "false";
+static const char CCPON_STR_IMAP_BEGIN[] = "i{";
+static const char CCPON_STR_ARRAY_BEGIN[] = "a[";
+static const char CCPON_DATE_TIME_BEGIN[] = "d\"";
 
 #define CCPON_C_KEY_DELIM ':'
 #define CCPON_C_FIELD_DELIM ','
@@ -333,11 +334,12 @@ void ccpon_pack_double(ccpon_pack_context* pack_context, double d)
 
 void ccpon_pack_date_time(ccpon_pack_context *pack_context, int64_t epoch_msecs, int min_from_utc)
 {
+	ccpon_pack_copy_bytes(pack_context, CCPON_DATE_TIME_BEGIN, sizeof (CCPON_DATE_TIME_BEGIN) - 1);
 	struct tm tm;
 	ccpon_gmtime(epoch_msecs / 1000, &tm);
 	static const unsigned LEN = 32;
 	char str[LEN];
-	int n = snprintf(str, LEN, "%04d-%02d-%02d %02d:%02d:%02d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+	int n = snprintf(str, LEN, "%04d-%02d-%02dT%02d:%02d:%02d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
 	if(n > 0)
 		ccpon_pack_copy_bytes(pack_context, str, n);
 	int msec = epoch_msecs % 1000;
@@ -361,6 +363,7 @@ void ccpon_pack_date_time(ccpon_pack_context *pack_context, int64_t epoch_msecs,
 		if(n > 0)
 			ccpon_pack_copy_bytes(pack_context, str, n);
 	}
+	ccpon_pack_copy_bytes(pack_context, "\"", 1);
 }
 
 void ccpon_pack_null(ccpon_pack_context* pack_context)
@@ -1038,6 +1041,41 @@ void ccpon_unpack_next (ccpon_unpack_context* unpack_context)
 		break;
 	}
 	*/
+	case 'f': {
+		UNPACK_ASSERT_BYTE();
+		if(*p == 'a') {
+			UNPACK_ASSERT_BYTE();
+			if(*p == 'l') {
+				UNPACK_ASSERT_BYTE();
+				if(*p == 's') {
+					UNPACK_ASSERT_BYTE();
+					if(*p == 'e') {
+						unpack_context->item.type = CCPON_ITEM_BOOLEAN;
+						unpack_context->item.as.Bool = false;
+						break;
+					}
+				}
+			}
+		}
+		UNPACK_ERROR(CCPON_RC_MALFORMED_INPUT)
+		break;
+	}
+	case 't': {
+		UNPACK_ASSERT_BYTE();
+		if(*p == 'r') {
+			UNPACK_ASSERT_BYTE();
+			if(*p == 'u') {
+				UNPACK_ASSERT_BYTE();
+				if(*p == 'e') {
+					unpack_context->item.type = CCPON_ITEM_BOOLEAN;
+					unpack_context->item.as.Bool = true;
+					break;
+				}
+			}
+		}
+		UNPACK_ERROR(CCPON_RC_MALFORMED_INPUT)
+		break;
+	}
 	case '"': {
 		unpack_context->item.type = CCPON_ITEM_STRING;
 		ccpon_string *str_it = &unpack_context->item.as.String;
