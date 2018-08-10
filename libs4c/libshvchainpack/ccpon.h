@@ -44,7 +44,8 @@ typedef struct ccpon_pack_context {
 	uint8_t* start;
 	uint8_t* current;
 	uint8_t* end;
-	//int return_code;
+	const char *indent;
+	int nest_count;
 	int err_no; /* handlers can save error here */
 	ccpon_pack_overflow_handler handle_pack_overflow;
 } ccpon_pack_context;
@@ -79,7 +80,7 @@ void ccpon_pack_meta_end (ccpon_pack_context* pack_context);
 
 void ccpon_pack_copy_str (ccpon_pack_context* pack_context, const void *str, size_t len);
 
-void ccpon_pack_field_delim (ccpon_pack_context* pack_context);
+void ccpon_pack_field_delim (ccpon_pack_context* pack_context, bool is_first_field);
 void ccpon_pack_key_delim (ccpon_pack_context* pack_context);
 
 /***************************** U N P A C K ********************************/

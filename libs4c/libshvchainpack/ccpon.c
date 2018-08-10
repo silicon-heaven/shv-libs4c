@@ -161,7 +161,7 @@ const char CCPON_STR_TRUE[] = "true";
 const char CCPON_STR_FALSE[] = "false";
 const char CCPON_STR_IMAP_BEGIN[] = "i{";
 const char CCPON_STR_ARRAY_BEGIN[] = "a[";
-const char CCPON_STR_ESC_BLOB_BEGIN[] = "b\"";
+//const char CCPON_STR_ESC_BLOB_BEGIN[] = "b\"";
 //const char CCPON_STR_HEX_BLOB_BEGIN[] = "x\"";
 //const char CCPON_STR_DATETIME_BEGIN[] = "d\"";
 
@@ -202,11 +202,68 @@ void ccpon_pack_context_init (ccpon_pack_context* pack_context, void *data, size
 	pack_context->err_no = 0;
 	pack_context->handle_pack_overflow = hpo;
 	pack_context->err_no = CCPON_RC_OK;
+	pack_context->indent = NULL;
+	pack_context->nest_count = 0;
 }
 
 /*  Packing routines  --------------------------------------------------------------------------------  */
 
+void ccpon_pack_copy_str(ccpon_pack_context *pack_context, const void *str, size_t len)
+{
+	size_t copied = 0;
+	if(len == 0)
+		len = strlen(str);
+	while (pack_context->err_no == CCPON_RC_OK && copied < len) {
+		uint8_t *p = ccpon_pack_reserve_space(pack_context, len);
+		if(!p)
+			break;
+		size_t buff_size = pack_context->current - p;
+		size_t rest = len - copied;
+		if(rest > buff_size)
+			rest = buff_size;
+		memcpy(p, ((const char*)str) + copied, rest);
+		copied += rest;
+	}
+}
 
+static void start_block(ccpon_pack_context* pack_context)
+{
+	if(pack_context->indent) {
+		ccpon_pack_copy_str(pack_context, "\n", 1);
+		pack_context->nest_count++;
+	}
+}
+
+static void indent_element(ccpon_pack_context* pack_context)
+{
+	if(pack_context->indent) {
+		for (int i = 0; i < pack_context->nest_count; ++i) {
+			ccpon_pack_copy_str(pack_context, pack_context->indent, 0);
+		}
+	}
+}
+
+static void end_block(ccpon_pack_context* pack_context)
+{
+	if(pack_context->indent) {
+		//m_out << '\n';
+		pack_context->nest_count--;
+		if(pack_context->indent)
+			ccpon_pack_copy_str(pack_context, "\n", 1);
+		indent_element(pack_context);
+	}
+}
+/*
+static void separate_element(ccpon_pack_context* pack_context)
+{
+	if(pack_context->indent) {
+		ccpon_pack_copy_str(pack_context, ",\n", 2);
+	}
+	else {
+		ccpon_pack_copy_str(pack_context, ", ", 2);
+	}
+}
+*/
 void ccpon_pack_uint(ccpon_pack_context* pack_context, uint64_t i)
 {
 	if (pack_context->err_no)
@@ -395,10 +452,8 @@ void ccpon_pack_array_begin(ccpon_pack_context* pack_context)
 	if (pack_context->err_no)
 		return;
 
-	uint8_t *p = ccpon_pack_reserve_space(pack_context, sizeof(CCPON_STR_ARRAY_BEGIN));
-	if(p) {
-		memcpy(p, CCPON_STR_ARRAY_BEGIN, sizeof(CCPON_STR_ARRAY_BEGIN) - 1);
-	}
+	ccpon_pack_copy_str(pack_context, CCPON_STR_ARRAY_BEGIN, sizeof(CCPON_STR_ARRAY_BEGIN));
+	start_block(pack_context);
 }
 
 void ccpon_pack_array_end(ccpon_pack_context *pack_context)
@@ -406,6 +461,7 @@ void ccpon_pack_array_end(ccpon_pack_context *pack_context)
 	if (pack_context->err_no)
 		return;
 
+	end_block(pack_context);
 	uint8_t *p = ccpon_pack_reserve_space(pack_context, 1);
 	if(p) {
 		*p = CCPON_C_ARRAY_END;
@@ -418,9 +474,10 @@ void ccpon_pack_list_begin(ccpon_pack_context *pack_context)
 		return;
 
 	uint8_t *p = ccpon_pack_reserve_space(pack_context, 1);
-	if(p) {
+	if(p)
 		*p = CCPON_C_LIST_BEGIN;
-	}
+	start_block(pack_context);
+
 }
 
 void ccpon_pack_list_end(ccpon_pack_context *pack_context)
@@ -428,10 +485,10 @@ void ccpon_pack_list_end(ccpon_pack_context *pack_context)
 	if (pack_context->err_no)
 		return;
 
+	end_block(pack_context);
 	uint8_t *p = ccpon_pack_reserve_space(pack_context, 1);
-	if(p) {
+	if(p)
 		*p = CCPON_C_LIST_END;
-	}
 }
 
 void ccpon_pack_map_begin(ccpon_pack_context *pack_context)
@@ -440,9 +497,9 @@ void ccpon_pack_map_begin(ccpon_pack_context *pack_context)
 		return;
 
 	uint8_t *p = ccpon_pack_reserve_space(pack_context, 1);
-	if(p) {
+	if(p)
 		*p = CCPON_C_MAP_BEGIN;
-	}
+	start_block(pack_context);
 }
 
 void ccpon_pack_map_end(ccpon_pack_context *pack_context)
@@ -450,6 +507,7 @@ void ccpon_pack_map_end(ccpon_pack_context *pack_context)
 	if (pack_context->err_no)
 		return;
 
+	end_block(pack_context);
 	uint8_t *p = ccpon_pack_reserve_space(pack_context, 1);
 	if(p) {
 		*p = CCPON_C_MAP_END;
@@ -461,10 +519,8 @@ void ccpon_pack_imap_begin(ccpon_pack_context* pack_context)
 	if (pack_context->err_no)
 		return;
 
-	uint8_t *p = ccpon_pack_reserve_space(pack_context, sizeof(CCPON_STR_IMAP_BEGIN));
-	if(p) {
-		memcpy(p, CCPON_STR_IMAP_BEGIN, sizeof(CCPON_STR_IMAP_BEGIN) - 1);
-	}
+	ccpon_pack_copy_str(pack_context, CCPON_STR_IMAP_BEGIN, sizeof(CCPON_STR_IMAP_BEGIN));
+	start_block(pack_context);
 }
 
 void ccpon_pack_imap_end(ccpon_pack_context *pack_context)
@@ -472,6 +528,7 @@ void ccpon_pack_imap_end(ccpon_pack_context *pack_context)
 	if (pack_context->err_no)
 		return;
 
+	end_block(pack_context);
 	uint8_t *p = ccpon_pack_reserve_space(pack_context, 1);
 	if(p) {
 		*p = CCPON_C_MAP_END;
@@ -484,9 +541,9 @@ void ccpon_pack_meta_begin(ccpon_pack_context *pack_context)
 		return;
 
 	uint8_t *p = ccpon_pack_reserve_space(pack_context, 1);
-	if(p) {
+	if(p)
 		*p = CCPON_C_META_BEGIN;
-	}
+	start_block(pack_context);
 }
 
 void ccpon_pack_meta_end(ccpon_pack_context *pack_context)
@@ -494,25 +551,10 @@ void ccpon_pack_meta_end(ccpon_pack_context *pack_context)
 	if (pack_context->err_no)
 		return;
 
+	end_block(pack_context);
 	uint8_t *p = ccpon_pack_reserve_space(pack_context, 1);
 	if(p) {
 		*p = CCPON_C_META_END;
-	}
-}
-
-void ccpon_pack_copy_str(ccpon_pack_context *pack_context, const void *str, size_t len)
-{
-	size_t copied = 0;
-	while (pack_context->err_no == CCPON_RC_OK && copied < len) {
-		uint8_t *p = ccpon_pack_reserve_space(pack_context, len);
-		if(!p)
-			break;
-		size_t buff_size = pack_context->current - p;
-		size_t rest = len - copied;
-		if(rest > buff_size)
-			rest = buff_size;
-		memcpy(p, ((const char*)str) + copied, rest);
-		copied += rest;
 	}
 }
 
@@ -1222,13 +1264,24 @@ void ccpon_unpack_next (ccpon_unpack_context* unpack_context)
 	}
 }
 
-void ccpon_pack_field_delim(ccpon_pack_context *pack_context)
+void ccpon_pack_field_delim(ccpon_pack_context *pack_context, bool is_first_field)
 {
-	ccpon_pack_copy_str(pack_context, ",", 1);
+	if(!is_first_field) {
+		if(pack_context->indent) {
+			ccpon_pack_copy_str(pack_context, ",\n", 2);
+		}
+		else {
+			ccpon_pack_copy_str(pack_context, ",", 2);
+		}
+	}
+	indent_element(pack_context);
 }
 
 void ccpon_pack_key_delim(ccpon_pack_context *pack_context)
 {
-	ccpon_pack_copy_str(pack_context, ":", 1);
+	if(pack_context->indent)
+		ccpon_pack_copy_str(pack_context, ": ", 2);
+	else
+		ccpon_pack_copy_str(pack_context, ":", 1);
 }
 
