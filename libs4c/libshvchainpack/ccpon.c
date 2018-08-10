@@ -1,33 +1,9 @@
-/*      CWPack - cwpack.c   */
-/*
- The MIT License (MIT)
-
- Copyright (c) 2017 Claes Wihlborg
-
- Permission is hereby granted, free of charge, to any person obtaining a copy of this
- software and associated documentation files (the "Software"), to deal in the Software
- without restriction, including without limitation the rights to use, copy, modify,
- merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit
- persons to whom the Software is furnished to do so, subject to the following conditions:
-
- The above copyright notice and this permission notice shall be included in all copies or
- substantial portions of the Software.
-
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
- BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
- DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
-
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
 
 #include "ccpon.h"
-//#include "ccpon_defines.h"
 
-//#if defined _WIN32 || defined LIBC_NEWLIB || 1
 // see http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap04.html#tag_04_15
 // see https://stackoverflow.com/questions/16647819/timegm-cross-platform
 // see https://www.boost.org/doc/libs/1_62_0/boost/chrono/io/time_point_io.hpp
@@ -63,6 +39,7 @@ static inline int days_from_1jan(int year, int month, int mday)
 
 time_t ccpon_timegm(struct tm *tm)
 {
+	// leap seconds are not part of Posix
 	time_t res = 0;
 	int year = tm->tm_year + 1900;
 	int month = tm->tm_mon; // 0 - 11
@@ -107,7 +84,6 @@ static void civil_from_days(long z, int *py, unsigned *pm, unsigned *pd)
 
 void ccpon_gmtime(int64_t epoch_sec, struct tm *tm)
 {
-
 	if (!tm)
 		return;
 
@@ -133,7 +109,6 @@ void ccpon_gmtime(int64_t epoch_sec, struct tm *tm)
 
 	tm->tm_isdst = -1;
 }
-//#endif
 
 uint8_t* ccpon_pack_reserve_space(ccpon_pack_context* pack_context, size_t more)
 {
@@ -161,9 +136,6 @@ const char CCPON_STR_TRUE[] = "true";
 const char CCPON_STR_FALSE[] = "false";
 const char CCPON_STR_IMAP_BEGIN[] = "i{";
 const char CCPON_STR_ARRAY_BEGIN[] = "a[";
-//const char CCPON_STR_ESC_BLOB_BEGIN[] = "b\"";
-//const char CCPON_STR_HEX_BLOB_BEGIN[] = "x\"";
-//const char CCPON_STR_DATETIME_BEGIN[] = "d\"";
 
 #define CCPON_C_KEY_DELIM ':'
 #define CCPON_C_FIELD_DELIM ','
@@ -176,8 +148,6 @@ const char CCPON_STR_ARRAY_BEGIN[] = "a[";
 #define CCPON_C_META_END '>'
 #define CCPON_C_DECIMAL_END 'n'
 #define CCPON_C_UNSIGNED_END 'u'
-
-/*************************   C   S Y S T E M   L I B R A R Y   ****************/
 
 #ifdef FORCE_NO_LIBRARY
 
@@ -194,7 +164,7 @@ static void	*memcpy(void *dst, const void *src, size_t n)
 
 #endif
 
-/*******************************   P A C K   **********************************/
+//============================   P A C K   =================================
 void ccpon_pack_context_init (ccpon_pack_context* pack_context, void *data, size_t length, ccpon_pack_overflow_handler hpo)
 {
 	pack_context->start = pack_context->current = (uint8_t*)data;
@@ -206,13 +176,9 @@ void ccpon_pack_context_init (ccpon_pack_context* pack_context, void *data, size
 	pack_context->nest_count = 0;
 }
 
-/*  Packing routines  --------------------------------------------------------------------------------  */
-
-void ccpon_pack_copy_str(ccpon_pack_context *pack_context, const void *str, size_t len)
+void ccpon_pack_copy_bytes(ccpon_pack_context *pack_context, const void *str, size_t len)
 {
 	size_t copied = 0;
-	if(len == 0)
-		len = strlen(str);
 	while (pack_context->err_no == CCPON_RC_OK && copied < len) {
 		uint8_t *p = ccpon_pack_reserve_space(pack_context, len);
 		if(!p)
@@ -226,6 +192,12 @@ void ccpon_pack_copy_str(ccpon_pack_context *pack_context, const void *str, size
 	}
 }
 
+void ccpon_pack_copy_str(ccpon_pack_context *pack_context, const void *str)
+{
+	size_t len = strlen(str);
+	ccpon_pack_copy_bytes(pack_context, str, len);
+}
+
 static void start_block(ccpon_pack_context* pack_context)
 {
 	pack_context->nest_count++;
@@ -235,7 +207,7 @@ static void indent_element(ccpon_pack_context* pack_context)
 {
 	if(pack_context->indent) {
 		for (int i = 0; i < pack_context->nest_count; ++i) {
-			ccpon_pack_copy_str(pack_context, pack_context->indent, 0);
+			ccpon_pack_copy_str(pack_context, pack_context->indent);
 		}
 	}
 }
@@ -245,7 +217,7 @@ static void end_block(ccpon_pack_context* pack_context)
 	pack_context->nest_count--;
 	if(pack_context->indent) {
 		if(pack_context->indent)
-			ccpon_pack_copy_str(pack_context, "\n", 1);
+			ccpon_pack_copy_bytes(pack_context, "\n", 1);
 		indent_element(pack_context);
 	}
 }
@@ -263,9 +235,8 @@ void ccpon_pack_uint(ccpon_pack_context* pack_context, uint64_t i)
 		pack_context->err_no = CCPON_RC_LOGICAL_ERROR;
 		return;
 	}
-	ccpon_pack_copy_str(pack_context, str, n);
+	ccpon_pack_copy_bytes(pack_context, str, n);
 }
-
 
 void ccpon_pack_int(ccpon_pack_context* pack_context, int64_t i)
 {
@@ -280,7 +251,7 @@ void ccpon_pack_int(ccpon_pack_context* pack_context, int64_t i)
 		pack_context->err_no = CCPON_RC_LOGICAL_ERROR;
 		return;
 	}
-	ccpon_pack_copy_str(pack_context, str, n);
+	ccpon_pack_copy_bytes(pack_context, str, n);
 }
 
 void ccpon_pack_decimal(ccpon_pack_context *pack_context, int64_t i, int dec_places)
@@ -323,7 +294,7 @@ void ccpon_pack_decimal(ccpon_pack_context *pack_context, int64_t i, int dec_pla
 			}
 		}
 	}
-	ccpon_pack_copy_str(pack_context, pc, buff + BUFFLEN - pc);
+	ccpon_pack_copy_bytes(pack_context, pc, buff + BUFFLEN - pc);
 }
 
 void ccpon_pack_double(ccpon_pack_context* pack_context, double d)
@@ -368,27 +339,27 @@ void ccpon_pack_date_time(ccpon_pack_context *pack_context, int64_t epoch_msecs,
 	char str[LEN];
 	int n = snprintf(str, LEN, "%04d-%02d-%02d %02d:%02d:%02d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
 	if(n > 0)
-		ccpon_pack_copy_str(pack_context, str, n);
+		ccpon_pack_copy_bytes(pack_context, str, n);
 	int msec = epoch_msecs % 1000;
 	if(msec > 0) {
 		n = snprintf(str, LEN, ".%03d", msec);
 		if(n > 0)
-			ccpon_pack_copy_str(pack_context, str, n);
+			ccpon_pack_copy_bytes(pack_context, str, n);
 	}
 	if(min_from_utc == 0) {
-		ccpon_pack_copy_str(pack_context, "Z", 1);
+		ccpon_pack_copy_bytes(pack_context, "Z", 1);
 	}
 	else {
 		if(min_from_utc < 0) {
-			ccpon_pack_copy_str(pack_context, "-", 1);
+			ccpon_pack_copy_bytes(pack_context, "-", 1);
 			min_from_utc = -min_from_utc;
 		}
 		else {
-			ccpon_pack_copy_str(pack_context, "+", 1);
+			ccpon_pack_copy_bytes(pack_context, "+", 1);
 		}
 		n = snprintf(str, LEN, "%02d%02d", min_from_utc/60, min_from_utc%60);
 		if(n > 0)
-			ccpon_pack_copy_str(pack_context, str, n);
+			ccpon_pack_copy_bytes(pack_context, str, n);
 	}
 }
 
@@ -396,21 +367,21 @@ void ccpon_pack_null(ccpon_pack_context* pack_context)
 {
 	if (pack_context->err_no)
 		return;
-	ccpon_pack_copy_str(pack_context, CCPON_STR_NULL, sizeof(CCPON_STR_NULL) - 1);
+	ccpon_pack_copy_bytes(pack_context, CCPON_STR_NULL, sizeof(CCPON_STR_NULL) - 1);
 }
 
 static void ccpon_pack_true (ccpon_pack_context* pack_context)
 {
 	if (pack_context->err_no)
 		return;
-	ccpon_pack_copy_str(pack_context, CCPON_STR_TRUE, sizeof(CCPON_STR_TRUE) - 1);
+	ccpon_pack_copy_bytes(pack_context, CCPON_STR_TRUE, sizeof(CCPON_STR_TRUE) - 1);
 }
 
 static void ccpon_pack_false (ccpon_pack_context* pack_context)
 {
 	if (pack_context->err_no)
 		return;
-	ccpon_pack_copy_str(pack_context, CCPON_STR_FALSE, sizeof(CCPON_STR_FALSE) - 1);
+	ccpon_pack_copy_bytes(pack_context, CCPON_STR_FALSE, sizeof(CCPON_STR_FALSE) - 1);
 }
 
 void ccpon_pack_boolean(ccpon_pack_context* pack_context, bool b)
@@ -429,7 +400,7 @@ void ccpon_pack_array_begin(ccpon_pack_context* pack_context)
 	if (pack_context->err_no)
 		return;
 
-	ccpon_pack_copy_str(pack_context, CCPON_STR_ARRAY_BEGIN, sizeof(CCPON_STR_ARRAY_BEGIN) - 1);
+	ccpon_pack_copy_bytes(pack_context, CCPON_STR_ARRAY_BEGIN, sizeof(CCPON_STR_ARRAY_BEGIN) - 1);
 	start_block(pack_context);
 }
 
@@ -489,7 +460,7 @@ void ccpon_pack_imap_begin(ccpon_pack_context* pack_context)
 	if (pack_context->err_no)
 		return;
 
-	ccpon_pack_copy_str(pack_context, CCPON_STR_IMAP_BEGIN, sizeof(CCPON_STR_IMAP_BEGIN)-1);
+	ccpon_pack_copy_bytes(pack_context, CCPON_STR_IMAP_BEGIN, sizeof(CCPON_STR_IMAP_BEGIN)-1);
 	start_block(pack_context);
 }
 
@@ -586,7 +557,7 @@ void ccpon_pack_blob(ccpon_pack_context* pack_context, const void* v, unsigned l
 	}
 }
 */
-/*******************************   U N P A C K   **********************************/
+//============================   U N P A C K   =================================
 
 #define UNPACK_ERROR(error_code)                        \
 {                                                       \
@@ -682,49 +653,7 @@ eonumb:
 		*p_val = val;
 	return n;
 }
-/*
-static int get_int(const uint8_t *s, long len, int64_t *val)
-{
-	int64_t ret = 0;
-	int neg = 0;
-	int n;
-	for (n = 0; n < len; n++) {
-		uint8_t b = s[n];
-		switch (b) {
-		case '+':
-		case '-':
-			if(n != 0)
-				return CCPON_RC_MALFORMED_INPUT;
-			if(b == '-')
-				neg = 1;
-			break;
-		case '0':
-		case '1':
-		case '2':
-		case '3':
-		case '4':
-		case '5':
-		case '6':
-		case '7':
-		case '8':
-		case '9':
-			ret *= 10;
-			ret += b - '0';
-			break;
-		default:
-			if(n == 0)
-				return CCPON_RC_MALFORMED_INPUT;
-			goto eonumb;
-		}
-	}
-eonumb:
-	if(neg)
-		ret = -ret;
-	if(val)
-		*val = ret;
-	return n;
-}
-*/
+
 static void unpack_date_time(ccpon_unpack_context *unpack_context, struct tm *tm, int *msec, int *utc_offset)
 {
 	tm->tm_year = 0;
@@ -833,9 +762,6 @@ void ccpon_unpack_context_init (ccpon_unpack_context* unpack_context, uint8_t *d
 	unpack_context->handle_unpack_underflow = huu;
 	//return unpack_context->return_code;
 }
-
-
-/*  Unpacking routines  ----------------------------------------------------------  */
 
 void ccpon_string_init(ccpon_string *str_it)
 {
@@ -1230,14 +1156,15 @@ void ccpon_unpack_next (ccpon_unpack_context* unpack_context)
 void ccpon_pack_field_delim(ccpon_pack_context *pack_context, bool is_first_field)
 {
 	if(!is_first_field) {
-		ccpon_pack_copy_str(pack_context, ",", 1);
+		ccpon_pack_copy_bytes(pack_context, ",", 1);
 	}
-	ccpon_pack_copy_str(pack_context, "\n", 1);
+	ccpon_pack_copy_bytes(pack_context, "\n", 1);
 	indent_element(pack_context);
 }
 
 void ccpon_pack_key_delim(ccpon_pack_context *pack_context)
 {
-	ccpon_pack_copy_str(pack_context, ":", 1);
+	ccpon_pack_copy_bytes(pack_context, ":", 1);
 }
+
 

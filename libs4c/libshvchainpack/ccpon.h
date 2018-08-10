@@ -10,12 +10,6 @@
 extern "C" {
 #endif
 
-//#ifndef ccpon_int
-//#define ccpon_int int
-//#endif
-
-/******************************* Return Codes *****************************/
-
 typedef enum
 {
 	CCPON_RC_OK = 0,
@@ -24,10 +18,6 @@ typedef enum
 	CCPON_RC_BUFFER_UNDERFLOW = -3,
 	CCPON_RC_MALFORMED_INPUT = -4,
 	CCPON_RC_LOGICAL_ERROR = -5,
-	//#define CCPON_RC_END_OF_INPUT -1
-	//#define CCPON_RC_ERROR_IN_HANDLER -6
-	//#define CCPON_RC_ILLEGAL_CALL -7
-	//#define CCPON_RC_STOPPED -9
 } ccpon_error_codes;
 
 
@@ -78,7 +68,8 @@ void ccpon_pack_imap_end (ccpon_pack_context* pack_context);
 void ccpon_pack_meta_begin (ccpon_pack_context* pack_context);
 void ccpon_pack_meta_end (ccpon_pack_context* pack_context);
 
-void ccpon_pack_copy_str (ccpon_pack_context* pack_context, const void *str, size_t len);
+void ccpon_pack_copy_bytes (ccpon_pack_context* pack_context, const void *str, size_t len);
+void ccpon_pack_copy_str (ccpon_pack_context* pack_context, const void *str);
 
 void ccpon_pack_field_delim (ccpon_pack_context* pack_context, bool is_first_field);
 void ccpon_pack_key_delim (ccpon_pack_context* pack_context);
@@ -103,33 +94,17 @@ typedef enum
 	CCPON_ITEM_IMAP,
 	CCPON_ITEM_DATE_TIME,
 	CCPON_ITEM_META,
-	//CCPON_ITEM_KEY_DELIM,
-	//CCPON_ITEM_FIELD_DELIM,
 	CCPON_ITEM_CONTAINER_END,
-	/*
-	CCPON_ITEM_ARRAY_END,
-	CCPON_ITEM_MAP_END,
-	CCPON_ITEM_IMAP_END,
-	CCPON_ITEM_META_END,
-	*/
 } ccpon_item_types;
-
-//enum ccpon_string_format {CCPON_STRING_FORMAT_INVALID = 0, CCPON_STRING_FORMAT_UTF8_ESCAPED, CCPON_STRING_FORMAT_HEX};
-//enum ccpon_string_unpack_escape_stage {CCPON_STRING_ESC_NONE = 0, CCPON_STRING_ESC_FOUND, CCPON_STRING_ESC_OCTAL, CCPON_STRING_ESC_HEX, CCPON_STRING_ESC_U16};
 
 typedef struct {
 	const uint8_t* start;
 	size_t length;
-	//enum ccpon_string_format format;
 	struct {
 		uint16_t chunk_cnt;
 		char escape_seq[2];
-		//uint8_t escaped_val;
-		//uint8_t escaped_len;
-		//uint8_t begin: 1;
 		uint8_t string_entered: 1;
 		uint8_t last_chunk: 1;
-		//uint8_t in_escape: 1;
 	} parse_status;
 } ccpon_string;
 
@@ -178,8 +153,6 @@ typedef struct ccpon_unpack_context {
 	int err_no; /* handlers can save error here */
 	ccpon_unpack_underflow_handler handle_unpack_underflow;
 } ccpon_unpack_context;
-
-
 
 void ccpon_unpack_context_init(ccpon_unpack_context* unpack_context, uint8_t* data, size_t length, ccpon_unpack_underflow_handler huu);
 
