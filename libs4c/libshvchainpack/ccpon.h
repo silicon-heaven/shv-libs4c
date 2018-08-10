@@ -149,7 +149,6 @@ typedef struct ccpon_unpack_context {
 	uint8_t* start;
 	uint8_t* current;
 	uint8_t* end; /* logical end of buffer */
-	//int return_code;
 	int err_no; /* handlers can save error here */
 	ccpon_unpack_underflow_handler handle_unpack_underflow;
 } ccpon_unpack_context;
