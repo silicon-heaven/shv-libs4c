@@ -1,162 +1,54 @@
 #ifndef C_CPON_H
 #define C_CPON_H
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <stddef.h>
+#include "ccpcp.h"
+
 #include <time.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef enum
-{
-	CCPON_RC_OK = 0,
-	CCPON_RC_MALLOC_ERROR = -1,
-	CCPON_RC_BUFFER_OVERFLOW = -2,
-	CCPON_RC_BUFFER_UNDERFLOW = -3,
-	CCPON_RC_MALFORMED_INPUT = -4,
-	CCPON_RC_LOGICAL_ERROR = -5,
-} ccpon_error_codes;
-
-
 time_t ccpon_timegm(struct tm *tm);
 void ccpon_gmtime(int64_t epoch_sec, struct tm *tm);
 
 /******************************* P A C K **********************************/
 
-struct ccpon_pack_context;
+void ccpon_pack_null (ccpcp_pack_context* pack_context);
+void ccpon_pack_boolean (ccpcp_pack_context* pack_context, bool b);
+void ccpon_pack_int (ccpcp_pack_context* pack_context, int64_t i);
+void ccpon_pack_uint (ccpcp_pack_context* pack_context, uint64_t i);
+void ccpon_pack_double (ccpcp_pack_context* pack_context, double d);
+void ccpon_pack_decimal (ccpcp_pack_context* pack_context, int64_t i, int dec_places);
+void ccpon_pack_str (ccpcp_pack_context* pack_context, const char* s, unsigned l);
+//void ccpon_pack_blob (ccpcp_pack_context* pack_context, const void *v, unsigned l);
+void ccpon_pack_date_time (ccpcp_pack_context* pack_context, int64_t epoch_msecs, int min_from_utc);
 
-typedef size_t (*ccpon_pack_overflow_handler)(struct ccpon_pack_context*, size_t);
+void ccpon_pack_array_begin (ccpcp_pack_context* pack_context, int size);
+void ccpon_pack_array_end (ccpcp_pack_context* pack_context);
 
-typedef struct ccpon_pack_context {
-	uint8_t* start;
-	uint8_t* current;
-	uint8_t* end;
-	const char *indent;
-	int nest_count;
-	int err_no; /* handlers can save error here */
-	ccpon_pack_overflow_handler handle_pack_overflow;
-} ccpon_pack_context;
+void ccpon_pack_list_begin (ccpcp_pack_context* pack_context);
+void ccpon_pack_list_end (ccpcp_pack_context* pack_context);
 
+void ccpon_pack_map_begin (ccpcp_pack_context* pack_context);
+void ccpon_pack_map_end (ccpcp_pack_context* pack_context);
 
-void ccpon_pack_context_init(ccpon_pack_context* pack_context, void *data, size_t length, ccpon_pack_overflow_handler hpo);
+void ccpon_pack_imap_begin (ccpcp_pack_context* pack_context);
+void ccpon_pack_imap_end (ccpcp_pack_context* pack_context);
 
-void ccpon_pack_null (ccpon_pack_context* pack_context);
-void ccpon_pack_boolean (ccpon_pack_context* pack_context, bool b);
-void ccpon_pack_int (ccpon_pack_context* pack_context, int64_t i);
-void ccpon_pack_uint (ccpon_pack_context* pack_context, uint64_t i);
-void ccpon_pack_double (ccpon_pack_context* pack_context, double d);
-void ccpon_pack_decimal (ccpon_pack_context* pack_context, int64_t i, int dec_places);
-void ccpon_pack_str (ccpon_pack_context* pack_context, const char* s, unsigned l);
-//void ccpon_pack_blob (ccpon_pack_context* pack_context, const void *v, unsigned l);
-void ccpon_pack_date_time (ccpon_pack_context* pack_context, int64_t epoch_msecs, int min_from_utc);
+void ccpon_pack_meta_begin (ccpcp_pack_context* pack_context);
+void ccpon_pack_meta_end (ccpcp_pack_context* pack_context);
 
-void ccpon_pack_array_begin (ccpon_pack_context* pack_context);
-void ccpon_pack_array_end (ccpon_pack_context* pack_context);
+void ccpon_pack_copy_str (ccpcp_pack_context* pack_context, const void *str);
 
-void ccpon_pack_list_begin (ccpon_pack_context* pack_context);
-void ccpon_pack_list_end (ccpon_pack_context* pack_context);
-
-void ccpon_pack_map_begin (ccpon_pack_context* pack_context);
-void ccpon_pack_map_end (ccpon_pack_context* pack_context);
-
-void ccpon_pack_imap_begin (ccpon_pack_context* pack_context);
-void ccpon_pack_imap_end (ccpon_pack_context* pack_context);
-
-void ccpon_pack_meta_begin (ccpon_pack_context* pack_context);
-void ccpon_pack_meta_end (ccpon_pack_context* pack_context);
-
-void ccpon_pack_copy_bytes (ccpon_pack_context* pack_context, const void *str, size_t len);
-void ccpon_pack_copy_str (ccpon_pack_context* pack_context, const void *str);
-
-void ccpon_pack_field_delim (ccpon_pack_context* pack_context, bool is_first_field);
-void ccpon_pack_key_delim (ccpon_pack_context* pack_context);
+void ccpon_pack_field_delim (ccpcp_pack_context* pack_context, bool is_first_field);
+void ccpon_pack_key_delim (ccpcp_pack_context* pack_context);
 
 /***************************** U N P A C K ********************************/
+void ccpcp_unpack_context_init(ccpcp_unpack_context* unpack_context, uint8_t* data, size_t length, ccpcp_unpack_underflow_handler huu);
 
-
-typedef enum
-{
-	CCPON_ITEM_INVALID = 0,
-	CCPON_ITEM_NULL,
-	CCPON_ITEM_BOOLEAN,
-	CCPON_ITEM_INT,
-	CCPON_ITEM_UINT,
-	CCPON_ITEM_DOUBLE,
-	CCPON_ITEM_DECIMAL,
-	CCPON_ITEM_STRING,
-	//CCPON_ITEM_BLOB,
-	CCPON_ITEM_LIST,
-	CCPON_ITEM_ARRAY,
-	CCPON_ITEM_MAP,
-	CCPON_ITEM_IMAP,
-	CCPON_ITEM_DATE_TIME,
-	CCPON_ITEM_META,
-	CCPON_ITEM_CONTAINER_END,
-} ccpon_item_types;
-
-typedef struct {
-	const uint8_t* start;
-	size_t length;
-	struct {
-		uint16_t chunk_cnt;
-		char escape_seq[2];
-		uint8_t string_entered: 1;
-		uint8_t last_chunk: 1;
-	} parse_status;
-} ccpon_string;
-
-void ccpon_string_init(ccpon_string *str_it);
-
-typedef struct {
-	uint32_t size;
-} ccpon_array;
-
-typedef struct {
-	int64_t msecs_since_epoch;
-	int minutes_from_utc;
-} ccpon_date_time;
-
-typedef struct {
-	int64_t mantisa;
-	int dec_places;
-} ccpon_decimal;
-
-typedef struct {
-	ccpon_item_types type;
-	union
-	{
-		ccpon_string String;
-		//ccpon_string Blob;
-		ccpon_date_time DateTime;
-		ccpon_decimal Decimal;
-		uint64_t UInt;
-		int64_t Int;
-		ccpon_array Array;
-		double Double;
-		bool Bool;
-	} as;
-} ccpon_item;
-
-struct ccpon_unpack_context;
-
-typedef size_t (*ccpon_unpack_underflow_handler)(struct ccpon_unpack_context*, size_t);
-
-typedef struct ccpon_unpack_context {
-	ccpon_item item;
-	uint8_t* start;
-	uint8_t* current;
-	uint8_t* end; /* logical end of buffer */
-	int err_no; /* handlers can save error here */
-	ccpon_unpack_underflow_handler handle_unpack_underflow;
-} ccpon_unpack_context;
-
-void ccpon_unpack_context_init(ccpon_unpack_context* unpack_context, uint8_t* data, size_t length, ccpon_unpack_underflow_handler huu);
-
-void ccpon_unpack_next (ccpon_unpack_context* unpack_context);
-void ccpon_skip_items (ccpon_unpack_context* unpack_context, long item_count);
+void ccpon_unpack_next (ccpcp_unpack_context* unpack_context);
+void ccpon_skip_items (ccpcp_unpack_context* unpack_context, long item_count);
 
 #ifdef __cplusplus
 }

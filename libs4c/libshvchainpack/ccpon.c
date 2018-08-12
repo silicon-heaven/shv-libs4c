@@ -1,8 +1,8 @@
+#include "ccpon.h"
+
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
-
-#include "ccpon.h"
 
 // see http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap04.html#tag_04_15
 // see https://stackoverflow.com/questions/16647819/timegm-cross-platform
@@ -110,18 +110,18 @@ void ccpon_gmtime(int64_t epoch_sec, struct tm *tm)
 	tm->tm_isdst = -1;
 }
 
-uint8_t* ccpon_pack_reserve_space(ccpon_pack_context* pack_context, size_t more)
+uint8_t* ccpon_pack_reserve_space(ccpcp_pack_context* pack_context, size_t more)
 {
 	uint8_t* p = pack_context->current;
 	uint8_t* nyp = p + more;
 	if (nyp > pack_context->end) {
 		if (!pack_context->handle_pack_overflow) {
-			pack_context->err_no = CCPON_RC_BUFFER_OVERFLOW;
+			pack_context->err_no = CCPCP_RC_BUFFER_OVERFLOW;
 			return NULL;
 		}
 		size_t sz = pack_context->handle_pack_overflow (pack_context, more);
 		if (sz < more) {
-			pack_context->err_no = CCPON_RC_BUFFER_OVERFLOW;
+			pack_context->err_no = CCPCP_RC_BUFFER_OVERFLOW;
 			return NULL;
 		}
 		p = pack_context->current;
@@ -166,45 +166,29 @@ static void	*memcpy(void *dst, const void *src, size_t n)
 #endif
 
 //============================   P A C K   =================================
-void ccpon_pack_context_init (ccpon_pack_context* pack_context, void *data, size_t length, ccpon_pack_overflow_handler hpo)
+void ccpcp_pack_context_init (ccpcp_pack_context* pack_context, void *data, size_t length, ccpcp_pack_overflow_handler hpo)
 {
 	pack_context->start = pack_context->current = (uint8_t*)data;
 	pack_context->end = pack_context->start + length;
 	pack_context->err_no = 0;
 	pack_context->handle_pack_overflow = hpo;
-	pack_context->err_no = CCPON_RC_OK;
+	pack_context->err_no = CCPCP_RC_OK;
 	pack_context->indent = NULL;
 	pack_context->nest_count = 0;
 }
 
-void ccpon_pack_copy_bytes(ccpon_pack_context *pack_context, const void *str, size_t len)
-{
-	size_t copied = 0;
-	while (pack_context->err_no == CCPON_RC_OK && copied < len) {
-		uint8_t *p = ccpon_pack_reserve_space(pack_context, len);
-		if(!p)
-			break;
-		size_t buff_size = pack_context->current - p;
-		size_t rest = len - copied;
-		if(rest > buff_size)
-			rest = buff_size;
-		memcpy(p, ((const char*)str) + copied, rest);
-		copied += rest;
-	}
-}
-
-void ccpon_pack_copy_str(ccpon_pack_context *pack_context, const void *str)
+void ccpon_pack_copy_str(ccpcp_pack_context *pack_context, const void *str)
 {
 	size_t len = strlen(str);
-	ccpon_pack_copy_bytes(pack_context, str, len);
+	ccpcp_pack_copy_bytes(pack_context, str, len);
 }
 
-static void start_block(ccpon_pack_context* pack_context)
+static void start_block(ccpcp_pack_context* pack_context)
 {
 	pack_context->nest_count++;
 }
 
-static void indent_element(ccpon_pack_context* pack_context)
+static void indent_element(ccpcp_pack_context* pack_context)
 {
 	if(pack_context->indent) {
 		for (int i = 0; i < pack_context->nest_count; ++i) {
@@ -213,17 +197,17 @@ static void indent_element(ccpon_pack_context* pack_context)
 	}
 }
 
-static void end_block(ccpon_pack_context* pack_context)
+static void end_block(ccpcp_pack_context* pack_context)
 {
 	pack_context->nest_count--;
 	if(pack_context->indent) {
 		if(pack_context->indent)
-			ccpon_pack_copy_bytes(pack_context, "\n", 1);
+			ccpcp_pack_copy_bytes(pack_context, "\n", 1);
 		indent_element(pack_context);
 	}
 }
 
-void ccpon_pack_uint(ccpon_pack_context* pack_context, uint64_t i)
+void ccpon_pack_uint(ccpcp_pack_context* pack_context, uint64_t i)
 {
 	if (pack_context->err_no)
 		return;
@@ -233,13 +217,13 @@ void ccpon_pack_uint(ccpon_pack_context* pack_context, uint64_t i)
 	char str[LEN];
 	int n = snprintf(str, LEN, "%luu", i);
 	if(n < 0) {
-		pack_context->err_no = CCPON_RC_LOGICAL_ERROR;
+		pack_context->err_no = CCPCP_RC_LOGICAL_ERROR;
 		return;
 	}
-	ccpon_pack_copy_bytes(pack_context, str, n);
+	ccpcp_pack_copy_bytes(pack_context, str, n);
 }
 
-void ccpon_pack_int(ccpon_pack_context* pack_context, int64_t i)
+void ccpon_pack_int(ccpcp_pack_context* pack_context, int64_t i)
 {
 	if (pack_context->err_no)
 		return;
@@ -249,13 +233,13 @@ void ccpon_pack_int(ccpon_pack_context* pack_context, int64_t i)
 	char str[LEN];
 	int n = snprintf(str, LEN, "%ld", i);
 	if(n < 0) {
-		pack_context->err_no = CCPON_RC_LOGICAL_ERROR;
+		pack_context->err_no = CCPCP_RC_LOGICAL_ERROR;
 		return;
 	}
-	ccpon_pack_copy_bytes(pack_context, str, n);
+	ccpcp_pack_copy_bytes(pack_context, str, n);
 }
 
-void ccpon_pack_decimal(ccpon_pack_context *pack_context, int64_t i, int dec_places)
+void ccpon_pack_decimal(ccpcp_pack_context *pack_context, int64_t i, int dec_places)
 {
 	if (pack_context->err_no)
 		return;
@@ -265,11 +249,11 @@ void ccpon_pack_decimal(ccpon_pack_context *pack_context, int64_t i, int dec_pla
 	char str[LEN];
 	int n = snprintf(str, LEN, "%ld", i);
 	if(n < 0) {
-		pack_context->err_no = CCPON_RC_LOGICAL_ERROR;
+		pack_context->err_no = CCPCP_RC_LOGICAL_ERROR;
 		return;
 	}
 	if(dec_places < 0) {
-		pack_context->err_no = CCPON_RC_LOGICAL_ERROR;
+		pack_context->err_no = CCPCP_RC_LOGICAL_ERROR;
 		return;
 	}
 	static const int BUFFLEN = 256;
@@ -295,10 +279,10 @@ void ccpon_pack_decimal(ccpon_pack_context *pack_context, int64_t i, int dec_pla
 			}
 		}
 	}
-	ccpon_pack_copy_bytes(pack_context, pc, buff + BUFFLEN - pc);
+	ccpcp_pack_copy_bytes(pack_context, pc, buff + BUFFLEN - pc);
 }
 
-void ccpon_pack_double(ccpon_pack_context* pack_context, double d)
+void ccpon_pack_double(ccpcp_pack_context* pack_context, double d)
 {
 	if (pack_context->err_no)
 		return;
@@ -308,7 +292,7 @@ void ccpon_pack_double(ccpon_pack_context* pack_context, double d)
 	char str[LEN];
 	int n = snprintf(str, LEN, "%lg", d);
 	if(n < 0) {
-		pack_context->err_no = CCPON_RC_LOGICAL_ERROR;
+		pack_context->err_no = CCPCP_RC_LOGICAL_ERROR;
 		return;
 	}
 	int has_dot = 0;
@@ -332,62 +316,62 @@ void ccpon_pack_double(ccpon_pack_context* pack_context, double d)
 	}
 }
 
-void ccpon_pack_date_time(ccpon_pack_context *pack_context, int64_t epoch_msecs, int min_from_utc)
+void ccpon_pack_date_time(ccpcp_pack_context *pack_context, int64_t epoch_msecs, int min_from_utc)
 {
-	ccpon_pack_copy_bytes(pack_context, CCPON_DATE_TIME_BEGIN, sizeof (CCPON_DATE_TIME_BEGIN) - 1);
+	ccpcp_pack_copy_bytes(pack_context, CCPON_DATE_TIME_BEGIN, sizeof (CCPON_DATE_TIME_BEGIN) - 1);
 	struct tm tm;
 	ccpon_gmtime(epoch_msecs / 1000, &tm);
 	static const unsigned LEN = 32;
 	char str[LEN];
 	int n = snprintf(str, LEN, "%04d-%02d-%02dT%02d:%02d:%02d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
 	if(n > 0)
-		ccpon_pack_copy_bytes(pack_context, str, n);
+		ccpcp_pack_copy_bytes(pack_context, str, n);
 	int msec = epoch_msecs % 1000;
 	if(msec > 0) {
 		n = snprintf(str, LEN, ".%03d", msec);
 		if(n > 0)
-			ccpon_pack_copy_bytes(pack_context, str, n);
+			ccpcp_pack_copy_bytes(pack_context, str, n);
 	}
 	if(min_from_utc == 0) {
-		ccpon_pack_copy_bytes(pack_context, "Z", 1);
+		ccpcp_pack_copy_bytes(pack_context, "Z", 1);
 	}
 	else {
 		if(min_from_utc < 0) {
-			ccpon_pack_copy_bytes(pack_context, "-", 1);
+			ccpcp_pack_copy_bytes(pack_context, "-", 1);
 			min_from_utc = -min_from_utc;
 		}
 		else {
-			ccpon_pack_copy_bytes(pack_context, "+", 1);
+			ccpcp_pack_copy_bytes(pack_context, "+", 1);
 		}
 		n = snprintf(str, LEN, "%02d%02d", min_from_utc/60, min_from_utc%60);
 		if(n > 0)
-			ccpon_pack_copy_bytes(pack_context, str, n);
+			ccpcp_pack_copy_bytes(pack_context, str, n);
 	}
-	ccpon_pack_copy_bytes(pack_context, "\"", 1);
+	ccpcp_pack_copy_bytes(pack_context, "\"", 1);
 }
 
-void ccpon_pack_null(ccpon_pack_context* pack_context)
+void ccpon_pack_null(ccpcp_pack_context* pack_context)
 {
 	if (pack_context->err_no)
 		return;
-	ccpon_pack_copy_bytes(pack_context, CCPON_STR_NULL, sizeof(CCPON_STR_NULL) - 1);
+	ccpcp_pack_copy_bytes(pack_context, CCPON_STR_NULL, sizeof(CCPON_STR_NULL) - 1);
 }
 
-static void ccpon_pack_true (ccpon_pack_context* pack_context)
+static void ccpon_pack_true (ccpcp_pack_context* pack_context)
 {
 	if (pack_context->err_no)
 		return;
-	ccpon_pack_copy_bytes(pack_context, CCPON_STR_TRUE, sizeof(CCPON_STR_TRUE) - 1);
+	ccpcp_pack_copy_bytes(pack_context, CCPON_STR_TRUE, sizeof(CCPON_STR_TRUE) - 1);
 }
 
-static void ccpon_pack_false (ccpon_pack_context* pack_context)
+static void ccpon_pack_false (ccpcp_pack_context* pack_context)
 {
 	if (pack_context->err_no)
 		return;
-	ccpon_pack_copy_bytes(pack_context, CCPON_STR_FALSE, sizeof(CCPON_STR_FALSE) - 1);
+	ccpcp_pack_copy_bytes(pack_context, CCPON_STR_FALSE, sizeof(CCPON_STR_FALSE) - 1);
 }
 
-void ccpon_pack_boolean(ccpon_pack_context* pack_context, bool b)
+void ccpon_pack_boolean(ccpcp_pack_context* pack_context, bool b)
 {
 	if (pack_context->err_no)
 		return;
@@ -398,21 +382,24 @@ void ccpon_pack_boolean(ccpon_pack_context* pack_context, bool b)
 		ccpon_pack_false(pack_context);
 }
 
-void ccpon_pack_array_begin(ccpon_pack_context* pack_context)
+void ccpon_pack_array_begin(ccpcp_pack_context* pack_context, int size)
 {
 	if (pack_context->err_no)
 		return;
 
-	ccpon_pack_copy_bytes(pack_context, CCPON_STR_ARRAY_BEGIN, sizeof(CCPON_STR_ARRAY_BEGIN) - 1);
+	ccpcp_pack_copy_bytes(pack_context, CCPON_STR_ARRAY_BEGIN, sizeof(CCPON_STR_ARRAY_BEGIN) - 1);
+	if(size >= 0) {
+		ccpon_pack_int(pack_context, size);
+	}
 	start_block(pack_context);
 }
 
-void ccpon_pack_array_end(ccpon_pack_context *pack_context)
+void ccpon_pack_array_end(ccpcp_pack_context *pack_context)
 {
 	ccpon_pack_list_end(pack_context);
 }
 
-void ccpon_pack_list_begin(ccpon_pack_context *pack_context)
+void ccpon_pack_list_begin(ccpcp_pack_context *pack_context)
 {
 	if (pack_context->err_no)
 		return;
@@ -424,7 +411,7 @@ void ccpon_pack_list_begin(ccpon_pack_context *pack_context)
 
 }
 
-void ccpon_pack_list_end(ccpon_pack_context *pack_context)
+void ccpon_pack_list_end(ccpcp_pack_context *pack_context)
 {
 	if (pack_context->err_no)
 		return;
@@ -435,7 +422,7 @@ void ccpon_pack_list_end(ccpon_pack_context *pack_context)
 		*p = CCPON_C_LIST_END;
 }
 
-void ccpon_pack_map_begin(ccpon_pack_context *pack_context)
+void ccpon_pack_map_begin(ccpcp_pack_context *pack_context)
 {
 	if (pack_context->err_no)
 		return;
@@ -446,7 +433,7 @@ void ccpon_pack_map_begin(ccpon_pack_context *pack_context)
 	start_block(pack_context);
 }
 
-void ccpon_pack_map_end(ccpon_pack_context *pack_context)
+void ccpon_pack_map_end(ccpcp_pack_context *pack_context)
 {
 	if (pack_context->err_no)
 		return;
@@ -458,21 +445,21 @@ void ccpon_pack_map_end(ccpon_pack_context *pack_context)
 	}
 }
 
-void ccpon_pack_imap_begin(ccpon_pack_context* pack_context)
+void ccpon_pack_imap_begin(ccpcp_pack_context* pack_context)
 {
 	if (pack_context->err_no)
 		return;
 
-	ccpon_pack_copy_bytes(pack_context, CCPON_STR_IMAP_BEGIN, sizeof(CCPON_STR_IMAP_BEGIN)-1);
+	ccpcp_pack_copy_bytes(pack_context, CCPON_STR_IMAP_BEGIN, sizeof(CCPON_STR_IMAP_BEGIN)-1);
 	start_block(pack_context);
 }
 
-void ccpon_pack_imap_end(ccpon_pack_context *pack_context)
+void ccpon_pack_imap_end(ccpcp_pack_context *pack_context)
 {
 	ccpon_pack_map_end(pack_context);
 }
 
-void ccpon_pack_meta_begin(ccpon_pack_context *pack_context)
+void ccpon_pack_meta_begin(ccpcp_pack_context *pack_context)
 {
 	if (pack_context->err_no)
 		return;
@@ -483,7 +470,7 @@ void ccpon_pack_meta_begin(ccpon_pack_context *pack_context)
 	start_block(pack_context);
 }
 
-void ccpon_pack_meta_end(ccpon_pack_context *pack_context)
+void ccpon_pack_meta_end(ccpcp_pack_context *pack_context)
 {
 	if (pack_context->err_no)
 		return;
@@ -495,7 +482,7 @@ void ccpon_pack_meta_end(ccpon_pack_context *pack_context)
 	}
 }
 
-static uint8_t* ccpon_pack_blob_data_escaped(ccpon_pack_context* pack_context, const void* v, unsigned l)
+static uint8_t* ccpon_pack_blob_data_escaped(ccpcp_pack_context* pack_context, const void* v, unsigned l)
 {
 	if (pack_context->err_no)
 		return 0;
@@ -528,7 +515,7 @@ static uint8_t* ccpon_pack_blob_data_escaped(ccpon_pack_context* pack_context, c
 	return p;
 }
 
-void ccpon_pack_str(ccpon_pack_context* pack_context, const char* s, unsigned l)
+void ccpon_pack_str(ccpcp_pack_context* pack_context, const char* s, unsigned l)
 {
 	if (pack_context->err_no)
 		return;
@@ -544,7 +531,7 @@ void ccpon_pack_str(ccpon_pack_context* pack_context, const char* s, unsigned l)
 	}
 }
 /*
-void ccpon_pack_blob(ccpon_pack_context* pack_context, const void* v, unsigned l)
+void ccpon_pack_blob(ccpcp_pack_context* pack_context, const void* v, unsigned l)
 {
 	if (pack_context->err_no)
 		return;
@@ -564,46 +551,22 @@ void ccpon_pack_blob(ccpon_pack_context* pack_context, const void* v, unsigned l
 
 #define UNPACK_ERROR(error_code)                        \
 {                                                       \
-    unpack_context->item.type = CCPON_ITEM_INVALID;        \
+    unpack_context->item.type = CCPCP_ITEM_INVALID;        \
     unpack_context->err_no = error_code;           \
     return;                                             \
 }
 
-uint8_t* ccpon_unpack_assert_byte(ccpon_unpack_context* unpack_context)
-{
-	size_t more = 1;
-	uint8_t* p = unpack_context->current;
-	uint8_t* nyp = p + more;
-	if (nyp > unpack_context->end) {
-		if (!unpack_context->handle_unpack_underflow) {
-			unpack_context->err_no = CCPON_RC_BUFFER_UNDERFLOW;
-			//unpack_context->item.type = CCPON_ITEM_INVALID;
-			return NULL;
-		}
-		size_t sz = unpack_context->handle_unpack_underflow (unpack_context, more);
-		if (sz < more) {
-			unpack_context->err_no = CCPON_RC_BUFFER_UNDERFLOW;
-			//unpack_context->item.type = CCPON_ITEM_INVALID;
-			return NULL;
-		}
-		p = unpack_context->current;
-		nyp = p + more;
-	}
-	unpack_context->current = nyp;
-	return p;
-}
-
 #define UNPACK_ASSERT_BYTE()              \
 {                                                       \
-    p = ccpon_unpack_assert_byte(unpack_context);        \
+    p = ccpcp_unpack_assert_byte(unpack_context);        \
     if(!p)           \
         return;                                             \
 }
 
-uint8_t* ccpon_unpack_skip_blank(ccpon_unpack_context* unpack_context)
+uint8_t* ccpon_unpack_skip_blank(ccpcp_unpack_context* unpack_context)
 {
 	while(1) {
-		uint8_t* p = ccpon_unpack_assert_byte(unpack_context);
+		uint8_t* p = ccpcp_unpack_assert_byte(unpack_context);
 		if(!p)
 			return p;
 		if(*p > ' ')
@@ -611,13 +574,13 @@ uint8_t* ccpon_unpack_skip_blank(ccpon_unpack_context* unpack_context)
 	}
 }
 
-static int unpack_int(ccpon_unpack_context* unpack_context, int64_t *p_val)
+static int unpack_int(ccpcp_unpack_context* unpack_context, int64_t *p_val)
 {
 	int64_t val = 0;
 	int neg = 0;
 	int n = 0;
 	for (; ; n++) {
-		uint8_t *p = ccpon_unpack_assert_byte(unpack_context);
+		uint8_t *p = ccpcp_unpack_assert_byte(unpack_context);
 		if(!p)
 			goto eonumb;
 		uint8_t b = *p;
@@ -657,7 +620,7 @@ eonumb:
 	return n;
 }
 
-static void unpack_date_time(ccpon_unpack_context *unpack_context, struct tm *tm, int *msec, int *utc_offset)
+static void unpack_date_time(ccpcp_unpack_context *unpack_context, struct tm *tm, int *msec, int *utc_offset)
 {
 	tm->tm_year = 0;
 	tm->tm_mon = 0;
@@ -713,14 +676,14 @@ static void unpack_date_time(ccpon_unpack_context *unpack_context, struct tm *tm
 		return;
 	tm->tm_sec = (int)val;
 
-	p = ccpon_unpack_assert_byte(unpack_context);
+	p = ccpcp_unpack_assert_byte(unpack_context);
 	if(p) {
 		if(*p == '.') {
 			n = unpack_int(unpack_context, &val);
 			if(n < 0)
 				return;
 			*msec = (int)val;
-			p = ccpon_unpack_assert_byte(unpack_context);
+			p = ccpcp_unpack_assert_byte(unpack_context);
 		}
 		if(p) {
 			uint8_t b = *p;
@@ -733,7 +696,7 @@ static void unpack_date_time(ccpon_unpack_context *unpack_context, struct tm *tm
 				if(n < 0)
 					return;
 				if(!(n == 2 || n == 4))
-					UNPACK_ERROR(CCPON_RC_MALFORMED_INPUT);
+					UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT);
 				if(n == 2)
 					*utc_offset = (int)(60 * val);
 				else if(n == 4)
@@ -748,25 +711,25 @@ static void unpack_date_time(ccpon_unpack_context *unpack_context, struct tm *tm
 			}
 		}
 	}
-	unpack_context->err_no = CCPON_RC_OK;
-	unpack_context->item.type = CCPON_ITEM_DATE_TIME;
+	unpack_context->err_no = CCPCP_RC_OK;
+	unpack_context->item.type = CCPCP_ITEM_DATE_TIME;
 	int64_t epoch_msec = ccpon_timegm(tm) * 1000;
-	ccpon_date_time *it = &unpack_context->item.as.DateTime;
+	ccpcp_date_time *it = &unpack_context->item.as.DateTime;
 	epoch_msec += *msec;
 	it->msecs_since_epoch = epoch_msec;
 	it->minutes_from_utc = *utc_offset;
 }
 
-void ccpon_unpack_context_init (ccpon_unpack_context* unpack_context, uint8_t *data, size_t length, ccpon_unpack_underflow_handler huu)
+void ccpcp_unpack_context_init (ccpcp_unpack_context* unpack_context, uint8_t *data, size_t length, ccpcp_unpack_underflow_handler huu)
 {
 	unpack_context->start = unpack_context->current = data;
 	unpack_context->end = unpack_context->start + length;
-	unpack_context->err_no = CCPON_RC_OK;
+	unpack_context->err_no = CCPCP_RC_OK;
 	unpack_context->handle_unpack_underflow = huu;
 	//return unpack_context->return_code;
 }
 
-void ccpon_string_init(ccpon_string *str_it)
+void ccpcp_string_init(ccpcp_string *str_it)
 {
 	str_it->start = NULL;
 	str_it->length = 0;
@@ -792,12 +755,12 @@ static inline int is_hex(uint8_t b)
 			|| (b >= 'A' && b <= 'F');
 }
 */
-static void ccpon_unpack_string(ccpon_unpack_context* unpack_context)
+static void ccpon_unpack_string(ccpcp_unpack_context* unpack_context)
 {
-	if(unpack_context->item.type != CCPON_ITEM_STRING)
-		UNPACK_ERROR(CCPON_RC_LOGICAL_ERROR);
+	if(unpack_context->item.type != CCPCP_ITEM_STRING)
+		UNPACK_ERROR(CCPCP_RC_LOGICAL_ERROR);
 
-	ccpon_string *it = &unpack_context->item.as.String;
+	ccpcp_string *it = &unpack_context->item.as.String;
 	it->length = 0;
 	it->start = unpack_context->current;
 	for (; unpack_context->current < unpack_context->end; unpack_context->current++) {
@@ -904,12 +867,12 @@ static void ccpon_unpack_string(ccpon_unpack_context* unpack_context)
 				it->parse_status.escape_stage = CCPON_STRING_ESC_NONE;
 		}
 		else {
-			UNPACK_ERROR(CCPON_RC_LOGICAL_ERROR);
+			UNPACK_ERROR(CCPCP_RC_LOGICAL_ERROR);
 		}
-static void ccpon_unpack_string(ccpon_unpack_context* unpack_context)
+static void ccpon_unpack_string(ccpcp_unpack_context* unpack_context)
 {
-	if(unpack_context->item.type != CCPON_ITEM_STRING)
-		UNPACK_ERROR(CCPON_RC_LOGICAL_ERROR);
+	if(unpack_context->item.type != CCPCP_ITEM_STRING)
+		UNPACK_ERROR(CCPCP_RC_LOGICAL_ERROR);
 
 	ccpon_string *it = &unpack_context->item.as.String;
 	uint8_t *p1 = unpack_context->current;
@@ -945,14 +908,14 @@ static void ccpon_unpack_string(ccpon_unpack_context* unpack_context)
 	it->parse_status.chunk_cnt++;
 }
 #endif
-void ccpon_unpack_next (ccpon_unpack_context* unpack_context)
+void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 {
 	if (unpack_context->err_no)
 		return;
 
 	uint8_t *p;
-	if(unpack_context->item.type == CCPON_ITEM_STRING) {
-		ccpon_string *str_it = &unpack_context->item.as.String;
+	if(unpack_context->item.type == CCPCP_ITEM_STRING) {
+		ccpcp_string *str_it = &unpack_context->item.as.String;
 		if(!str_it->parse_status.last_chunk) {
 			UNPACK_ASSERT_BYTE();
 			unpack_context->current--;
@@ -961,7 +924,7 @@ void ccpon_unpack_next (ccpon_unpack_context* unpack_context)
 		}
 	}
 
-	unpack_context->item.type = CCPON_ITEM_INVALID;
+	unpack_context->item.type = CCPCP_ITEM_INVALID;
 
 	p = ccpon_unpack_skip_blank(unpack_context);
 	if(!p)
@@ -980,50 +943,55 @@ void ccpon_unpack_next (ccpon_unpack_context* unpack_context)
 	case CCPON_C_MAP_END:
 	case CCPON_C_LIST_END:
 	case CCPON_C_META_END:
-		unpack_context->item.type = CCPON_ITEM_CONTAINER_END;
+		unpack_context->item.type = CCPCP_ITEM_CONTAINER_END;
 		break;
 	case CCPON_C_META_BEGIN:
-		unpack_context->item.type = CCPON_ITEM_META;
+		unpack_context->item.type = CCPCP_ITEM_META;
 		break;
 	case CCPON_C_MAP_BEGIN:
-		unpack_context->item.type = CCPON_ITEM_MAP;
+		unpack_context->item.type = CCPCP_ITEM_MAP;
 		break;
 	case CCPON_C_LIST_BEGIN:
-		unpack_context->item.type = CCPON_ITEM_LIST;
+		unpack_context->item.type = CCPCP_ITEM_LIST;
 		break;
 	case 'i': {
 		UNPACK_ASSERT_BYTE();
 		if(*p != '{')
-			UNPACK_ERROR(CCPON_RC_MALFORMED_INPUT)
-		unpack_context->item.type = CCPON_ITEM_IMAP;
+			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT)
+		unpack_context->item.type = CCPCP_ITEM_IMAP;
 		break;
 	}
 	case 'a': {
+		int64_t size;
+		int n = unpack_int(unpack_context, &size);
+		if(n == 0)
+			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT)
 		UNPACK_ASSERT_BYTE();
 		if(*p != '[')
-			UNPACK_ERROR(CCPON_RC_MALFORMED_INPUT)
-		unpack_context->item.type = CCPON_ITEM_ARRAY;
+			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT)
+		unpack_context->item.type = CCPCP_ITEM_ARRAY;
+		unpack_context->item.as.Array.size = size;
 		break;
 	}
 	case 'd': {
 		UNPACK_ASSERT_BYTE();
 		if(!p || *p != '"')
-			UNPACK_ERROR(CCPON_RC_MALFORMED_INPUT)
+			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT)
 		struct tm tm;
 		int msec;
 		int utc_offset;
 		unpack_date_time(unpack_context, &tm, &msec, &utc_offset);
 		UNPACK_ASSERT_BYTE();
 		if(!p || *p != '"')
-			UNPACK_ERROR(CCPON_RC_MALFORMED_INPUT)
+			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT)
 		break;
 	}
 		/*
 	case 'x': {
 		UNPACK_ASSERT_BYTE();
-		unpack_context->item.type = CCPON_ITEM_STRING;
+		unpack_context->item.type = CCPCP_ITEM_STRING;
 		ccpon_string *str_it = &unpack_context->item.as.String;
-		ccpon_string_init(str_it);
+		ccpcp_string_init(str_it);
 		str_it->format = CCPON_STRING_FORMAT_HEX;
 		ccpon_unpack_string(unpack_context);
 		break;
@@ -1031,7 +999,7 @@ void ccpon_unpack_next (ccpon_unpack_context* unpack_context)
 	case 'b': {
 		UNPACK_ASSERT_BYTE();
 		if(*p != '"')
-			UNPACK_ERROR(CCPON_RC_MALFORMED_INPUT)
+			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT)
 		if(ccpon_unpack_string(unpack_context) == 0)
 		return;
 		unpack_context->item.type = CCPON_ITEM_BLOB;
@@ -1050,14 +1018,14 @@ void ccpon_unpack_next (ccpon_unpack_context* unpack_context)
 				if(*p == 's') {
 					UNPACK_ASSERT_BYTE();
 					if(*p == 'e') {
-						unpack_context->item.type = CCPON_ITEM_BOOLEAN;
+						unpack_context->item.type = CCPCP_ITEM_BOOLEAN;
 						unpack_context->item.as.Bool = false;
 						break;
 					}
 				}
 			}
 		}
-		UNPACK_ERROR(CCPON_RC_MALFORMED_INPUT)
+		UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT)
 		break;
 	}
 	case 't': {
@@ -1067,19 +1035,19 @@ void ccpon_unpack_next (ccpon_unpack_context* unpack_context)
 			if(*p == 'u') {
 				UNPACK_ASSERT_BYTE();
 				if(*p == 'e') {
-					unpack_context->item.type = CCPON_ITEM_BOOLEAN;
+					unpack_context->item.type = CCPCP_ITEM_BOOLEAN;
 					unpack_context->item.as.Bool = true;
 					break;
 				}
 			}
 		}
-		UNPACK_ERROR(CCPON_RC_MALFORMED_INPUT)
+		UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT)
 		break;
 	}
 	case '"': {
-		unpack_context->item.type = CCPON_ITEM_STRING;
-		ccpon_string *str_it = &unpack_context->item.as.String;
-		ccpon_string_init(str_it);
+		unpack_context->item.type = CCPCP_ITEM_STRING;
+		ccpcp_string *str_it = &unpack_context->item.as.String;
+		ccpcp_string_init(str_it);
 		//str_it->format = CCPON_STRING_FORMAT_UTF8_ESCAPED;
 		unpack_context->current--;
 		ccpon_unpack_string(unpack_context);
@@ -1119,7 +1087,7 @@ void ccpon_unpack_next (ccpon_unpack_context* unpack_context)
 		int n = unpack_int(unpack_context, &mantisa);
 		if(n < 0)
 			UNPACK_ERROR(n)
-		p = ccpon_unpack_assert_byte(unpack_context);
+		p = ccpcp_unpack_assert_byte(unpack_context);
 		while(p) {
 			if(*p == CCPON_C_UNSIGNED_END) {
 				flags.is_uint = 1;
@@ -1131,7 +1099,7 @@ void ccpon_unpack_next (ccpon_unpack_context* unpack_context)
 				if(n < 0)
 					UNPACK_ERROR(n)
 				dec_cnt = n;
-				p = ccpon_unpack_assert_byte(unpack_context);
+				p = ccpcp_unpack_assert_byte(unpack_context);
 				if(!p)
 					break;
 				if(*p == CCPON_C_DECIMAL_END) {
@@ -1156,7 +1124,7 @@ void ccpon_unpack_next (ccpon_unpack_context* unpack_context)
 			for (int i = 0; i < dec_cnt; ++i)
 				mantisa *= 10;
 			mantisa += decimals;
-			unpack_context->item.type = CCPON_ITEM_DECIMAL;
+			unpack_context->item.type = CCPCP_ITEM_DECIMAL;
 			unpack_context->item.as.Decimal.mantisa = flags.is_neg? -mantisa: mantisa;
 			unpack_context->item.as.Decimal.dec_places = dec_cnt;
 		}
@@ -1173,36 +1141,36 @@ void ccpon_unpack_next (ccpon_unpack_context* unpack_context)
 				for (int i=0; i<exponent; i++)
 					d *= 10;
 			}
-			unpack_context->item.type = CCPON_ITEM_DOUBLE;
+			unpack_context->item.type = CCPCP_ITEM_DOUBLE;
 			unpack_context->item.as.Double = flags.is_neg? -d: d;
 		}
 		else if(flags.is_uint) {
-			unpack_context->item.type = CCPON_ITEM_UINT;
+			unpack_context->item.type = CCPCP_ITEM_UINT;
 			unpack_context->item.as.UInt = mantisa;;
 
 		}
 		else {
-			unpack_context->item.type = CCPON_ITEM_INT;
+			unpack_context->item.type = CCPCP_ITEM_INT;
 			unpack_context->item.as.Int = flags.is_neg? -mantisa: mantisa;;
 		}
-		unpack_context->err_no = CCPON_RC_OK;
+		unpack_context->err_no = CCPCP_RC_OK;
 		break;
 	}
 	}
 }
 
-void ccpon_pack_field_delim(ccpon_pack_context *pack_context, bool is_first_field)
+void ccpon_pack_field_delim(ccpcp_pack_context *pack_context, bool is_first_field)
 {
 	if(!is_first_field) {
-		ccpon_pack_copy_bytes(pack_context, ",", 1);
+		ccpcp_pack_copy_bytes(pack_context, ",", 1);
 	}
-	ccpon_pack_copy_bytes(pack_context, "\n", 1);
+	ccpcp_pack_copy_bytes(pack_context, "\n", 1);
 	indent_element(pack_context);
 }
 
-void ccpon_pack_key_delim(ccpon_pack_context *pack_context)
+void ccpon_pack_key_delim(ccpcp_pack_context *pack_context)
 {
-	ccpon_pack_copy_bytes(pack_context, ":", 1);
+	ccpcp_pack_copy_bytes(pack_context, ":", 1);
 }
 
 
