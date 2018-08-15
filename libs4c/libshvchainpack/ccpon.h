@@ -45,8 +45,6 @@ void ccpon_pack_field_delim (ccpcp_pack_context* pack_context, bool is_first_fie
 void ccpon_pack_key_delim (ccpcp_pack_context* pack_context);
 
 /***************************** U N P A C K ********************************/
-void ccpcp_unpack_context_init(ccpcp_unpack_context* unpack_context, uint8_t* data, size_t length, ccpcp_unpack_underflow_handler huu);
-
 void ccpon_unpack_next (ccpcp_unpack_context* unpack_context);
 void ccpon_skip_items (ccpcp_unpack_context* unpack_context, long item_count);
 

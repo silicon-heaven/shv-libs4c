@@ -549,20 +549,6 @@ void ccpon_pack_blob(ccpcp_pack_context* pack_context, const void* v, unsigned l
 */
 //============================   U N P A C K   =================================
 
-#define UNPACK_ERROR(error_code)                        \
-{                                                       \
-    unpack_context->item.type = CCPCP_ITEM_INVALID;        \
-    unpack_context->err_no = error_code;           \
-    return;                                             \
-}
-
-#define UNPACK_ASSERT_BYTE()              \
-{                                                       \
-    p = ccpcp_unpack_assert_byte(unpack_context);        \
-    if(!p)           \
-        return;                                             \
-}
-
 uint8_t* ccpon_unpack_skip_blank(ccpcp_unpack_context* unpack_context)
 {
 	while(1) {
@@ -720,28 +706,6 @@ static void unpack_date_time(ccpcp_unpack_context *unpack_context, struct tm *tm
 	it->minutes_from_utc = *utc_offset;
 }
 
-void ccpcp_unpack_context_init (ccpcp_unpack_context* unpack_context, uint8_t *data, size_t length, ccpcp_unpack_underflow_handler huu)
-{
-	unpack_context->start = unpack_context->current = data;
-	unpack_context->end = unpack_context->start + length;
-	unpack_context->err_no = CCPCP_RC_OK;
-	unpack_context->handle_unpack_underflow = huu;
-	//return unpack_context->return_code;
-}
-
-void ccpcp_string_init(ccpcp_string *str_it)
-{
-	str_it->start = NULL;
-	str_it->length = 0;
-	//str_it->parse_status.begin = 0;
-	//str_it->parse_status.middle = 0;
-	str_it->parse_status.chunk_cnt = 0;
-	str_it->parse_status.last_chunk = 0;
-	//str_it->parse_status.escaped_len = 0;
-	str_it->parse_status.string_entered = 0;
-	str_it->parse_status.escape_seq[0] = 0;
-}
-
 /*
 static inline int is_octal(uint8_t b)
 {
@@ -764,7 +728,7 @@ static void ccpon_unpack_string(ccpcp_unpack_context* unpack_context)
 	it->length = 0;
 	it->start = unpack_context->current;
 	for (; unpack_context->current < unpack_context->end; unpack_context->current++) {
-		uint8_t *p = unpack_context->current;
+		const uint8_t *p = unpack_context->current;
 		if(*p == '\\') {
 			if(it->length > 0) {
 				// finish current chunk, esc sequence wil have own, because it can be in 2 buffers
@@ -772,26 +736,22 @@ static void ccpon_unpack_string(ccpcp_unpack_context* unpack_context)
 				return;
 			}
 			UNPACK_ASSERT_BYTE();
-			it->parse_status.escape_seq[0] = '\\';
 			UNPACK_ASSERT_BYTE();
 			if(!p)
 				return;
-			/*
 			switch (*p) {
-			case '\\': it->parse_status.escape_seq[1] = '\\'; break;
-			case '"' : it->parse_status.escape_seq[1] = '"'; break;
-			case 'b': it->parse_status.escape_seq[1] = '\b'; break;
-			case 'f': it->parse_status.escape_seq[1] = '\f'; break;
-			case 'n': it->parse_status.escape_seq[1] = '\n'; break;
-			case 'r': it->parse_status.escape_seq[1] = '\r'; break;
-			case 't': it->parse_status.escape_seq[1] = '\t'; break;
-			case '0': it->parse_status.escape_seq[1] = '\0'; break;
-			default: it->parse_status.escape_seq[1] = *p; break;
+			case '\\': it->parse_status.escaped_byte = '\\'; break;
+			case '"' : it->parse_status.escaped_byte = '"'; break;
+			case 'b': it->parse_status.escaped_byte = '\b'; break;
+			case 'f': it->parse_status.escaped_byte = '\f'; break;
+			case 'n': it->parse_status.escaped_byte = '\n'; break;
+			case 'r': it->parse_status.escaped_byte = '\r'; break;
+			case 't': it->parse_status.escaped_byte = '\t'; break;
+			case '0': it->parse_status.escaped_byte = '\0'; break;
+			default: it->parse_status.escaped_byte = *p; break;
 			}
-			*/
-			it->parse_status.escape_seq[1] = *p;
-			it->start = (const uint8_t*)it->parse_status.escape_seq;
-			it->length = 2;
+			it->start = &(it->parse_status.escaped_byte);
+			it->length = 1;
 			break;
 		}
 		else {
