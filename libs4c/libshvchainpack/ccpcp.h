@@ -18,6 +18,7 @@ typedef enum
 	CCPCP_RC_MALFORMED_INPUT = -4,
 	CCPCP_RC_LOGICAL_ERROR = -5,
 	CCPCP_RC_CONTAINER_STACK_OVERFLOW = -6,
+	CCPCP_RC_CONTAINER_STACK_UNDERFLOW = -7,
 } ccpcp_error_codes;
 
 //=========================== PACK ============================
@@ -38,6 +39,7 @@ typedef struct ccpcp_pack_context {
 
 void ccpcp_pack_context_init(ccpcp_pack_context* pack_context, void *data, size_t length, ccpcp_pack_overflow_handler hpo);
 
+uint8_t* ccpcp_pack_reserve_space(ccpcp_pack_context* pack_context, size_t more);
 void ccpcp_pack_copy_bytes (ccpcp_pack_context* pack_context, const void *str, size_t len);
 
 //=========================== UNPACK ============================
@@ -53,14 +55,22 @@ typedef enum
 	CCPCP_ITEM_DECIMAL,
 	CCPCP_ITEM_STRING,
 	//CCPCP_ITEM_BLOB,
-	CCPCP_ITEM_LIST,
-	CCPCP_ITEM_ARRAY,
-	CCPCP_ITEM_MAP,
-	CCPCP_ITEM_IMAP,
 	CCPCP_ITEM_DATE_TIME,
+
+	CCPCP_ITEM_LIST,
+	CCPCP_ITEM_LIST_END,
+	CCPCP_ITEM_ARRAY,
+	CCPCP_ITEM_ARRAY_END,
+	CCPCP_ITEM_MAP,
+	CCPCP_ITEM_MAP_END,
+	CCPCP_ITEM_IMAP,
+	CCPCP_ITEM_IMAP_END,
 	CCPCP_ITEM_META,
-	CCPCP_ITEM_CONTAINER_END,
+	CCPCP_ITEM_META_END,
 } ccpcp_item_types;
+
+bool ccpcp_item_type_is_value(ccpcp_item_types t);
+bool ccpcp_item_type_is_container_end(ccpcp_item_types t);
 
 typedef struct {
 	const uint8_t* start;
@@ -122,6 +132,8 @@ typedef struct {
 
 void ccpcp_container_state_init(ccpcp_container_state *self, ccpcp_item_types cont_type);
 
+struct ccpcp_container_stack;
+
 typedef int (*ccpcp_container_stack_overflow_handler)(struct ccpcp_container_stack*);
 
 typedef struct ccpcp_container_stack {
@@ -152,10 +164,11 @@ void ccpcp_unpack_context_init(ccpcp_unpack_context* self, const uint8_t* data, 
 							   , ccpcp_container_stack *stack);
 
 ccpcp_container_state* ccpc_unpack_context_push_container_state(ccpcp_unpack_context* self, ccpcp_item_types container_type);
-ccpcp_container_state* ccpc_unpack_context_last_container_state(ccpcp_unpack_context* unpack_context);
+ccpcp_container_state* ccpc_unpack_context_top_container_state(ccpcp_unpack_context* self);
+ccpcp_container_state* ccpc_unpack_context_subtop_container_state(ccpcp_unpack_context* self);
 void ccpc_unpack_context_pop_container_state(ccpcp_unpack_context* self);
 
-uint8_t* ccpcp_unpack_assert_byte(ccpcp_unpack_context* unpack_context);
+const uint8_t *ccpcp_unpack_assert_byte(ccpcp_unpack_context* unpack_context);
 
 #define UNPACK_ERROR(error_code)                        \
 {                                                       \

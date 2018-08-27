@@ -371,7 +371,7 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 	if (unpack_context->err_no)
 		return;
 
-	uint8_t *p;
+	const uint8_t *p;
 	if(unpack_context->item.type == CCPCP_ITEM_STRING) {
 		ccpcp_string *str_it = &unpack_context->item.as.String;
 		if(!str_it->parse_status.last_chunk) {
@@ -381,7 +381,7 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 	}
 
 	{
-		ccpcp_container_state *state = ccpc_unpack_context_last_container_state(unpack_context);
+		ccpcp_container_state *state = ccpc_unpack_context_top_container_state(unpack_context);
 		if(state) {
 			state->item_count++;
 		}
@@ -393,7 +393,7 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 
 	uint8_t packing_schema = *p;
 	if(packing_schema == STRING_META_KEY_PREFIX) {
-		ccpcp_container_state *state = ccpc_unpack_context_last_container_state(unpack_context);
+		ccpcp_container_state *state = ccpc_unpack_context_top_container_state(unpack_context);
 		if(state && state->container_type == CCPCP_ITEM_META && (state->item_count % 2) == 1) {
 			packing_schema = CP_String;
 			UNPACK_ASSERT_BYTE();
@@ -418,7 +418,25 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 		unpack_context->item.type = CCPCP_ITEM_LIST;
 		break;
 	case CP_TERM: {
-		unpack_context->item.type = CCPCP_ITEM_CONTAINER_END;
+		ccpcp_container_state *top_cont_state = ccpc_unpack_context_top_container_state(unpack_context);
+		if(!top_cont_state)
+			UNPACK_ERROR(CCPCP_RC_CONTAINER_STACK_UNDERFLOW)
+		switch(unpack_context->item.type) {
+		case CCPCP_ITEM_LIST:
+			unpack_context->item.type = CCPCP_ITEM_LIST_END;
+			break;
+		case CCPCP_ITEM_MAP:
+			unpack_context->item.type = CCPCP_ITEM_MAP_END;
+			break;
+		case CCPCP_ITEM_IMAP:
+			unpack_context->item.type = CCPCP_ITEM_IMAP_END;
+			break;
+		case CCPCP_ITEM_META:
+			unpack_context->item.type = CCPCP_ITEM_META_END;
+			break;
+		default:
+			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT)
+		}
 		break;
 	}
 	case CP_String: {

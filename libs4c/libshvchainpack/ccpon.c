@@ -110,27 +110,6 @@ void ccpon_gmtime(int64_t epoch_sec, struct tm *tm)
 	tm->tm_isdst = -1;
 }
 
-uint8_t* ccpon_pack_reserve_space(ccpcp_pack_context* pack_context, size_t more)
-{
-	uint8_t* p = pack_context->current;
-	uint8_t* nyp = p + more;
-	if (nyp > pack_context->end) {
-		if (!pack_context->handle_pack_overflow) {
-			pack_context->err_no = CCPCP_RC_BUFFER_OVERFLOW;
-			return NULL;
-		}
-		size_t sz = pack_context->handle_pack_overflow (pack_context, more);
-		if (sz < more) {
-			pack_context->err_no = CCPCP_RC_BUFFER_OVERFLOW;
-			return NULL;
-		}
-		p = pack_context->current;
-		nyp = p + more;
-	}
-	pack_context->current = nyp;
-	return p;
-}
-
 static const char CCPON_STR_NULL[] = "null";
 static const char CCPON_STR_TRUE[] = "true";
 static const char CCPON_STR_FALSE[] = "false";
@@ -310,7 +289,7 @@ void ccpon_pack_double(ccpcp_pack_context* pack_context, double d)
 	if(!has_dot && !has_e) {
 		str[n++] = '.';
 	}
-	uint8_t *p = ccpon_pack_reserve_space(pack_context, (unsigned)n);
+	uint8_t *p = ccpcp_pack_reserve_space(pack_context, (unsigned)n);
 	if(p) {
 		memcpy(p, str, (unsigned)n);
 	}
@@ -404,7 +383,7 @@ void ccpon_pack_list_begin(ccpcp_pack_context *pack_context)
 	if (pack_context->err_no)
 		return;
 
-	uint8_t *p = ccpon_pack_reserve_space(pack_context, 1);
+	uint8_t *p = ccpcp_pack_reserve_space(pack_context, 1);
 	if(p)
 		*p = CCPON_C_LIST_BEGIN;
 	start_block(pack_context);
@@ -417,7 +396,7 @@ void ccpon_pack_list_end(ccpcp_pack_context *pack_context)
 		return;
 
 	end_block(pack_context);
-	uint8_t *p = ccpon_pack_reserve_space(pack_context, 1);
+	uint8_t *p = ccpcp_pack_reserve_space(pack_context, 1);
 	if(p)
 		*p = CCPON_C_LIST_END;
 }
@@ -427,7 +406,7 @@ void ccpon_pack_map_begin(ccpcp_pack_context *pack_context)
 	if (pack_context->err_no)
 		return;
 
-	uint8_t *p = ccpon_pack_reserve_space(pack_context, 1);
+	uint8_t *p = ccpcp_pack_reserve_space(pack_context, 1);
 	if(p)
 		*p = CCPON_C_MAP_BEGIN;
 	start_block(pack_context);
@@ -439,7 +418,7 @@ void ccpon_pack_map_end(ccpcp_pack_context *pack_context)
 		return;
 
 	end_block(pack_context);
-	uint8_t *p = ccpon_pack_reserve_space(pack_context, 1);
+	uint8_t *p = ccpcp_pack_reserve_space(pack_context, 1);
 	if(p) {
 		*p = CCPON_C_MAP_END;
 	}
@@ -464,7 +443,7 @@ void ccpon_pack_meta_begin(ccpcp_pack_context *pack_context)
 	if (pack_context->err_no)
 		return;
 
-	uint8_t *p = ccpon_pack_reserve_space(pack_context, 1);
+	uint8_t *p = ccpcp_pack_reserve_space(pack_context, 1);
 	if(p)
 		*p = CCPON_C_META_BEGIN;
 	start_block(pack_context);
@@ -476,7 +455,7 @@ void ccpon_pack_meta_end(ccpcp_pack_context *pack_context)
 		return;
 
 	end_block(pack_context);
-	uint8_t *p = ccpon_pack_reserve_space(pack_context, 1);
+	uint8_t *p = ccpcp_pack_reserve_space(pack_context, 1);
 	if(p) {
 		*p = CCPON_C_META_END;
 	}
@@ -486,7 +465,7 @@ static uint8_t* ccpon_pack_blob_data_escaped(ccpcp_pack_context* pack_context, c
 {
 	if (pack_context->err_no)
 		return 0;
-	uint8_t *p = ccpon_pack_reserve_space(pack_context, 4*l);
+	uint8_t *p = ccpcp_pack_reserve_space(pack_context, 4*l);
 	if(p) {
 		for (unsigned i = 0; i < l; i++) {
 			const uint8_t ch = ((const uint8_t*)v)[i];
@@ -519,7 +498,7 @@ void ccpon_pack_str(ccpcp_pack_context* pack_context, const char* s, unsigned l)
 {
 	if (pack_context->err_no)
 		return;
-	uint8_t *p = ccpon_pack_reserve_space(pack_context, 1);
+	uint8_t *p = ccpcp_pack_reserve_space(pack_context, 1);
 	if(p) {
 		*p = '"';
 		p = ccpon_pack_blob_data_escaped(pack_context, s, 4*l);
@@ -535,7 +514,7 @@ void ccpon_pack_blob(ccpcp_pack_context* pack_context, const void* v, unsigned l
 {
 	if (pack_context->err_no)
 		return;
-	uint8_t *p = ccpon_pack_reserve_space(pack_context, sizeof (CCPON_STR_ESC_BLOB_BEGIN) - 1);
+	uint8_t *p = ccpcp_pack_reserve_space(pack_context, sizeof (CCPON_STR_ESC_BLOB_BEGIN) - 1);
 	if(p) {
 		memcpy(p, CCPON_STR_ESC_BLOB_BEGIN, sizeof (CCPON_STR_ESC_BLOB_BEGIN) - 1);
 		p = ccpon_pack_blob_data_escaped(pack_context, v, 4*l);
@@ -549,10 +528,10 @@ void ccpon_pack_blob(ccpcp_pack_context* pack_context, const void* v, unsigned l
 */
 //============================   U N P A C K   =================================
 
-uint8_t* ccpon_unpack_skip_blank(ccpcp_unpack_context* unpack_context)
+static const uint8_t* ccpon_unpack_skip_blank(ccpcp_unpack_context* unpack_context)
 {
 	while(1) {
-		uint8_t* p = ccpcp_unpack_assert_byte(unpack_context);
+		const uint8_t* p = ccpcp_unpack_assert_byte(unpack_context);
 		if(!p)
 			return p;
 		if(*p > ' ')
@@ -566,7 +545,7 @@ static int unpack_int(ccpcp_unpack_context* unpack_context, int64_t *p_val)
 	int neg = 0;
 	int n = 0;
 	for (; ; n++) {
-		uint8_t *p = ccpcp_unpack_assert_byte(unpack_context);
+		const uint8_t *p = ccpcp_unpack_assert_byte(unpack_context);
 		if(!p)
 			goto eonumb;
 		uint8_t b = *p;
@@ -619,7 +598,7 @@ static void unpack_date_time(ccpcp_unpack_context *unpack_context, struct tm *tm
 	*msec = 0;
 	*utc_offset = 0;
 
-	uint8_t *p;
+	const uint8_t *p;
 
 	int64_t val;
 	int n = unpack_int(unpack_context, &val);
@@ -873,7 +852,9 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 	if (unpack_context->err_no)
 		return;
 
-	uint8_t *p;
+	ccpcp_container_state *top_cont_state = ccpc_unpack_context_top_container_state(unpack_context);
+
+	const uint8_t *p;
 	if(unpack_context->item.type == CCPCP_ITEM_STRING) {
 		ccpcp_string *str_it = &unpack_context->item.as.String;
 		if(!str_it->parse_status.last_chunk) {
@@ -895,15 +876,27 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		//unpack_context->item.type = CCPON_ITEM_KEY_DELIM;
 		// silently ignore
 		ccpon_unpack_next(unpack_context);
-		break;
+		return;
 	case CCPON_C_FIELD_DELIM:
 		//unpack_context->item.type = CCPON_ITEM_FIELD_DELIM;
 		ccpon_unpack_next(unpack_context);
+		return;
+	case CCPON_C_MAP_END: {
+		ccpcp_container_state *top_cont_state = ccpc_unpack_context_top_container_state(unpack_context);
+		if(!top_cont_state)
+			UNPACK_ERROR(CCPCP_RC_CONTAINER_STACK_UNDERFLOW)
+		unpack_context->item.type = (top_cont_state->container_type == CCPCP_ITEM_MAP)? CCPCP_ITEM_MAP_END: CCPCP_ITEM_IMAP_END;
 		break;
-	case CCPON_C_MAP_END:
-	case CCPON_C_LIST_END:
+	}
+	case CCPON_C_LIST_END: {
+		ccpcp_container_state *top_cont_state = ccpc_unpack_context_top_container_state(unpack_context);
+		if(!top_cont_state)
+			UNPACK_ERROR(CCPCP_RC_CONTAINER_STACK_UNDERFLOW)
+		unpack_context->item.type = (top_cont_state->container_type == CCPCP_ITEM_LIST)? CCPCP_ITEM_LIST_END: CCPCP_ITEM_ARRAY_END;
+		break;
+	}
 	case CCPON_C_META_END:
-		unpack_context->item.type = CCPCP_ITEM_CONTAINER_END;
+		unpack_context->item.type = CCPCP_ITEM_META_END;
 		break;
 	case CCPON_C_META_BEGIN:
 		unpack_context->item.type = CCPCP_ITEM_META;
@@ -1117,6 +1110,27 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		break;
 	}
 	}
+
+	switch(unpack_context->item.type) {
+	case CCPCP_ITEM_LIST:
+	case CCPCP_ITEM_ARRAY:
+	case CCPCP_ITEM_MAP:
+	case CCPCP_ITEM_IMAP:
+	case CCPCP_ITEM_META:
+		ccpc_unpack_context_push_container_state(unpack_context, unpack_context->item.type);
+		break;
+	case CCPCP_ITEM_LIST_END:
+	case CCPCP_ITEM_ARRAY_END:
+	case CCPCP_ITEM_MAP_END:
+	case CCPCP_ITEM_IMAP_END:
+	case CCPCP_ITEM_META_END:
+		ccpc_unpack_context_pop_container_state(unpack_context);
+		break;
+	default:
+		break;
+	}
+	if(top_cont_state)
+		top_cont_state->item_count++;
 }
 
 void ccpon_pack_field_delim(ccpcp_pack_context *pack_context, bool is_first_field)
