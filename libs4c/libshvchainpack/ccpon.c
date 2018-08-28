@@ -1136,10 +1136,10 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 
 void ccpon_pack_field_delim(ccpcp_pack_context *pack_context, bool is_first_field)
 {
-	if(!is_first_field) {
+	if(!is_first_field)
 		ccpcp_pack_copy_bytes(pack_context, ",", 1);
-	}
-	ccpcp_pack_copy_bytes(pack_context, "\n", 1);
+	if(pack_context->indent)
+		ccpcp_pack_copy_bytes(pack_context, "\n", 1);
 	indent_element(pack_context);
 }
 
