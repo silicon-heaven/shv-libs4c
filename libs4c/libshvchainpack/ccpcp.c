@@ -98,10 +98,17 @@ ccpcp_container_state* ccpc_unpack_context_top_container_state(ccpcp_unpack_cont
 	return NULL;
 }
 
-ccpcp_container_state *ccpc_unpack_context_subtop_container_state(ccpcp_unpack_context *self)
+ccpcp_container_state *ccpc_unpack_context_current_item_container_state(ccpcp_unpack_context *self)
 {
-	if(self->container_stack && self->container_stack->length > 1) {
-		return self->container_stack->container_states + self->container_stack->length - 2;
+	if(self->container_stack && self->container_stack->length > 0) {
+		ccpcp_container_state *top_st = self->container_stack->container_states + self->container_stack->length - 1;
+		if(top_st && top_st->item_count == 0) {
+			if(self->container_stack->length > 1)
+				return self->container_stack->container_states + self->container_stack->length - 2;
+			else
+				return NULL;
+		}
+		return top_st;
 	}
 	return NULL;
 }

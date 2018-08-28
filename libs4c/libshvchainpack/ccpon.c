@@ -114,7 +114,6 @@ static const char CCPON_STR_NULL[] = "null";
 static const char CCPON_STR_TRUE[] = "true";
 static const char CCPON_STR_FALSE[] = "false";
 static const char CCPON_STR_IMAP_BEGIN[] = "i{";
-static const char CCPON_STR_ARRAY_BEGIN[] = "a[";
 static const char CCPON_DATE_TIME_BEGIN[] = "d\"";
 
 #define CCPON_C_KEY_DELIM ':'
@@ -366,10 +365,11 @@ void ccpon_pack_array_begin(ccpcp_pack_context* pack_context, int size)
 	if (pack_context->err_no)
 		return;
 
-	ccpcp_pack_copy_bytes(pack_context, CCPON_STR_ARRAY_BEGIN, sizeof(CCPON_STR_ARRAY_BEGIN) - 1);
+	ccpcp_pack_copy_bytes(pack_context, "a", 1);
 	if(size >= 0) {
 		ccpon_pack_int(pack_context, size);
 	}
+	ccpcp_pack_copy_bytes(pack_context, "[", 1);
 	start_block(pack_context);
 }
 
@@ -918,7 +918,8 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		int64_t size;
 		int n = unpack_int(unpack_context, &size);
 		if(n == 0)
-			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT)
+			size = -1;
+		//	UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT)
 		UNPACK_ASSERT_BYTE();
 		if(*p != '[')
 			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT)

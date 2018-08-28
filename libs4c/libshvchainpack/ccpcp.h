@@ -88,7 +88,7 @@ void ccpcp_string_init(ccpcp_string *str_it);
 
 typedef struct {
 	ccpcp_item_types type;
-	uint32_t size;
+	int32_t size;
 } ccpcp_array;
 
 typedef struct {
@@ -165,7 +165,7 @@ void ccpcp_unpack_context_init(ccpcp_unpack_context* self, const uint8_t* data, 
 
 ccpcp_container_state* ccpc_unpack_context_push_container_state(ccpcp_unpack_context* self, ccpcp_item_types container_type);
 ccpcp_container_state* ccpc_unpack_context_top_container_state(ccpcp_unpack_context* self);
-ccpcp_container_state* ccpc_unpack_context_subtop_container_state(ccpcp_unpack_context* self);
+ccpcp_container_state* ccpc_unpack_context_current_item_container_state(ccpcp_unpack_context* self);
 void ccpc_unpack_context_pop_container_state(ccpcp_unpack_context* self);
 
 const uint8_t *ccpcp_unpack_assert_byte(ccpcp_unpack_context* unpack_context);
