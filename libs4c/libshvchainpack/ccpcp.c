@@ -9,7 +9,7 @@ uint8_t* ccpcp_pack_reserve_space(ccpcp_pack_context* pack_context, size_t more)
 			pack_context->err_no = CCPCP_RC_BUFFER_OVERFLOW;
 			return NULL;
 		}
-		size_t sz = pack_context->handle_pack_overflow (pack_context, more);
+		size_t sz = pack_context->handle_pack_overflow (pack_context);
 		if (sz < more) {
 			pack_context->err_no = CCPCP_RC_BUFFER_OVERFLOW;
 			return NULL;
@@ -201,7 +201,7 @@ const uint8_t* ccpcp_unpack_assert_byte(ccpcp_unpack_context* unpack_context)
 			//unpack_context->item.type = CCPCP_ITEM_INVALID;
 			return NULL;
 		}
-		size_t sz = unpack_context->handle_unpack_underflow (unpack_context, more);
+		size_t sz = unpack_context->handle_unpack_underflow (unpack_context);
 		if (sz < more) {
 			unpack_context->err_no = CCPCP_RC_BUFFER_UNDERFLOW;
 			//unpack_context->item.type = CCPCP_ITEM_INVALID;

@@ -400,65 +400,114 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 		}
 	}
 
-	bool is_array = packing_schema & ARRAY_FLAG_MASK;
-	packing_schema &= ~ARRAY_FLAG_MASK;
-	switch(packing_schema) {
-	case CP_MetaMap: {
-		unpack_context->item.type = CCPCP_ITEM_META;
-		ccpc_unpack_context_push_container_state(unpack_context, unpack_context->item.type);
-		break;
-	}
-	case CP_Map:
-		unpack_context->item.type = CCPCP_ITEM_MAP;
-		break;
-	case CP_IMap:
-		unpack_context->item.type = CCPCP_ITEM_MAP;
-		break;
-	case CP_List:
-		unpack_context->item.type = CCPCP_ITEM_LIST;
-		break;
-	case CP_TERM: {
-		ccpcp_container_state *top_cont_state = ccpc_unpack_context_top_container_state(unpack_context);
-		if(!top_cont_state)
-			UNPACK_ERROR(CCPCP_RC_CONTAINER_STACK_UNDERFLOW)
-		switch(unpack_context->item.type) {
-		case CCPCP_ITEM_LIST:
-			unpack_context->item.type = CCPCP_ITEM_LIST_END;
-			break;
-		case CCPCP_ITEM_MAP:
-			unpack_context->item.type = CCPCP_ITEM_MAP_END;
-			break;
-		case CCPCP_ITEM_IMAP:
-			unpack_context->item.type = CCPCP_ITEM_IMAP_END;
-			break;
-		case CCPCP_ITEM_META:
-			unpack_context->item.type = CCPCP_ITEM_META_END;
-			break;
-		default:
-			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT)
+	if(packing_schema < 128) {
+		if(packing_schema & 64) {
+			// tiny Int
+			unpack_context->item.type = CCPCP_ITEM_INT;
+			unpack_context->item.as.Int = packing_schema & 63;
 		}
-		break;
+		else {
+			// tiny UInt
+			unpack_context->item.type = CCPCP_ITEM_UINT;
+			unpack_context->item.as.UInt = packing_schema & 63;
+		}
 	}
-	case CP_String: {
-		unpack_context->item.type = CCPCP_ITEM_STRING;
-		ccpcp_string *it = &unpack_context->item.as.String;
-		ccpcp_string_init(it);
-		uint64_t str_len;
-		unpack_uint(unpack_context, &str_len, NULL);
-		if(unpack_context->err_no == CCPCP_RC_OK) {
-			it->parse_status.size_to_load = str_len;
+	else {
+		bool is_array = 0;
+		if(packing_schema < CP_FALSE) {
+			is_array = packing_schema & ARRAY_FLAG_MASK;
+			packing_schema &= ~ARRAY_FLAG_MASK;
+		}
+
+		switch(packing_schema) {
+		case CP_TRUE: {
+			unpack_context->item.type = CCPCP_ITEM_BOOLEAN;
+			unpack_context->item.as.Bool = 1;
+			break;
+		}
+		case CP_FALSE: {
+			unpack_context->item.type = CCPCP_ITEM_BOOLEAN;
+			unpack_context->item.as.Bool = 0;
+			break;
+		}
+		case CP_Int: {
+			int64_t n;
+			unpack_int(unpack_context, &n);
+			unpack_context->item.type = CCPCP_ITEM_INT;
+			unpack_context->item.as.Int = n;
+			break;
+		}
+		case CP_UInt: {
+			uint64_t n;
+			unpack_uint(unpack_context, &n, NULL);
+			unpack_context->item.type = CCPCP_ITEM_UINT;
+			unpack_context->item.as.UInt = n;
+			break;
+		}
+		case CP_MetaMap: {
+			unpack_context->item.type = CCPCP_ITEM_META;
+			ccpc_unpack_context_push_container_state(unpack_context, unpack_context->item.type);
+			break;
+		}
+		case CP_Map: {
+			unpack_context->item.type = CCPCP_ITEM_MAP;
+			ccpc_unpack_context_push_container_state(unpack_context, unpack_context->item.type);
+			break;
+		}
+		case CP_IMap: {
+			unpack_context->item.type = CCPCP_ITEM_MAP;
+			ccpc_unpack_context_push_container_state(unpack_context, unpack_context->item.type);
+			break;
+		}
+		case CP_List: {
+			unpack_context->item.type = CCPCP_ITEM_LIST;
+			ccpc_unpack_context_push_container_state(unpack_context, unpack_context->item.type);
+			break;
+		}
+		case CP_TERM: {
+			ccpcp_container_state *top_cont_state = ccpc_unpack_context_top_container_state(unpack_context);
+			if(!top_cont_state)
+				UNPACK_ERROR(CCPCP_RC_CONTAINER_STACK_UNDERFLOW)
+			switch(top_cont_state->container_type) {
+			case CCPCP_ITEM_LIST:
+				unpack_context->item.type = CCPCP_ITEM_LIST_END;
+				break;
+			case CCPCP_ITEM_MAP:
+				unpack_context->item.type = CCPCP_ITEM_MAP_END;
+				break;
+			case CCPCP_ITEM_IMAP:
+				unpack_context->item.type = CCPCP_ITEM_IMAP_END;
+				break;
+			case CCPCP_ITEM_META:
+				unpack_context->item.type = CCPCP_ITEM_META_END;
+				break;
+			default:
+				UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT)
+			}
+			ccpc_unpack_context_pop_container_state(unpack_context);
+			break;
+		}
+		case CP_String: {
+			unpack_context->item.type = CCPCP_ITEM_STRING;
+			ccpcp_string *it = &unpack_context->item.as.String;
+			ccpcp_string_init(it);
+			uint64_t str_len;
+			unpack_uint(unpack_context, &str_len, NULL);
+			if(unpack_context->err_no == CCPCP_RC_OK) {
+				it->parse_status.size_to_load = str_len;
+				unpack_string(unpack_context);
+			}
+			break;
+		}
+		case CP_CString: {
+			unpack_context->item.type = CCPCP_ITEM_STRING;
+			ccpcp_string *it = &unpack_context->item.as.String;
+			ccpcp_string_init(it);
+			it->parse_status.size_to_load = -1;
 			unpack_string(unpack_context);
+			break;
 		}
-		break;
-	}
-	case CP_CString: {
-		unpack_context->item.type = CCPCP_ITEM_STRING;
-		ccpcp_string *it = &unpack_context->item.as.String;
-		ccpcp_string_init(it);
-		it->parse_status.size_to_load = -1;
-		unpack_string(unpack_context);
-		break;
-	}
+		}
 	}
 }
 

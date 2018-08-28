@@ -25,7 +25,7 @@ typedef enum
 
 struct ccpcp_pack_context;
 
-typedef size_t (*ccpcp_pack_overflow_handler)(struct ccpcp_pack_context*, size_t);
+typedef size_t (*ccpcp_pack_overflow_handler)(struct ccpcp_pack_context*);
 
 typedef struct ccpcp_pack_context {
 	uint8_t* start;
@@ -147,7 +147,7 @@ void ccpc_container_stack_init(ccpcp_container_stack* self, ccpcp_container_stat
 
 struct ccpcp_unpack_context;
 
-typedef size_t (*ccpcp_unpack_underflow_handler)(struct ccpcp_unpack_context*, size_t);
+typedef size_t (*ccpcp_unpack_underflow_handler)(struct ccpcp_unpack_context*);
 
 typedef struct ccpcp_unpack_context {
 	ccpcp_item item;
