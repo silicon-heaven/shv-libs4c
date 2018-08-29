@@ -12,6 +12,35 @@
 extern "C" {
 #endif
 
+extern const uint8_t CP_ARRAY_FLAG_MASK;
+extern const uint8_t CP_STRING_META_KEY_PREFIX;
+
+typedef enum {
+	CP_INVALID = -1,
+
+	CP_Null = 128,
+	CP_UInt,
+	CP_Int,
+	CP_Double,
+	CP_Bool,
+	CP_Blob_depr, // deprecated
+	CP_String,
+	CP_DateTimeEpoch_depr, // deprecated
+	CP_List,
+	CP_Map,
+	CP_IMap,
+	CP_MetaMap,
+	CP_Decimal,
+	CP_DateTime,
+	CP_CString,
+
+	CP_FALSE = 253,
+	CP_TRUE = 254,
+	CP_TERM = 255,
+} cchainpack_pack_packing_schema;
+
+const char* cchainpack_packing_schema_name(int sch);
+
 void cchainpack_pack_null (ccpcp_pack_context* pack_context);
 void cchainpack_pack_boolean (ccpcp_pack_context* pack_context, bool b);
 void cchainpack_pack_int (ccpcp_pack_context* pack_context, int64_t i);
@@ -22,7 +51,7 @@ void cchainpack_pack_str (ccpcp_pack_context* pack_context, const char* s, unsig
 //void cchainpack_pack_blob (ccpcp_pack_context* pack_context, const void *v, unsigned l);
 void cchainpack_pack_date_time (ccpcp_pack_context* pack_context, int64_t epoch_msecs, int min_from_utc);
 
-void cchainpack_pack_array_begin (ccpcp_pack_context* pack_context, int size);
+void cchainpack_pack_array_begin (ccpcp_pack_context* pack_context, ccpcp_item_types type, int size);
 void cchainpack_pack_array_end (ccpcp_pack_context* pack_context);
 
 void cchainpack_pack_list_begin (ccpcp_pack_context* pack_context);

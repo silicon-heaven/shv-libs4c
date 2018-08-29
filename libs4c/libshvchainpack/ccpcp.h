@@ -11,6 +11,12 @@ extern "C" {
 
 typedef enum
 {
+	CCPCP_ChainPack = 1,
+	CCPCP_Cpon,
+} ccpcp_pack_format;
+
+typedef enum
+{
 	CCPCP_RC_OK = 0,
 	CCPCP_RC_MALLOC_ERROR = -1,
 	CCPCP_RC_BUFFER_OVERFLOW = -2,
@@ -40,6 +46,7 @@ typedef struct ccpcp_pack_context {
 void ccpcp_pack_context_init(ccpcp_pack_context* pack_context, void *data, size_t length, ccpcp_pack_overflow_handler hpo);
 
 uint8_t* ccpcp_pack_reserve_space(ccpcp_pack_context* pack_context, size_t more);
+void ccpcp_pack_copy_byte (ccpcp_pack_context* pack_context, uint8_t b);
 void ccpcp_pack_copy_bytes (ccpcp_pack_context* pack_context, const void *str, size_t len);
 
 //=========================== UNPACK ============================
@@ -54,6 +61,7 @@ typedef enum
 	CCPCP_ITEM_DOUBLE,
 	CCPCP_ITEM_DECIMAL,
 	CCPCP_ITEM_STRING,
+	//CCPCP_ITEM_CSTRING,
 	//CCPCP_ITEM_BLOB,
 	CCPCP_ITEM_DATE_TIME,
 
@@ -159,7 +167,7 @@ typedef struct ccpcp_unpack_context {
 	ccpcp_container_stack *container_stack;
 } ccpcp_unpack_context;
 
-void ccpcp_unpack_context_init(ccpcp_unpack_context* self, const uint8_t* data, size_t length
+void ccpcp_unpack_context_init(ccpcp_unpack_context* self, const void* data, size_t length
 							   , ccpcp_unpack_underflow_handler huu
 							   , ccpcp_container_stack *stack);
 
@@ -168,7 +176,7 @@ ccpcp_container_state* ccpc_unpack_context_top_container_state(ccpcp_unpack_cont
 ccpcp_container_state* ccpc_unpack_context_current_item_container_state(ccpcp_unpack_context* self);
 void ccpc_unpack_context_pop_container_state(ccpcp_unpack_context* self);
 
-const uint8_t *ccpcp_unpack_assert_byte(ccpcp_unpack_context* unpack_context);
+const uint8_t *ccpcp_unpack_take_byte(ccpcp_unpack_context* unpack_context);
 
 #define UNPACK_ERROR(error_code)                        \
 {                                                       \
@@ -179,7 +187,7 @@ const uint8_t *ccpcp_unpack_assert_byte(ccpcp_unpack_context* unpack_context);
 
 #define UNPACK_ASSERT_BYTE()              \
 {                                                       \
-    p = ccpcp_unpack_assert_byte(unpack_context);        \
+    p = ccpcp_unpack_take_byte(unpack_context);        \
     if(!p)           \
         return;                                             \
 }

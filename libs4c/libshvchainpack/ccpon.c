@@ -531,7 +531,7 @@ void ccpon_pack_blob(ccpcp_pack_context* pack_context, const void* v, unsigned l
 static const uint8_t* ccpon_unpack_skip_blank(ccpcp_unpack_context* unpack_context)
 {
 	while(1) {
-		const uint8_t* p = ccpcp_unpack_assert_byte(unpack_context);
+		const uint8_t* p = ccpcp_unpack_take_byte(unpack_context);
 		if(!p)
 			return p;
 		if(*p > ' ')
@@ -545,7 +545,7 @@ static int unpack_int(ccpcp_unpack_context* unpack_context, int64_t *p_val)
 	int neg = 0;
 	int n = 0;
 	for (; ; n++) {
-		const uint8_t *p = ccpcp_unpack_assert_byte(unpack_context);
+		const uint8_t *p = ccpcp_unpack_take_byte(unpack_context);
 		if(!p)
 			goto eonumb;
 		uint8_t b = *p;
@@ -641,14 +641,14 @@ static void unpack_date_time(ccpcp_unpack_context *unpack_context, struct tm *tm
 		return;
 	tm->tm_sec = (int)val;
 
-	p = ccpcp_unpack_assert_byte(unpack_context);
+	p = ccpcp_unpack_take_byte(unpack_context);
 	if(p) {
 		if(*p == '.') {
 			n = unpack_int(unpack_context, &val);
 			if(n < 0)
 				return;
 			*msec = (int)val;
-			p = ccpcp_unpack_assert_byte(unpack_context);
+			p = ccpcp_unpack_take_byte(unpack_context);
 		}
 		if(p) {
 			uint8_t b = *p;
@@ -999,7 +999,7 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		break;
 	}
 	case '"': {
-		unpack_context->item.type = CCPCP_ITEM_STRING;
+		unpack_context->item.type = CCPCP_ITEM_CSTRING;
 		ccpcp_string *str_it = &unpack_context->item.as.String;
 		ccpcp_string_init(str_it);
 		//str_it->format = CCPON_STRING_FORMAT_UTF8_ESCAPED;
@@ -1041,7 +1041,7 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		int n = unpack_int(unpack_context, &mantisa);
 		if(n < 0)
 			UNPACK_ERROR(n)
-		p = ccpcp_unpack_assert_byte(unpack_context);
+		p = ccpcp_unpack_take_byte(unpack_context);
 		while(p) {
 			if(*p == CCPON_C_UNSIGNED_END) {
 				flags.is_uint = 1;
@@ -1053,7 +1053,7 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 				if(n < 0)
 					UNPACK_ERROR(n)
 				dec_cnt = n;
-				p = ccpcp_unpack_assert_byte(unpack_context);
+				p = ccpcp_unpack_take_byte(unpack_context);
 				if(!p)
 					break;
 				if(*p == CCPON_C_DECIMAL_END) {

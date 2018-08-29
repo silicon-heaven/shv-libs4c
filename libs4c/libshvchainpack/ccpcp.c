@@ -1,7 +1,11 @@
 #include "ccpcp.h"
 
+#include <string.h>
+
 uint8_t* ccpcp_pack_reserve_space(ccpcp_pack_context* pack_context, size_t more)
 {
+	if(pack_context->err_no != CCPCP_RC_OK)
+		return NULL;
 	uint8_t* p = pack_context->current;
 	uint8_t* nyp = p + more;
 	if (nyp > pack_context->end) {
@@ -19,6 +23,14 @@ uint8_t* ccpcp_pack_reserve_space(ccpcp_pack_context* pack_context, size_t more)
 	}
 	pack_context->current = nyp;
 	return p;
+}
+
+void ccpcp_pack_copy_byte(ccpcp_pack_context *pack_context, uint8_t b)
+{
+	uint8_t *p = ccpcp_pack_reserve_space(pack_context, 1);
+	if(!p)
+		return;
+	*p = b;
 }
 
 void ccpcp_pack_copy_bytes(ccpcp_pack_context *pack_context, const void *str, size_t len)
@@ -54,9 +66,9 @@ void ccpc_container_stack_init(ccpcp_container_stack *self, ccpcp_container_stat
 	self->overflow_handler = hnd;
 }
 
-void ccpcp_unpack_context_init (ccpcp_unpack_context* self, const uint8_t *data, size_t length, ccpcp_unpack_underflow_handler huu, ccpcp_container_stack *stack)
+void ccpcp_unpack_context_init (ccpcp_unpack_context* self, const void *data, size_t length, ccpcp_unpack_underflow_handler huu, ccpcp_container_stack *stack)
 {
-	self->start = self->current = data;
+	self->start = self->current = (const uint8_t*)data;
 	self->end = self->start + length;
 	self->err_no = CCPCP_RC_OK;
 	self->handle_unpack_underflow = huu;
@@ -190,7 +202,7 @@ void ccpcp_string_init(ccpcp_string *str_it)
 	str_it->parse_status.string_entered = 0;
 }
 
-const uint8_t* ccpcp_unpack_assert_byte(ccpcp_unpack_context* unpack_context)
+const uint8_t* ccpcp_unpack_take_byte(ccpcp_unpack_context* unpack_context)
 {
 	size_t more = 1;
 	const uint8_t* p = unpack_context->current;
@@ -213,3 +225,4 @@ const uint8_t* ccpcp_unpack_assert_byte(ccpcp_unpack_context* unpack_context)
 	unpack_context->current = nyp;
 	return p;
 }
+
