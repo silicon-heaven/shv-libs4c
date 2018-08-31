@@ -19,13 +19,20 @@ void ccpon_pack_boolean (ccpcp_pack_context* pack_context, bool b);
 void ccpon_pack_int (ccpcp_pack_context* pack_context, int64_t i);
 void ccpon_pack_uint (ccpcp_pack_context* pack_context, uint64_t i);
 void ccpon_pack_double (ccpcp_pack_context* pack_context, double d);
-void ccpon_pack_decimal (ccpcp_pack_context* pack_context, int64_t i, int dec_places);
-void ccpon_pack_str (ccpcp_pack_context* pack_context, const char* s, unsigned l);
+void ccpon_pack_decimal (ccpcp_pack_context* pack_context, int64_t mantisa, int dec_places);
+//void ccpon_pack_string (ccpcp_pack_context* pack_context, const char* s, unsigned l);
+//void ccpon_pack_cstring (ccpcp_pack_context* pack_context, const char* s);
 //void ccpon_pack_blob (ccpcp_pack_context* pack_context, const void *v, unsigned l);
 void ccpon_pack_date_time (ccpcp_pack_context* pack_context, int64_t epoch_msecs, int min_from_utc);
 
-void ccpon_pack_array_begin (ccpcp_pack_context* pack_context, int size);
-void ccpon_pack_array_end (ccpcp_pack_context* pack_context);
+void ccpon_pack_string (ccpcp_pack_context* pack_context, const char* s, size_t l);
+void ccpon_pack_string_terminated (ccpcp_pack_context* pack_context, const char* s);
+void ccpon_pack_string_start (ccpcp_pack_context* pack_context, const char*buff, size_t buff_len);
+void ccpon_pack_string_cont (ccpcp_pack_context* pack_context, const char*buff, unsigned buff_len);
+void ccpon_pack_string_finish (ccpcp_pack_context* pack_context);
+
+//void ccpon_pack_array_begin (ccpcp_pack_context* pack_context, int size);
+//void ccpon_pack_array_end (ccpcp_pack_context* pack_context);
 
 void ccpon_pack_list_begin (ccpcp_pack_context* pack_context);
 void ccpon_pack_list_end (ccpcp_pack_context* pack_context);

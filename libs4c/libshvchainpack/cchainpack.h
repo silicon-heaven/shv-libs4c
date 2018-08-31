@@ -12,7 +12,7 @@
 extern "C" {
 #endif
 
-extern const uint8_t CP_ARRAY_FLAG_MASK;
+//extern const uint8_t CP_ARRAY_FLAG_MASK;
 extern const uint8_t CP_STRING_META_KEY_PREFIX;
 
 typedef enum {
@@ -47,24 +47,33 @@ void cchainpack_pack_int (ccpcp_pack_context* pack_context, int64_t i);
 void cchainpack_pack_uint (ccpcp_pack_context* pack_context, uint64_t i);
 void cchainpack_pack_double (ccpcp_pack_context* pack_context, double d);
 void cchainpack_pack_decimal (ccpcp_pack_context* pack_context, int64_t i, int dec_places);
-void cchainpack_pack_str (ccpcp_pack_context* pack_context, const char* s, unsigned l);
 //void cchainpack_pack_blob (ccpcp_pack_context* pack_context, const void *v, unsigned l);
 void cchainpack_pack_date_time (ccpcp_pack_context* pack_context, int64_t epoch_msecs, int min_from_utc);
 
-void cchainpack_pack_array_begin (ccpcp_pack_context* pack_context, ccpcp_item_types type, int size);
-void cchainpack_pack_array_end (ccpcp_pack_context* pack_context);
+void cchainpack_pack_string (ccpcp_pack_context* pack_context, const char* buff, size_t buff_len);
+void cchainpack_pack_string_start (ccpcp_pack_context* pack_context, size_t string_len, const char* buff, size_t buff_len);
+void cchainpack_pack_string_cont (ccpcp_pack_context* pack_context, const char* buff, size_t buff_len);
+
+void cchainpack_pack_cstring (ccpcp_pack_context* pack_context, const char* buff, size_t buff_len);
+void cchainpack_pack_cstring_terminated (ccpcp_pack_context* pack_context, const char* str);
+void cchainpack_pack_cstring_start (ccpcp_pack_context* pack_context, const char* buff, size_t buff_len);
+void cchainpack_pack_cstring_cont (ccpcp_pack_context* pack_context, const char* buff, size_t buff_len);
+void cchainpack_pack_cstring_finish (ccpcp_pack_context* pack_context);
+
+//void cchainpack_pack_array_begin (ccpcp_pack_context* pack_context, ccpcp_item_types type, int size);
+void cchainpack_pack_container_end(ccpcp_pack_context* pack_context);
 
 void cchainpack_pack_list_begin (ccpcp_pack_context* pack_context);
-void cchainpack_pack_list_end (ccpcp_pack_context* pack_context);
+//void cchainpack_pack_list_end (ccpcp_pack_context* pack_context);
 
 void cchainpack_pack_map_begin (ccpcp_pack_context* pack_context);
-void cchainpack_pack_map_end (ccpcp_pack_context* pack_context);
+//void cchainpack_pack_map_end (ccpcp_pack_context* pack_context);
 
 void cchainpack_pack_imap_begin (ccpcp_pack_context* pack_context);
-void cchainpack_pack_imap_end (ccpcp_pack_context* pack_context);
+//void cchainpack_pack_imap_end (ccpcp_pack_context* pack_context);
 
 void cchainpack_pack_meta_begin (ccpcp_pack_context* pack_context);
-void cchainpack_pack_meta_end (ccpcp_pack_context* pack_context);
+//void cchainpack_pack_meta_end (ccpcp_pack_context* pack_context);
 
 void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context);
 

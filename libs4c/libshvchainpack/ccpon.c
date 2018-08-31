@@ -217,20 +217,28 @@ void ccpon_pack_int(ccpcp_pack_context* pack_context, int64_t i)
 	ccpcp_pack_copy_bytes(pack_context, str, n);
 }
 
-void ccpon_pack_decimal(ccpcp_pack_context *pack_context, int64_t i, int dec_places)
+void ccpon_pack_decimal(ccpcp_pack_context *pack_context, int64_t mantisa, int dec_places)
 {
 	if (pack_context->err_no)
 		return;
 
+	bool neg = false;
+	if(mantisa < 0) {
+		mantisa = -mantisa;
+		neg = true;
+	}
+
 	// at least 21 characters for 64-bit types.
 	static const int LEN = 32;
 	char str[LEN];
-	int n = snprintf(str, LEN, "%ld", i);
+	int n = snprintf(str, LEN, "%ld", mantisa);
 	if(n < 0) {
 		pack_context->err_no = CCPCP_RC_LOGICAL_ERROR;
 		return;
 	}
-	if(dec_places < 0) {
+	if(dec_places <= 0) {
+		// not supported since 123000n is ambiguous
+		// maight be (123, -3) or (1230, -2) or (12300, -1) or (123000, 0)
 		pack_context->err_no = CCPCP_RC_LOGICAL_ERROR;
 		return;
 	}
@@ -238,7 +246,8 @@ void ccpon_pack_decimal(ccpcp_pack_context *pack_context, int64_t i, int dec_pla
 	char buff[BUFFLEN];
 	int ix;
 	char *pc = buff + BUFFLEN - 1;
-	for(ix = 0; ix < n; ix++) {
+	int len = (n > dec_places)? n: dec_places + 2;
+	for(ix = 0; ix < len; ix++) {
 		if(ix < dec_places) {
 			if(ix < n)
 				*pc-- = str[n - ix - 1];
@@ -257,7 +266,11 @@ void ccpon_pack_decimal(ccpcp_pack_context *pack_context, int64_t i, int dec_pla
 			}
 		}
 	}
+	if(neg)
+		*pc-- = '-';
+	pc++;
 	ccpcp_pack_copy_bytes(pack_context, pc, buff + BUFFLEN - pc);
+	ccpcp_pack_copy_byte(pack_context, CCPON_C_DECIMAL_END);
 }
 
 void ccpon_pack_double(ccpcp_pack_context* pack_context, double d)
@@ -296,6 +309,7 @@ void ccpon_pack_double(ccpcp_pack_context* pack_context, double d)
 
 void ccpon_pack_date_time(ccpcp_pack_context *pack_context, int64_t epoch_msecs, int min_from_utc)
 {
+	/// ISO 8601 with msecs extension
 	ccpcp_pack_copy_bytes(pack_context, CCPON_DATE_TIME_BEGIN, sizeof (CCPON_DATE_TIME_BEGIN) - 1);
 	struct tm tm;
 	ccpon_gmtime(epoch_msecs / 1000, &tm);
@@ -321,7 +335,10 @@ void ccpon_pack_date_time(ccpcp_pack_context *pack_context, int64_t epoch_msecs,
 		else {
 			ccpcp_pack_copy_bytes(pack_context, "+", 1);
 		}
-		n = snprintf(str, LEN, "%02d%02d", min_from_utc/60, min_from_utc%60);
+		if(min_from_utc%60)
+			n = snprintf(str, LEN, "%02d%02d", min_from_utc/60, min_from_utc%60);
+		else
+			n = snprintf(str, LEN, "%02d", min_from_utc/60);
 		if(n > 0)
 			ccpcp_pack_copy_bytes(pack_context, str, n);
 	}
@@ -461,54 +478,59 @@ void ccpon_pack_meta_end(ccpcp_pack_context *pack_context)
 	}
 }
 
-static uint8_t* ccpon_pack_blob_data_escaped(ccpcp_pack_context* pack_context, const void* v, unsigned l)
+static uint8_t* copy_data_escaped(ccpcp_pack_context* pack_context, const void* str, size_t len)
 {
-	if (pack_context->err_no)
-		return 0;
-	uint8_t *p = ccpcp_pack_reserve_space(pack_context, 4*l);
-	if(p) {
-		for (unsigned i = 0; i < l; i++) {
-			const uint8_t ch = ((const uint8_t*)v)[i];
-			switch (ch) {
-			case '\\': *p++ = '\\'; *p++ = '\\'; break;
-			case '"' : *p++ = '\\'; *p++ = '"'; break;
-			case '\b': *p++ = '\\'; *p++ = 'b'; break;
-			case '\f': *p++ = '\\'; *p++ = 'f'; break;
-			case '\n': *p++ = '\\'; *p++ = 'n'; break;
-			case '\r': *p++ = '\\'; *p++ = 'r'; break;
-			case '\t': *p++ = '\\'; *p++ = 't'; break;
-			default: {
-				if (ch < ' ') {
-					int n = snprintf((char*)p, 4, "\\x%02x", ch);
-					p += n;
-				}
-				else {
-					*p++ = ch;
-				}
-				break;
-			}
-			}
+	for (size_t i = 0; i < len; ++i) {
+		if(pack_context->err_no != CCPCP_RC_OK)
+			return NULL;
+		uint8_t ch = ((const uint8_t*)str)[i];
+		switch(ch) {
+		case '\0':
+		case '\\':
+		case '\t':
+		case '\b':
+		case '\r':
+		case '\n':
+		case '"':
+			ccpcp_pack_copy_byte(pack_context, '\\');
+			ccpcp_pack_copy_byte(pack_context, ch);
+			break;
+		default:
+			ccpcp_pack_copy_byte(pack_context, ch);
 		}
 	}
-	pack_context->current = p;
-	return p;
+	return pack_context->current;
 }
 
-void ccpon_pack_str(ccpcp_pack_context* pack_context, const char* s, unsigned l)
+void ccpon_pack_string(ccpcp_pack_context* pack_context, const char* s, size_t l)
 {
-	if (pack_context->err_no)
-		return;
-	uint8_t *p = ccpcp_pack_reserve_space(pack_context, 1);
-	if(p) {
-		*p = '"';
-		p = ccpon_pack_blob_data_escaped(pack_context, s, 4*l);
-		if(p) {
-			p = ccpon_pack_blob_data_escaped(pack_context, s, 1);
-			if(p)
-				*p = '"';
-		}
-	}
+	ccpcp_pack_copy_byte(pack_context, '"');
+	copy_data_escaped(pack_context, s, l);
+	ccpcp_pack_copy_byte(pack_context, '"');
 }
+
+void ccpon_pack_string_terminated (ccpcp_pack_context* pack_context, const char* s)
+{
+	size_t len = strlen(s);
+	ccpon_pack_string(pack_context, s, len);
+}
+
+void ccpon_pack_string_start (ccpcp_pack_context* pack_context, const char*buff, size_t buff_len)
+{
+	ccpcp_pack_copy_byte(pack_context, '"');
+	copy_data_escaped(pack_context, buff, buff_len);
+}
+
+void ccpon_pack_string_cont (ccpcp_pack_context* pack_context, const char*buff, unsigned buff_len)
+{
+	copy_data_escaped(pack_context, buff, buff_len);
+}
+
+void ccpon_pack_string_finish (ccpcp_pack_context* pack_context)
+{
+	ccpcp_pack_copy_byte(pack_context, '"');
+}
+
 /*
 void ccpon_pack_blob(ccpcp_pack_context* pack_context, const void* v, unsigned l)
 {
@@ -891,8 +913,9 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 	case CCPON_C_LIST_END: {
 		ccpcp_container_state *top_cont_state = ccpc_unpack_context_top_container_state(unpack_context);
 		if(!top_cont_state)
-			UNPACK_ERROR(CCPCP_RC_CONTAINER_STACK_UNDERFLOW)
-		unpack_context->item.type = (top_cont_state->container_type == CCPCP_ITEM_LIST)? CCPCP_ITEM_LIST_END: CCPCP_ITEM_ARRAY_END;
+			UNPACK_ERROR(CCPCP_RC_CONTAINER_STACK_UNDERFLOW);
+		//unpack_context->item.type = (top_cont_state->container_type == CCPCP_ITEM_LIST)? CCPCP_ITEM_LIST_END: CCPCP_ITEM_ARRAY_END;
+		unpack_context->item.type = CCPCP_ITEM_LIST_END;
 		break;
 	}
 	case CCPON_C_META_END:
@@ -914,6 +937,7 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		unpack_context->item.type = CCPCP_ITEM_IMAP;
 		break;
 	}
+	/*
 	case 'a': {
 		int64_t size;
 		int n = unpack_int(unpack_context, &size);
@@ -927,6 +951,7 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		unpack_context->item.as.Array.size = size;
 		break;
 	}
+	*/
 	case 'd': {
 		UNPACK_ASSERT_BYTE();
 		if(!p || *p != '"')
@@ -963,6 +988,21 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		break;
 	}
 	*/
+	case 'n': {
+		UNPACK_ASSERT_BYTE();
+		if(*p == 'u') {
+			UNPACK_ASSERT_BYTE();
+			if(*p == 'l') {
+				UNPACK_ASSERT_BYTE();
+				if(*p == 'l') {
+					unpack_context->item.type = CCPCP_ITEM_NULL;
+					break;
+				}
+			}
+		}
+		UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT)
+		break;
+	}
 	case 'f': {
 		UNPACK_ASSERT_BYTE();
 		if(*p == 'a') {
@@ -999,7 +1039,7 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		break;
 	}
 	case '"': {
-		unpack_context->item.type = CCPCP_ITEM_CSTRING;
+		unpack_context->item.type = CCPCP_ITEM_STRING;
 		ccpcp_string *str_it = &unpack_context->item.as.String;
 		ccpcp_string_init(str_it);
 		//str_it->format = CCPON_STRING_FORMAT_UTF8_ESCAPED;
@@ -1114,14 +1154,14 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 
 	switch(unpack_context->item.type) {
 	case CCPCP_ITEM_LIST:
-	case CCPCP_ITEM_ARRAY:
+	//case CCPCP_ITEM_ARRAY:
 	case CCPCP_ITEM_MAP:
 	case CCPCP_ITEM_IMAP:
 	case CCPCP_ITEM_META:
 		ccpc_unpack_context_push_container_state(unpack_context, unpack_context->item.type);
 		break;
 	case CCPCP_ITEM_LIST_END:
-	case CCPCP_ITEM_ARRAY_END:
+	//case CCPCP_ITEM_ARRAY_END:
 	case CCPCP_ITEM_MAP_END:
 	case CCPCP_ITEM_IMAP_END:
 	case CCPCP_ITEM_META_END:
@@ -1147,5 +1187,6 @@ void ccpon_pack_key_delim(ccpcp_pack_context *pack_context)
 {
 	ccpcp_pack_copy_bytes(pack_context, ":", 1);
 }
+
 
 

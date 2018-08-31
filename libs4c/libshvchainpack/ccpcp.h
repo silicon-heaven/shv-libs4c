@@ -31,7 +31,7 @@ typedef enum
 
 struct ccpcp_pack_context;
 
-typedef size_t (*ccpcp_pack_overflow_handler)(struct ccpcp_pack_context*);
+typedef void (*ccpcp_pack_overflow_handler)(struct ccpcp_pack_context*, size_t size_hint);
 
 typedef struct ccpcp_pack_context {
 	uint8_t* start;
@@ -45,9 +45,14 @@ typedef struct ccpcp_pack_context {
 
 void ccpcp_pack_context_init(ccpcp_pack_context* pack_context, void *data, size_t length, ccpcp_pack_overflow_handler hpo);
 
+// try to make size_hint bytes space in pack_context
+// returns number of bytes available in pack_context buffer, can be < size_hint, but always > 0
+// returns 0 if fails
+size_t ccpcp_pack_make_space(ccpcp_pack_context* pack_context, size_t size_hint);
 uint8_t* ccpcp_pack_reserve_space(ccpcp_pack_context* pack_context, size_t more);
 void ccpcp_pack_copy_byte (ccpcp_pack_context* pack_context, uint8_t b);
 void ccpcp_pack_copy_bytes (ccpcp_pack_context* pack_context, const void *str, size_t len);
+//void ccpcp_pack_copy_bytes_cpon_string_escaped (ccpcp_pack_context* pack_context, const void *str, size_t len);
 
 //=========================== UNPACK ============================
 
@@ -67,8 +72,8 @@ typedef enum
 
 	CCPCP_ITEM_LIST,
 	CCPCP_ITEM_LIST_END,
-	CCPCP_ITEM_ARRAY,
-	CCPCP_ITEM_ARRAY_END,
+	//CCPCP_ITEM_ARRAY,
+	//CCPCP_ITEM_ARRAY_END,
 	CCPCP_ITEM_MAP,
 	CCPCP_ITEM_MAP_END,
 	CCPCP_ITEM_IMAP,
@@ -93,12 +98,12 @@ typedef struct {
 } ccpcp_string;
 
 void ccpcp_string_init(ccpcp_string *str_it);
-
+/*
 typedef struct {
 	ccpcp_item_types type;
 	int32_t size;
 } ccpcp_array;
-
+*/
 typedef struct {
 	int64_t msecs_since_epoch;
 	int minutes_from_utc;
@@ -119,7 +124,7 @@ typedef struct {
 		ccpcp_decimal Decimal;
 		uint64_t UInt;
 		int64_t Int;
-		ccpcp_array Array;
+		//ccpcp_array Array;
 		double Double;
 		bool Bool;
 	} as;

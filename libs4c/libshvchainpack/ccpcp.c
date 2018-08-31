@@ -2,26 +2,37 @@
 
 #include <string.h>
 
+size_t ccpcp_pack_make_space(ccpcp_pack_context* pack_context, size_t size_hint)
+{
+	if(pack_context->err_no != CCPCP_RC_OK)
+		return NULL;
+	size_t free_space = pack_context->end - pack_context->current;
+	if(free_space < size_hint) {
+		if (!pack_context->handle_pack_overflow) {
+			pack_context->err_no = CCPCP_RC_BUFFER_OVERFLOW;
+			return 0;
+		}
+		pack_context->handle_pack_overflow (pack_context, size_hint);
+		free_space = pack_context->end - pack_context->current;
+		if (free_space < 1) {
+			pack_context->err_no = CCPCP_RC_BUFFER_OVERFLOW;
+			return 0;
+		}
+	}
+	return free_space;
+}
+
 uint8_t* ccpcp_pack_reserve_space(ccpcp_pack_context* pack_context, size_t more)
 {
 	if(pack_context->err_no != CCPCP_RC_OK)
 		return NULL;
-	uint8_t* p = pack_context->current;
-	uint8_t* nyp = p + more;
-	if (nyp > pack_context->end) {
-		if (!pack_context->handle_pack_overflow) {
-			pack_context->err_no = CCPCP_RC_BUFFER_OVERFLOW;
-			return NULL;
-		}
-		size_t sz = pack_context->handle_pack_overflow (pack_context);
-		if (sz < more) {
-			pack_context->err_no = CCPCP_RC_BUFFER_OVERFLOW;
-			return NULL;
-		}
-		p = pack_context->current;
-		nyp = p + more;
+	size_t free_space = ccpcp_pack_make_space(pack_context, more);
+	if (free_space < more) {
+		pack_context->err_no = CCPCP_RC_BUFFER_OVERFLOW;
+		return NULL;
 	}
-	pack_context->current = nyp;
+	uint8_t* p = pack_context->current;
+	pack_context->current = p + more;
 	return p;
 }
 
@@ -37,18 +48,45 @@ void ccpcp_pack_copy_bytes(ccpcp_pack_context *pack_context, const void *str, si
 {
 	size_t copied = 0;
 	while (pack_context->err_no == CCPCP_RC_OK && copied < len) {
-		uint8_t *p = ccpcp_pack_reserve_space(pack_context, len);
-		if(!p)
-			break;
-		size_t buff_size = pack_context->current - p;
+		size_t buff_size = ccpcp_pack_make_space(pack_context, len);
+		if(buff_size == 0) {
+			pack_context->err_no = CCPCP_RC_BUFFER_OVERFLOW;
+			return;
+		}
 		size_t rest = len - copied;
 		if(rest > buff_size)
 			rest = buff_size;
-		memcpy(p, ((const char*)str) + copied, rest);
+		memcpy(pack_context->current, ((const char*)str) + copied, rest);
 		copied += rest;
+		pack_context->current += rest;
 	}
 }
 
+
+/*
+void ccpcp_pack_copy_bytes_cpon_string_escaped(ccpcp_pack_context *pack_context, const void *str, size_t len)
+{
+	for (size_t i = 0; i < len; ++i) {
+		if(pack_context->err_no != CCPCP_RC_OK)
+			return;
+		uint8_t ch = ((const uint8_t*)str)[i];
+		switch(ch) {
+		case '\0':
+		case '\\':
+		case '\t':
+		case '\b':
+		case '\r':
+		case '\n':
+		case '"':
+			ccpcp_pack_copy_byte(pack_context, '\\');
+			ccpcp_pack_copy_byte(pack_context, ch);
+			break;
+		default:
+			ccpcp_pack_copy_byte(pack_context, ch);
+		}
+	}
+}
+*/
 //================================ UNPACK ================================
 
 void ccpcp_container_state_init(ccpcp_container_state *self, ccpcp_item_types cont_type)
@@ -138,12 +176,12 @@ bool ccpcp_item_type_is_value(ccpcp_item_types t)
 	case CCPCP_ITEM_INVALID:
 		return false;
 	case CCPCP_ITEM_LIST:
-	case CCPCP_ITEM_ARRAY:
+	//case CCPCP_ITEM_ARRAY:
 	case CCPCP_ITEM_MAP:
 	case CCPCP_ITEM_IMAP:
 	case CCPCP_ITEM_META:
 	case CCPCP_ITEM_LIST_END:
-	case CCPCP_ITEM_ARRAY_END:
+	//case CCPCP_ITEM_ARRAY_END:
 	case CCPCP_ITEM_MAP_END:
 	case CCPCP_ITEM_IMAP_END:
 	case CCPCP_ITEM_META_END:
@@ -167,7 +205,7 @@ bool ccpcp_item_type_is_container_end(ccpcp_item_types t)
 	case CCPCP_ITEM_INVALID:
 		return false;
 	case CCPCP_ITEM_LIST:
-	case CCPCP_ITEM_ARRAY:
+	//case CCPCP_ITEM_ARRAY:
 	case CCPCP_ITEM_MAP:
 	case CCPCP_ITEM_IMAP:
 	case CCPCP_ITEM_META:
@@ -181,7 +219,7 @@ bool ccpcp_item_type_is_container_end(ccpcp_item_types t)
 	case CCPCP_ITEM_STRING:
 		return false;
 	case CCPCP_ITEM_LIST_END:
-	case CCPCP_ITEM_ARRAY_END:
+	//case CCPCP_ITEM_ARRAY_END:
 	case CCPCP_ITEM_MAP_END:
 	case CCPCP_ITEM_IMAP_END:
 	case CCPCP_ITEM_META_END:
@@ -225,4 +263,5 @@ const uint8_t* ccpcp_unpack_take_byte(ccpcp_unpack_context* unpack_context)
 	unpack_context->current = nyp;
 	return p;
 }
+
 

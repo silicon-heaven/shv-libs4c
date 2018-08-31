@@ -18,7 +18,7 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 			ccpcp_container_state *curr_item_cont_state = ccpc_unpack_context_current_item_container_state(in_ctx);
 			if(curr_item_cont_state != NULL) {
 				bool is_string_concat = 0;
-				if(in_ctx->item.type == CCPCP_ITEM_STRING || in_ctx->item.type == CCPCP_ITEM_CSTRING) {
+				if(in_ctx->item.type == CCPCP_ITEM_STRING) {
 					ccpcp_string *it = &(in_ctx->item.as.String);
 					if(it->parse_status.chunk_cnt > 1) {
 						// multichunk string
@@ -31,7 +31,7 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 				if(!is_string_concat && !ccpcp_item_type_is_container_end(in_ctx->item.type)) {
 					switch(curr_item_cont_state->container_type) {
 					case CCPCP_ITEM_LIST:
-					case CCPCP_ITEM_ARRAY:
+					//case CCPCP_ITEM_ARRAY:
 						if(prev_item != CCPCP_ITEM_META_END)
 							ccpon_pack_field_delim(out_ctx, curr_item_cont_state->item_count == 1);
 						break;
@@ -66,6 +66,7 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 				ccpon_pack_list_begin(out_ctx);
 			break;
 		}
+		/*
 		case CCPCP_ITEM_ARRAY: {
 			if(o_chainpack_output)
 				cchainpack_pack_array_begin(out_ctx, in_ctx->item.as.Array.size);
@@ -73,6 +74,7 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 				ccpon_pack_array_begin(out_ctx, in_ctx->item.as.Array.size);
 			break;
 		}
+		*/
 		case CCPCP_ITEM_MAP: {
 			if(o_chainpack_output)
 				cchainpack_pack_map_begin(out_ctx);
@@ -96,11 +98,12 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 		}
 		case CCPCP_ITEM_LIST_END: {
 			if(o_chainpack_output)
-				cchainpack_pack_list_end(out_ctx);
+				cchainpack_pack_container_end(out_ctx);
 			else
 				ccpon_pack_list_end(out_ctx);
 			break;
 		}
+		/*
 		case CCPCP_ITEM_ARRAY_END: {
 			if(o_chainpack_output)
 				;
@@ -108,23 +111,24 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 				ccpon_pack_list_end(out_ctx);
 			break;
 		}
+		*/
 		case CCPCP_ITEM_MAP_END: {
 			if(o_chainpack_output)
-				cchainpack_pack_map_end(out_ctx);
+				cchainpack_pack_container_end(out_ctx);
 			else
 				ccpon_pack_map_end(out_ctx);
 			break;
 		}
 		case CCPCP_ITEM_IMAP_END: {
 			if(o_chainpack_output)
-				cchainpack_pack_imap_end(out_ctx);
+				cchainpack_pack_container_end(out_ctx);
 			else
 				ccpon_pack_imap_end(out_ctx);
 			break;
 		}
 		case CCPCP_ITEM_META_END: {
 			if(o_chainpack_output)
-				cchainpack_pack_meta_end(out_ctx);
+				cchainpack_pack_container_end(out_ctx);
 			else
 				ccpon_pack_meta_end(out_ctx);
 			break;
@@ -214,5 +218,5 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 	} while(in_ctx->err_no == CCPCP_RC_OK && out_ctx->err_no == CCPCP_RC_OK);
 
 	if(out_ctx->handle_pack_overflow)
-		out_ctx->handle_pack_overflow(out_ctx);
+		out_ctx->handle_pack_overflow(out_ctx, 0);
 }

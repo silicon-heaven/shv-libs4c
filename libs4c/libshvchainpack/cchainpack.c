@@ -8,7 +8,7 @@
 // Fri Feb 02 2018 00:00:00 == 1517529600 EPOCH
 static const int64_t SHV_EPOCH_MSEC = 1517529600000;
 
-const uint8_t CP_ARRAY_FLAG_MASK = 64;
+//static const uint8_t CP_ARRAY_FLAG_MASK = 64; // DEPRECATED
 const uint8_t CP_STRING_META_KEY_PREFIX = 0xFE;
 
 const char* cchainpack_packing_schema_name(int sch)
@@ -39,6 +39,24 @@ const char* cchainpack_packing_schema_name(int sch)
 	}
 	//SHVCHP_EXCEPTION("Unknown TypeInfo: " + Utils::toString((int)e));
 	return "";
+}
+
+static void copy_bytes_cstring(ccpcp_pack_context *pack_context, const void *str, size_t len)
+{
+	for (size_t i = 0; i < len; ++i) {
+		if(pack_context->err_no != CCPCP_RC_OK)
+			return;
+		uint8_t ch = ((const uint8_t*)str)[i];
+		switch(ch) {
+		case '\0':
+		case '\\':
+			ccpcp_pack_copy_byte(pack_context, '\\');
+			ccpcp_pack_copy_byte(pack_context, ch);
+			break;
+		default:
+			ccpcp_pack_copy_byte(pack_context, ch);
+		}
+	}
 }
 
 static int significant_bits_part_length(uint64_t n)
@@ -172,7 +190,7 @@ void cchainpack_pack_int(ccpcp_pack_context* pack_context, int64_t i)
 {
 	if (pack_context->err_no)
 		return;
-	if(i < 64) {
+	if(i >= 0 && i < 64) {
 		ccpcp_pack_copy_byte(pack_context, (i % 64) + 64);
 	}
 	else {
@@ -267,7 +285,7 @@ void cchainpack_pack_boolean(ccpcp_pack_context* pack_context, bool b)
 	else
 		cchainpack_pack_false(pack_context);
 }
-
+/*
 void cchainpack_pack_array_begin(ccpcp_pack_context* pack_context, ccpcp_item_types type, int size)
 {
 	if (pack_context->err_no)
@@ -279,8 +297,8 @@ void cchainpack_pack_array_begin(ccpcp_pack_context* pack_context, ccpcp_item_ty
 	case CCPCP_ITEM_INVALID:
 	case CCPCP_ITEM_META:
 	case CCPCP_ITEM_META_END:
-	case CCPCP_ITEM_ARRAY:
-	case CCPCP_ITEM_ARRAY_END:
+	//case CCPCP_ITEM_ARRAY:
+	//case CCPCP_ITEM_ARRAY_END:
 	case CCPCP_ITEM_LIST_END:
 	case CCPCP_ITEM_MAP_END:
 	case CCPCP_ITEM_IMAP_END:
@@ -319,9 +337,6 @@ void cchainpack_pack_array_begin(ccpcp_pack_context* pack_context, ccpcp_item_ty
 	case CCPCP_ITEM_STRING:
 		sch = CP_String;
 		break;
-	case CCPCP_ITEM_CSTRING:
-		sch = CP_CString;
-		break;
 	}
 
 }
@@ -329,30 +344,15 @@ void cchainpack_pack_array_begin(ccpcp_pack_context* pack_context, ccpcp_item_ty
 void cchainpack_pack_array_end(ccpcp_pack_context *pack_context)
 {
 }
-
+*/
 void cchainpack_pack_list_begin(ccpcp_pack_context *pack_context)
 {
 	if (pack_context->err_no)
 		return;
-
-
-}
-
-void cchainpack_pack_list_end(ccpcp_pack_context *pack_context)
-{
-	if (pack_context->err_no)
-		return;
-
+	ccpcp_pack_copy_byte(pack_context, CP_List);
 }
 
 void cchainpack_pack_map_begin(ccpcp_pack_context *pack_context)
-{
-	if (pack_context->err_no)
-		return;
-
-}
-
-void cchainpack_pack_map_end(ccpcp_pack_context *pack_context)
 {
 	if (pack_context->err_no)
 		return;
@@ -363,92 +363,68 @@ void cchainpack_pack_imap_begin(ccpcp_pack_context* pack_context)
 {
 	if (pack_context->err_no)
 		return;
-
-}
-
-void cchainpack_pack_imap_end(ccpcp_pack_context *pack_context)
-{
+	ccpcp_pack_copy_byte(pack_context, CP_IMap);
 }
 
 void cchainpack_pack_meta_begin(ccpcp_pack_context *pack_context)
 {
 	if (pack_context->err_no)
 		return;
-
+	ccpcp_pack_copy_byte(pack_context, CP_MetaMap);
 }
 
-void cchainpack_pack_meta_end(ccpcp_pack_context *pack_context)
+void cchainpack_pack_container_end(ccpcp_pack_context *pack_context)
 {
 	if (pack_context->err_no)
 		return;
-
-}
-/*
-static uint8_t* ccpon_pack_blob_data_escaped(ccpcp_pack_context* pack_context, const void* v, unsigned l)
-{
-	if (pack_context->err_no)
-		return 0;
-	uint8_t *p = ccpon_pack_reserve_space(pack_context, 4*l);
-	if(p) {
-		for (unsigned i = 0; i < l; i++) {
-			const uint8_t ch = ((const uint8_t*)v)[i];
-			switch (ch) {
-			case '\\': *p++ = '\\'; *p++ = '\\'; break;
-			case '"' : *p++ = '\\'; *p++ = '"'; break;
-			case '\b': *p++ = '\\'; *p++ = 'b'; break;
-			case '\f': *p++ = '\\'; *p++ = 'f'; break;
-			case '\n': *p++ = '\\'; *p++ = 'n'; break;
-			case '\r': *p++ = '\\'; *p++ = 'r'; break;
-			case '\t': *p++ = '\\'; *p++ = 't'; break;
-			default: {
-				if (ch < ' ') {
-					int n = snprintf((char*)p, 4, "\\x%02x", ch);
-					p += n;
-				}
-				else {
-					*p++ = ch;
-				}
-				break;
-			}
-			}
-		}
-	}
-	pack_context->current = p;
-	return p;
+	ccpcp_pack_copy_byte(pack_context, CP_TERM);
 }
 
-void cchainpack_pack_str(ccpcp_pack_context* pack_context, const char* s, unsigned l)
+void cchainpack_pack_string (ccpcp_pack_context* pack_context, const char* buff, size_t buff_len)
 {
-	if (pack_context->err_no)
-		return;
-	uint8_t *p = ccpon_pack_reserve_space(pack_context, 1);
-	if(p) {
-		*p = '"';
-		p = ccpon_pack_blob_data_escaped(pack_context, s, 4*l);
-		if(p) {
-			p = ccpon_pack_blob_data_escaped(pack_context, s, 1);
-			if(p)
-				*p = '"';
-		}
-	}
+	cchainpack_pack_string_start(pack_context, buff_len, buff, buff_len);
 }
 
-void cchainpack_pack_blob(ccpcp_pack_context* pack_context, const void* v, unsigned l)
+void cchainpack_pack_string_start (ccpcp_pack_context* pack_context, size_t string_len, const char* buff, size_t buff_len)
 {
-	if (pack_context->err_no)
-		return;
-	uint8_t *p = ccpon_pack_reserve_space(pack_context, sizeof (CCPCP_STR_ESC_BLOB_BEGIN) - 1);
-	if(p) {
-		memcpy(p, CCPCP_STR_ESC_BLOB_BEGIN, sizeof (CCPCP_STR_ESC_BLOB_BEGIN) - 1);
-		p = ccpon_pack_blob_data_escaped(pack_context, v, 4*l);
-		if(p) {
-			p = ccpon_pack_blob_data_escaped(pack_context, v, 1);
-			if(p)
-				*p = '"';
-		}
-	}
+	ccpcp_pack_copy_byte(pack_context, CP_String);
+	cchainpack_pack_uint_data(pack_context, string_len);
+	ccpcp_pack_copy_bytes(pack_context, buff, buff_len);
 }
-*/
+
+void cchainpack_pack_string_cont (ccpcp_pack_context* pack_context, const char* buff, size_t buff_len)
+{
+	ccpcp_pack_copy_bytes(pack_context, buff, buff_len);
+}
+
+void cchainpack_pack_cstring (ccpcp_pack_context* pack_context, const char* buff, size_t buff_len)
+{
+	cchainpack_pack_cstring_start(pack_context, buff, buff_len);
+	cchainpack_pack_cstring_finish(pack_context);
+}
+
+void cchainpack_pack_cstring_terminated (ccpcp_pack_context* pack_context, const char* str)
+{
+	size_t len = strlen(str);
+	cchainpack_pack_cstring(pack_context, str, len);
+}
+
+void cchainpack_pack_cstring_start (ccpcp_pack_context* pack_context, const char*buff, size_t buff_len)
+{
+	ccpcp_pack_copy_byte(pack_context, CP_CString);
+	copy_bytes_cstring(pack_context, buff, buff_len);
+}
+
+void cchainpack_pack_cstring_cont (ccpcp_pack_context* pack_context, const char*buff, size_t buff_len)
+{
+	copy_bytes_cstring(pack_context, buff, buff_len);
+}
+
+void cchainpack_pack_cstring_finish (ccpcp_pack_context* pack_context)
+{
+	ccpcp_pack_copy_byte(pack_context, '\0');
+}
+
 //============================   U N P A C K   =================================
 
 /// @pbitlen is used to enable same function usage for signed int unpacking
@@ -490,7 +466,7 @@ static void unpack_int(ccpcp_unpack_context* unpack_context, int64_t *pval)
 	uint64_t num;
 	unpack_uint(unpack_context, &num, &bitlen);
 	if(unpack_context->err_no == CCPCP_RC_OK) {
-		uint64_t sign_bit_mask = 1 << (bitlen - 1);
+		uint64_t sign_bit_mask = (uint64_t)1 << (bitlen - 1);
 		bool neg = num & sign_bit_mask;
 		snum = (int64_t)num;
 		if(neg) {
@@ -611,13 +587,18 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 		}
 	}
 	else {
+		/*
 		bool is_array = 0;
 		if(packing_schema < CP_FALSE) {
 			is_array = packing_schema & CP_ARRAY_FLAG_MASK;
 			packing_schema &= ~CP_ARRAY_FLAG_MASK;
 		}
-
+		*/
 		switch(packing_schema) {
+		case CP_Null: {
+			unpack_context->item.type = CCPCP_ITEM_NULL;
+			break;
+		}
 		case CP_TRUE: {
 			unpack_context->item.type = CCPCP_ITEM_BOOLEAN;
 			unpack_context->item.as.Bool = 1;
@@ -661,6 +642,16 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 					bytes[i] = *p;
 				}
 			}
+			break;
+		}
+		case CP_Decimal: {
+			int64_t mant;
+			unpack_int(unpack_context, &mant);
+			int64_t dec;
+			unpack_int(unpack_context, &dec);
+			unpack_context->item.type = CCPCP_ITEM_DECIMAL;
+			unpack_context->item.as.Decimal.mantisa = mant;
+			unpack_context->item.as.Decimal.dec_places = dec;
 			break;
 		}
 		case CP_DateTime: {
