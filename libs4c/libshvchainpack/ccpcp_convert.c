@@ -136,28 +136,34 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 		case CCPCP_ITEM_STRING: {
 			ccpcp_string *it = &in_ctx->item.as.String;
 			if(o_chainpack_output) {
-				if(it->parse_status.chunk_cnt == 1) {
-					// first string chunk
-					cchainpack_pack_uint(out_ctx, it->length);
-					ccpcp_pack_copy_bytes(out_ctx, it->start, it->length);
+				if(it->parse_status.chunk_cnt == 1 && it->parse_status.last_chunk) {
+					// one chunk string with known length is always packed as RAW
+					cchainpack_pack_string(out_ctx, it->start, it->chunk_length);
+				}
+				else if(it->parse_status.string_size >= 0) {
+					if(it->parse_status.chunk_cnt == 1)
+						cchainpack_pack_string_start(out_ctx, it->parse_status.string_size, it->start, it->parse_status.string_size);
+					else
+						cchainpack_pack_string_cont(out_ctx, it->start, it->chunk_length);
 				}
 				else {
-					// next string chunk
-					ccpcp_pack_copy_bytes(out_ctx, it->start, it->length);
+					// cstring
+					if(it->parse_status.chunk_cnt == 1)
+						cchainpack_pack_cstring_start(out_ctx, it->start, it->chunk_length);
+					else
+						cchainpack_pack_cstring_cont(out_ctx, it->start, it->chunk_length);
+					if(it->parse_status.last_chunk)
+						cchainpack_pack_cstring_finish(out_ctx);
 				}
 			}
 			else {
-				if(it->parse_status.chunk_cnt == 1) {
-					// first string chunk
-					ccpcp_pack_copy_bytes(out_ctx, "\"", 1);
-					ccpcp_pack_copy_bytes(out_ctx, it->start, it->length);
-				}
-				else {
-					// next string chunk
-					ccpcp_pack_copy_bytes(out_ctx, it->start, it->length);
-				}
+				// Cpon
+				if(it->parse_status.chunk_cnt == 1)
+					ccpon_pack_string_start(out_ctx, it->start, it->chunk_length);
+				else
+					ccpon_pack_string_cont(out_ctx, it->start, it->chunk_length);
 				if(it->parse_status.last_chunk)
-					ccpcp_pack_copy_bytes(out_ctx, "\"", 1);
+					ccpon_pack_string_finish(out_ctx);
 			}
 			break;
 		}
@@ -212,8 +218,14 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 		{
 			ccpcp_container_state *top_state = ccpc_unpack_context_top_container_state(in_ctx);
 			// take just one object from stream
-			if(!top_state)
-				break;
+			if(!top_state) {
+				if(in_ctx->item.type == CCPCP_ITEM_STRING && !in_ctx->item.as.String.parse_status.last_chunk) {
+					// do not stop parsing in the middle of the string
+				}
+				else {
+					break;
+				}
+			}
 		}
 	} while(in_ctx->err_no == CCPCP_RC_OK && out_ctx->err_no == CCPCP_RC_OK);
 

@@ -146,7 +146,7 @@ static void	*memcpy(void *dst, const void *src, size_t n)
 //============================   P A C K   =================================
 void ccpcp_pack_context_init (ccpcp_pack_context* pack_context, void *data, size_t length, ccpcp_pack_overflow_handler hpo)
 {
-	pack_context->start = pack_context->current = (uint8_t*)data;
+	pack_context->start = pack_context->current = (char*)data;
 	pack_context->end = pack_context->start + length;
 	pack_context->err_no = 0;
 	pack_context->handle_pack_overflow = hpo;
@@ -301,7 +301,7 @@ void ccpon_pack_double(ccpcp_pack_context* pack_context, double d)
 	if(!has_dot && !has_e) {
 		str[n++] = '.';
 	}
-	uint8_t *p = ccpcp_pack_reserve_space(pack_context, (unsigned)n);
+	char *p = ccpcp_pack_reserve_space(pack_context, (unsigned)n);
 	if(p) {
 		memcpy(p, str, (unsigned)n);
 	}
@@ -400,7 +400,7 @@ void ccpon_pack_list_begin(ccpcp_pack_context *pack_context)
 	if (pack_context->err_no)
 		return;
 
-	uint8_t *p = ccpcp_pack_reserve_space(pack_context, 1);
+	char *p = ccpcp_pack_reserve_space(pack_context, 1);
 	if(p)
 		*p = CCPON_C_LIST_BEGIN;
 	start_block(pack_context);
@@ -413,7 +413,7 @@ void ccpon_pack_list_end(ccpcp_pack_context *pack_context)
 		return;
 
 	end_block(pack_context);
-	uint8_t *p = ccpcp_pack_reserve_space(pack_context, 1);
+	char *p = ccpcp_pack_reserve_space(pack_context, 1);
 	if(p)
 		*p = CCPON_C_LIST_END;
 }
@@ -423,7 +423,7 @@ void ccpon_pack_map_begin(ccpcp_pack_context *pack_context)
 	if (pack_context->err_no)
 		return;
 
-	uint8_t *p = ccpcp_pack_reserve_space(pack_context, 1);
+	char *p = ccpcp_pack_reserve_space(pack_context, 1);
 	if(p)
 		*p = CCPON_C_MAP_BEGIN;
 	start_block(pack_context);
@@ -435,7 +435,7 @@ void ccpon_pack_map_end(ccpcp_pack_context *pack_context)
 		return;
 
 	end_block(pack_context);
-	uint8_t *p = ccpcp_pack_reserve_space(pack_context, 1);
+	char *p = ccpcp_pack_reserve_space(pack_context, 1);
 	if(p) {
 		*p = CCPON_C_MAP_END;
 	}
@@ -460,7 +460,7 @@ void ccpon_pack_meta_begin(ccpcp_pack_context *pack_context)
 	if (pack_context->err_no)
 		return;
 
-	uint8_t *p = ccpcp_pack_reserve_space(pack_context, 1);
+	char *p = ccpcp_pack_reserve_space(pack_context, 1);
 	if(p)
 		*p = CCPON_C_META_BEGIN;
 	start_block(pack_context);
@@ -472,13 +472,13 @@ void ccpon_pack_meta_end(ccpcp_pack_context *pack_context)
 		return;
 
 	end_block(pack_context);
-	uint8_t *p = ccpcp_pack_reserve_space(pack_context, 1);
+	char *p = ccpcp_pack_reserve_space(pack_context, 1);
 	if(p) {
 		*p = CCPON_C_META_END;
 	}
 }
 
-static uint8_t* copy_data_escaped(ccpcp_pack_context* pack_context, const void* str, size_t len)
+static char* copy_data_escaped(ccpcp_pack_context* pack_context, const void* str, size_t len)
 {
 	for (size_t i = 0; i < len; ++i) {
 		if(pack_context->err_no != CCPCP_RC_OK)
@@ -486,14 +486,32 @@ static uint8_t* copy_data_escaped(ccpcp_pack_context* pack_context, const void* 
 		uint8_t ch = ((const uint8_t*)str)[i];
 		switch(ch) {
 		case '\0':
+			ccpcp_pack_copy_byte(pack_context, '\\');
+			ccpcp_pack_copy_byte(pack_context, '0');
+			break;
 		case '\\':
+			ccpcp_pack_copy_byte(pack_context, '\\');
+			ccpcp_pack_copy_byte(pack_context, '\\');
+			break;
 		case '\t':
+			ccpcp_pack_copy_byte(pack_context, '\\');
+			ccpcp_pack_copy_byte(pack_context, 't');
+			break;
 		case '\b':
+			ccpcp_pack_copy_byte(pack_context, '\\');
+			ccpcp_pack_copy_byte(pack_context, 'b');
+			break;
 		case '\r':
+			ccpcp_pack_copy_byte(pack_context, '\\');
+			ccpcp_pack_copy_byte(pack_context, 'r');
+			break;
 		case '\n':
+			ccpcp_pack_copy_byte(pack_context, '\\');
+			ccpcp_pack_copy_byte(pack_context, 'n');
+			break;
 		case '"':
 			ccpcp_pack_copy_byte(pack_context, '\\');
-			ccpcp_pack_copy_byte(pack_context, ch);
+			ccpcp_pack_copy_byte(pack_context, '"');
 			break;
 		default:
 			ccpcp_pack_copy_byte(pack_context, ch);
@@ -511,7 +529,7 @@ void ccpon_pack_string(ccpcp_pack_context* pack_context, const char* s, size_t l
 
 void ccpon_pack_string_terminated (ccpcp_pack_context* pack_context, const char* s)
 {
-	size_t len = strlen(s);
+	size_t len = s? strlen(s): 0;
 	ccpon_pack_string(pack_context, s, len);
 }
 
@@ -536,7 +554,7 @@ void ccpon_pack_blob(ccpcp_pack_context* pack_context, const void* v, unsigned l
 {
 	if (pack_context->err_no)
 		return;
-	uint8_t *p = ccpcp_pack_reserve_space(pack_context, sizeof (CCPON_STR_ESC_BLOB_BEGIN) - 1);
+	char *p = ccpcp_pack_reserve_space(pack_context, sizeof (CCPON_STR_ESC_BLOB_BEGIN) - 1);
 	if(p) {
 		memcpy(p, CCPON_STR_ESC_BLOB_BEGIN, sizeof (CCPON_STR_ESC_BLOB_BEGIN) - 1);
 		p = ccpon_pack_blob_data_escaped(pack_context, v, 4*l);
@@ -550,10 +568,10 @@ void ccpon_pack_blob(ccpcp_pack_context* pack_context, const void* v, unsigned l
 */
 //============================   U N P A C K   =================================
 
-static const uint8_t* ccpon_unpack_skip_blank(ccpcp_unpack_context* unpack_context)
+static const char* ccpon_unpack_skip_blank(ccpcp_unpack_context* unpack_context)
 {
 	while(1) {
-		const uint8_t* p = ccpcp_unpack_take_byte(unpack_context);
+		const char* p = ccpcp_unpack_take_byte(unpack_context);
 		if(!p)
 			return p;
 		if(*p > ' ')
@@ -567,7 +585,7 @@ static int unpack_int(ccpcp_unpack_context* unpack_context, int64_t *p_val)
 	int neg = 0;
 	int n = 0;
 	for (; ; n++) {
-		const uint8_t *p = ccpcp_unpack_take_byte(unpack_context);
+		const char *p = ccpcp_unpack_take_byte(unpack_context);
 		if(!p)
 			goto eonumb;
 		uint8_t b = *p;
@@ -620,7 +638,7 @@ static void unpack_date_time(ccpcp_unpack_context *unpack_context, struct tm *tm
 	*msec = 0;
 	*utc_offset = 0;
 
-	const uint8_t *p;
+	const char *p;
 
 	int64_t val;
 	int n = unpack_int(unpack_context, &val);
@@ -725,18 +743,25 @@ static void ccpon_unpack_string(ccpcp_unpack_context* unpack_context)
 	if(unpack_context->item.type != CCPCP_ITEM_STRING)
 		UNPACK_ERROR(CCPCP_RC_LOGICAL_ERROR);
 
+	const char *p;
 	ccpcp_string *it = &unpack_context->item.as.String;
-	it->length = 0;
-	it->start = unpack_context->current;
-	for (; unpack_context->current < unpack_context->end; unpack_context->current++) {
-		const uint8_t *p = unpack_context->current;
+	if(it->parse_status.chunk_cnt == 0) {
+		// must start with '"'
+		UNPACK_ASSERT_BYTE();
+		if (*p != '"') {
+			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT);
+		}
+	}
+	UNPACK_ASSERT_BYTE();
+	it->chunk_length = 0;
+	it->start = p;
+	for (; unpack_context->current <= unpack_context->end; ) {
 		if(*p == '\\') {
-			if(it->length > 0) {
+			if(it->chunk_length > 0) {
 				// finish current chunk, esc sequence wil have own, because it can be in 2 buffers
-				//unpack_context->current--;
-				return;
+				unpack_context->current--;
+				break;
 			}
-			UNPACK_ASSERT_BYTE();
 			UNPACK_ASSERT_BYTE();
 			if(!p)
 				return;
@@ -752,25 +777,19 @@ static void ccpon_unpack_string(ccpcp_unpack_context* unpack_context)
 			default: it->parse_status.escaped_byte = *p; break;
 			}
 			it->start = &(it->parse_status.escaped_byte);
-			it->length = 1;
+			it->chunk_length = 1;
 			break;
 		}
 		else {
 			if (*p == '"') {
-				if(!it->parse_status.string_entered) {
-					// begin of string
-					it->start = p+1;
-					it->parse_status.string_entered = 1;
-				}
-				else {
-					// end of string
-					unpack_context->current++;
-					it->parse_status.last_chunk = 1;
-					break;
-				}
+				// end of string
+				//unpack_context->current++;
+				it->parse_status.last_chunk = 1;
+				break;
 			}
 			else {
-				it->length++;
+				it->chunk_length++;
+				p = unpack_context->current++;
 			}
 		}
 	}
@@ -836,10 +855,10 @@ static void ccpon_unpack_string(ccpcp_unpack_context* unpack_context)
 		UNPACK_ERROR(CCPCP_RC_LOGICAL_ERROR);
 
 	ccpon_string *it = &unpack_context->item.as.String;
-	uint8_t *p1 = unpack_context->current;
+	char *p1 = unpack_context->current;
 	it->start = p1;
 	for (; unpack_context->current < unpack_context->end; unpack_context->current++) {
-		uint8_t *p = unpack_context->current;
+		char *p = unpack_context->current;
 		if(!it->parse_status.in_escape) {
 			if (*p == '"') {
 				if(it->parse_status.chunk_cnt || p > p1) {
@@ -876,12 +895,12 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 
 	ccpcp_container_state *top_cont_state = ccpc_unpack_context_top_container_state(unpack_context);
 
-	const uint8_t *p;
+	const char *p;
 	if(unpack_context->item.type == CCPCP_ITEM_STRING) {
 		ccpcp_string *str_it = &unpack_context->item.as.String;
 		if(!str_it->parse_status.last_chunk) {
-			UNPACK_ASSERT_BYTE();
-			unpack_context->current--;
+			//UNPACK_ASSERT_BYTE();
+			//unpack_context->current--;
 			ccpon_unpack_string(unpack_context);
 			return;
 		}

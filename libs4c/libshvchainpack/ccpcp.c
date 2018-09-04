@@ -22,7 +22,7 @@ size_t ccpcp_pack_make_space(ccpcp_pack_context* pack_context, size_t size_hint)
 	return free_space;
 }
 
-uint8_t* ccpcp_pack_reserve_space(ccpcp_pack_context* pack_context, size_t more)
+char* ccpcp_pack_reserve_space(ccpcp_pack_context* pack_context, size_t more)
 {
 	if(pack_context->err_no != CCPCP_RC_OK)
 		return NULL;
@@ -31,14 +31,14 @@ uint8_t* ccpcp_pack_reserve_space(ccpcp_pack_context* pack_context, size_t more)
 		pack_context->err_no = CCPCP_RC_BUFFER_OVERFLOW;
 		return NULL;
 	}
-	uint8_t* p = pack_context->current;
+	char* p = pack_context->current;
 	pack_context->current = p + more;
 	return p;
 }
 
 void ccpcp_pack_copy_byte(ccpcp_pack_context *pack_context, uint8_t b)
 {
-	uint8_t *p = ccpcp_pack_reserve_space(pack_context, 1);
+	char *p = ccpcp_pack_reserve_space(pack_context, 1);
 	if(!p)
 		return;
 	*p = b;
@@ -106,7 +106,8 @@ void ccpc_container_stack_init(ccpcp_container_stack *self, ccpcp_container_stat
 
 void ccpcp_unpack_context_init (ccpcp_unpack_context* self, const void *data, size_t length, ccpcp_unpack_underflow_handler huu, ccpcp_container_stack *stack)
 {
-	self->start = self->current = (const uint8_t*)data;
+	self->item.type = CCPCP_ITEM_INVALID;
+	self->start = self->current = (const char*)data;
 	self->end = self->start + length;
 	self->err_no = CCPCP_RC_OK;
 	self->handle_unpack_underflow = huu;
@@ -231,20 +232,19 @@ bool ccpcp_item_type_is_container_end(ccpcp_item_types t)
 void ccpcp_string_init(ccpcp_string *str_it)
 {
 	str_it->start = NULL;
-	str_it->length = 0;
-	//str_it->parse_status.begin = 0;
-	//str_it->parse_status.middle = 0;
+	str_it->chunk_length = 0;
 	str_it->parse_status.chunk_cnt = 0;
 	str_it->parse_status.last_chunk = 0;
+	str_it->parse_status.string_size = -1;
 	str_it->parse_status.size_to_load = -1;
-	str_it->parse_status.string_entered = 0;
+	//str_it->parse_status.string_entered = 0;
 }
 
-const uint8_t* ccpcp_unpack_take_byte(ccpcp_unpack_context* unpack_context)
+const char* ccpcp_unpack_take_byte(ccpcp_unpack_context* unpack_context)
 {
 	size_t more = 1;
-	const uint8_t* p = unpack_context->current;
-	const uint8_t* nyp = p + more;
+	const char* p = unpack_context->current;
+	const char* nyp = p + more;
 	if (nyp > unpack_context->end) {
 		if (!unpack_context->handle_unpack_underflow) {
 			unpack_context->err_no = CCPCP_RC_BUFFER_UNDERFLOW;

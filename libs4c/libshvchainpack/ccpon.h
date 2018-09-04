@@ -53,7 +53,7 @@ void ccpon_pack_key_delim (ccpcp_pack_context* pack_context);
 
 /***************************** U N P A C K ********************************/
 void ccpon_unpack_next (ccpcp_unpack_context* unpack_context);
-void ccpon_skip_items (ccpcp_unpack_context* unpack_context, long item_count);
+//void ccpon_skip_items (ccpcp_unpack_context* unpack_context, long item_count);
 
 #ifdef __cplusplus
 }

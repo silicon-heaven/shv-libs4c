@@ -356,7 +356,7 @@ void cchainpack_pack_map_begin(ccpcp_pack_context *pack_context)
 {
 	if (pack_context->err_no)
 		return;
-
+	ccpcp_pack_copy_byte(pack_context, CP_Map);
 }
 
 void cchainpack_pack_imap_begin(ccpcp_pack_context* pack_context)
@@ -433,7 +433,7 @@ static void unpack_uint(ccpcp_unpack_context* unpack_context, uint64_t *pval, in
 	uint64_t num = 0;
 	int bitlen = 0;
 	do {
-		const uint8_t *p;
+		const char *p;
 		UNPACK_ASSERT_BYTE();
 		uint8_t head = *p;
 
@@ -485,21 +485,22 @@ void unpack_string(ccpcp_unpack_context* unpack_context)
 
 	ccpcp_string *it = &unpack_context->item.as.String;
 
-	const uint8_t *p;
+	const char *p;
 	UNPACK_ASSERT_BYTE();
 
-	bool is_cstr = it->parse_status.size_to_load < 0;
+	bool is_cstr = it->parse_status.string_size < 0;
 	if(is_cstr) {
-		it->length = 0;
+		it->chunk_length = 0;
 		it->start = p;
 		for (unpack_context->current = p; unpack_context->current < unpack_context->end; unpack_context->current++) {
 			p = unpack_context->current;
 			if(*p == '\\') {
-				if(it->length > 0) {
+				if(it->chunk_length > 0) {
 					// finish current chunk, esc sequence wil have own one byte long
 					//unpack_context->current--;
-					return;
+					break;
 				}
+				unpack_context->current++;
 				UNPACK_ASSERT_BYTE();
 				if(!p)
 					return;
@@ -509,7 +510,7 @@ void unpack_string(ccpcp_unpack_context* unpack_context)
 				default: it->parse_status.escaped_byte = *p; break;
 				}
 				it->start = &(it->parse_status.escaped_byte);
-				it->length = 1;
+				it->chunk_length = 1;
 				break;
 			}
 			else {
@@ -520,7 +521,7 @@ void unpack_string(ccpcp_unpack_context* unpack_context)
 					break;
 				}
 				else {
-					it->length++;
+					it->chunk_length++;
 				}
 			}
 		}
@@ -530,11 +531,11 @@ void unpack_string(ccpcp_unpack_context* unpack_context)
 		int64_t buffered_len = unpack_context->end - p;
 		if(buffered_len > it->parse_status.size_to_load)
 			buffered_len = it->parse_status.size_to_load;
-		it->length = buffered_len;
+		it->chunk_length = buffered_len;
 		it->parse_status.size_to_load -= buffered_len;
 		if(it->parse_status.size_to_load == 0)
 			it->parse_status.last_chunk = 1;
-		unpack_context->current = p + it->length;
+		unpack_context->current = p + it->chunk_length;
 
 	}
 	it->parse_status.chunk_cnt++;
@@ -545,7 +546,7 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 	if (unpack_context->err_no)
 		return;
 
-	const uint8_t *p;
+	const char *p;
 	if(unpack_context->item.type == CCPCP_ITEM_STRING) {
 		ccpcp_string *str_it = &unpack_context->item.as.String;
 		if(!str_it->parse_status.last_chunk) {
@@ -727,7 +728,8 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 			uint64_t str_len;
 			unpack_uint(unpack_context, &str_len, NULL);
 			if(unpack_context->err_no == CCPCP_RC_OK) {
-				it->parse_status.size_to_load = str_len;
+				it->parse_status.string_size = str_len;
+				it->parse_status.size_to_load = it->parse_status.string_size;
 				unpack_string(unpack_context);
 			}
 			break;
@@ -736,7 +738,8 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 			unpack_context->item.type = CCPCP_ITEM_STRING;
 			ccpcp_string *it = &unpack_context->item.as.String;
 			ccpcp_string_init(it);
-			it->parse_status.size_to_load = -1;
+			it->parse_status.string_size = -1;
+			it->parse_status.size_to_load = it->parse_status.string_size;
 			unpack_string(unpack_context);
 			break;
 		}

@@ -34,9 +34,9 @@ struct ccpcp_pack_context;
 typedef void (*ccpcp_pack_overflow_handler)(struct ccpcp_pack_context*, size_t size_hint);
 
 typedef struct ccpcp_pack_context {
-	uint8_t* start;
-	uint8_t* current;
-	uint8_t* end;
+	char* start;
+	char* current;
+	char* end;
 	const char *indent;
 	int nest_count;
 	int err_no; /* handlers can save error here */
@@ -49,7 +49,7 @@ void ccpcp_pack_context_init(ccpcp_pack_context* pack_context, void *data, size_
 // returns number of bytes available in pack_context buffer, can be < size_hint, but always > 0
 // returns 0 if fails
 size_t ccpcp_pack_make_space(ccpcp_pack_context* pack_context, size_t size_hint);
-uint8_t* ccpcp_pack_reserve_space(ccpcp_pack_context* pack_context, size_t more);
+char *ccpcp_pack_reserve_space(ccpcp_pack_context* pack_context, size_t more);
 void ccpcp_pack_copy_byte (ccpcp_pack_context* pack_context, uint8_t b);
 void ccpcp_pack_copy_bytes (ccpcp_pack_context* pack_context, const void *str, size_t len);
 //void ccpcp_pack_copy_bytes_cpon_string_escaped (ccpcp_pack_context* pack_context, const void *str, size_t len);
@@ -86,13 +86,14 @@ bool ccpcp_item_type_is_value(ccpcp_item_types t);
 bool ccpcp_item_type_is_container_end(ccpcp_item_types t);
 
 typedef struct {
-	const uint8_t* start;
-	size_t length;
+	const char* start;
+	size_t chunk_length;
 	struct {
+		long string_size;
 		long size_to_load;
 		uint16_t chunk_cnt;
-		uint8_t escaped_byte;
-		uint8_t string_entered: 1;
+		char escaped_byte;
+		//uint8_t string_entered: 1;
 		uint8_t last_chunk: 1;
 	} parse_status;
 } ccpcp_string;
@@ -164,9 +165,9 @@ typedef size_t (*ccpcp_unpack_underflow_handler)(struct ccpcp_unpack_context*);
 
 typedef struct ccpcp_unpack_context {
 	ccpcp_item item;
-	const uint8_t* start;
-	const uint8_t* current;
-	const uint8_t* end; /* logical end of buffer */
+	const char* start;
+	const char* current;
+	const char* end; /* logical end of buffer */
 	int err_no; /* handlers can save error here */
 	ccpcp_unpack_underflow_handler handle_unpack_underflow;
 	ccpcp_container_stack *container_stack;
@@ -181,7 +182,7 @@ ccpcp_container_state* ccpc_unpack_context_top_container_state(ccpcp_unpack_cont
 ccpcp_container_state* ccpc_unpack_context_current_item_container_state(ccpcp_unpack_context* self);
 void ccpc_unpack_context_pop_container_state(ccpcp_unpack_context* self);
 
-const uint8_t *ccpcp_unpack_take_byte(ccpcp_unpack_context* unpack_context);
+const char *ccpcp_unpack_take_byte(ccpcp_unpack_context* unpack_context);
 
 #define UNPACK_ERROR(error_code)                        \
 {                                                       \
