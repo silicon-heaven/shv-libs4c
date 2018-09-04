@@ -753,11 +753,11 @@ static void ccpon_unpack_string(ccpcp_unpack_context* unpack_context)
 		}
 	}
 	UNPACK_ASSERT_BYTE();
-	it->chunk_length = 0;
+	it->parse_status.chunk_length = 0;
 	it->start = p;
 	for (; unpack_context->current <= unpack_context->end; ) {
 		if(*p == '\\') {
-			if(it->chunk_length > 0) {
+			if(it->parse_status.chunk_length > 0) {
 				// finish current chunk, esc sequence wil have own, because it can be in 2 buffers
 				unpack_context->current--;
 				break;
@@ -777,7 +777,7 @@ static void ccpon_unpack_string(ccpcp_unpack_context* unpack_context)
 			default: it->parse_status.escaped_byte = *p; break;
 			}
 			it->start = &(it->parse_status.escaped_byte);
-			it->chunk_length = 1;
+			it->parse_status.chunk_length = 1;
 			break;
 		}
 		else {
@@ -788,7 +788,7 @@ static void ccpon_unpack_string(ccpcp_unpack_context* unpack_context)
 				break;
 			}
 			else {
-				it->chunk_length++;
+				it->parse_status.chunk_length++;
 				p = unpack_context->current++;
 			}
 		}

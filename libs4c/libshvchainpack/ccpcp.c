@@ -232,10 +232,10 @@ bool ccpcp_item_type_is_container_end(ccpcp_item_types t)
 void ccpcp_string_init(ccpcp_string *str_it)
 {
 	str_it->start = NULL;
-	str_it->chunk_length = 0;
+	str_it->parse_status.chunk_length = 0;
 	str_it->parse_status.chunk_cnt = 0;
 	str_it->parse_status.last_chunk = 0;
-	str_it->parse_status.string_size = -1;
+	str_it->string_size = -1;
 	str_it->parse_status.size_to_load = -1;
 	//str_it->parse_status.string_entered = 0;
 }

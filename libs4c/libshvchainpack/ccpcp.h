@@ -87,9 +87,9 @@ bool ccpcp_item_type_is_container_end(ccpcp_item_types t);
 
 typedef struct {
 	const char* start;
-	size_t chunk_length;
+	long string_size;
 	struct {
-		long string_size;
+		size_t chunk_length;
 		long size_to_load;
 		uint16_t chunk_cnt;
 		char escaped_byte;

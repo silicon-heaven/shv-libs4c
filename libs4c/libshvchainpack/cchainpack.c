@@ -488,14 +488,14 @@ void unpack_string(ccpcp_unpack_context* unpack_context)
 	const char *p;
 	UNPACK_ASSERT_BYTE();
 
-	bool is_cstr = it->parse_status.string_size < 0;
+	bool is_cstr = it->string_size < 0;
 	if(is_cstr) {
-		it->chunk_length = 0;
+		it->parse_status.chunk_length = 0;
 		it->start = p;
 		for (unpack_context->current = p; unpack_context->current < unpack_context->end; unpack_context->current++) {
 			p = unpack_context->current;
 			if(*p == '\\') {
-				if(it->chunk_length > 0) {
+				if(it->parse_status.chunk_length > 0) {
 					// finish current chunk, esc sequence wil have own one byte long
 					//unpack_context->current--;
 					break;
@@ -510,7 +510,7 @@ void unpack_string(ccpcp_unpack_context* unpack_context)
 				default: it->parse_status.escaped_byte = *p; break;
 				}
 				it->start = &(it->parse_status.escaped_byte);
-				it->chunk_length = 1;
+				it->parse_status.chunk_length = 1;
 				break;
 			}
 			else {
@@ -521,7 +521,7 @@ void unpack_string(ccpcp_unpack_context* unpack_context)
 					break;
 				}
 				else {
-					it->chunk_length++;
+					it->parse_status.chunk_length++;
 				}
 			}
 		}
@@ -531,11 +531,11 @@ void unpack_string(ccpcp_unpack_context* unpack_context)
 		int64_t buffered_len = unpack_context->end - p;
 		if(buffered_len > it->parse_status.size_to_load)
 			buffered_len = it->parse_status.size_to_load;
-		it->chunk_length = buffered_len;
+		it->parse_status.chunk_length = buffered_len;
 		it->parse_status.size_to_load -= buffered_len;
 		if(it->parse_status.size_to_load == 0)
 			it->parse_status.last_chunk = 1;
-		unpack_context->current = p + it->chunk_length;
+		unpack_context->current = p + it->parse_status.chunk_length;
 
 	}
 	it->parse_status.chunk_cnt++;
@@ -728,8 +728,8 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 			uint64_t str_len;
 			unpack_uint(unpack_context, &str_len, NULL);
 			if(unpack_context->err_no == CCPCP_RC_OK) {
-				it->parse_status.string_size = str_len;
-				it->parse_status.size_to_load = it->parse_status.string_size;
+				it->string_size = str_len;
+				it->parse_status.size_to_load = it->string_size;
 				unpack_string(unpack_context);
 			}
 			break;
@@ -738,8 +738,8 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 			unpack_context->item.type = CCPCP_ITEM_STRING;
 			ccpcp_string *it = &unpack_context->item.as.String;
 			ccpcp_string_init(it);
-			it->parse_status.string_size = -1;
-			it->parse_status.size_to_load = it->parse_status.string_size;
+			it->string_size = -1;
+			it->parse_status.size_to_load = it->string_size;
 			unpack_string(unpack_context);
 			break;
 		}

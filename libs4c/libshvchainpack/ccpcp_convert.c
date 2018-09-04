@@ -43,6 +43,7 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 							ccpon_pack_key_delim(out_ctx);
 						}
 						else {
+							// pack key
 							if(prev_item != CCPCP_ITEM_META_END)
 								ccpon_pack_field_delim(out_ctx, curr_item_cont_state->item_count == 1);
 						}
@@ -138,20 +139,20 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 			if(o_chainpack_output) {
 				if(it->parse_status.chunk_cnt == 1 && it->parse_status.last_chunk) {
 					// one chunk string with known length is always packed as RAW
-					cchainpack_pack_string(out_ctx, it->start, it->chunk_length);
+					cchainpack_pack_string(out_ctx, it->start, it->parse_status.chunk_length);
 				}
-				else if(it->parse_status.string_size >= 0) {
+				else if(it->string_size >= 0) {
 					if(it->parse_status.chunk_cnt == 1)
-						cchainpack_pack_string_start(out_ctx, it->parse_status.string_size, it->start, it->parse_status.string_size);
+						cchainpack_pack_string_start(out_ctx, it->string_size, it->start, it->string_size);
 					else
-						cchainpack_pack_string_cont(out_ctx, it->start, it->chunk_length);
+						cchainpack_pack_string_cont(out_ctx, it->start, it->parse_status.chunk_length);
 				}
 				else {
 					// cstring
 					if(it->parse_status.chunk_cnt == 1)
-						cchainpack_pack_cstring_start(out_ctx, it->start, it->chunk_length);
+						cchainpack_pack_cstring_start(out_ctx, it->start, it->parse_status.chunk_length);
 					else
-						cchainpack_pack_cstring_cont(out_ctx, it->start, it->chunk_length);
+						cchainpack_pack_cstring_cont(out_ctx, it->start, it->parse_status.chunk_length);
 					if(it->parse_status.last_chunk)
 						cchainpack_pack_cstring_finish(out_ctx);
 				}
@@ -159,9 +160,9 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 			else {
 				// Cpon
 				if(it->parse_status.chunk_cnt == 1)
-					ccpon_pack_string_start(out_ctx, it->start, it->chunk_length);
+					ccpon_pack_string_start(out_ctx, it->start, it->parse_status.chunk_length);
 				else
-					ccpon_pack_string_cont(out_ctx, it->start, it->chunk_length);
+					ccpon_pack_string_cont(out_ctx, it->start, it->parse_status.chunk_length);
 				if(it->parse_status.last_chunk)
 					ccpon_pack_string_finish(out_ctx);
 			}
