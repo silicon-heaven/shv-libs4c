@@ -49,7 +49,7 @@ void ccpon_pack_meta_end (ccpcp_pack_context* pack_context);
 void ccpon_pack_copy_str (ccpcp_pack_context* pack_context, const void *str);
 
 void ccpon_pack_field_delim (ccpcp_pack_context* pack_context, bool is_first_field);
-void ccpon_pack_key_delim (ccpcp_pack_context* pack_context);
+void ccpon_pack_key_val_delim (ccpcp_pack_context* pack_context);
 
 /***************************** U N P A C K ********************************/
 void ccpon_unpack_next (ccpcp_unpack_context* unpack_context);

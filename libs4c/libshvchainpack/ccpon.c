@@ -1071,7 +1071,7 @@ void ccpon_pack_field_delim(ccpcp_pack_context *pack_context, bool is_first_fiel
 	indent_element(pack_context);
 }
 
-void ccpon_pack_key_delim(ccpcp_pack_context *pack_context)
+void ccpon_pack_key_val_delim(ccpcp_pack_context *pack_context)
 {
 	ccpcp_pack_copy_bytes(pack_context, ":", 1);
 }

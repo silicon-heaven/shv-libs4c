@@ -100,13 +100,14 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 					case CCPCP_ITEM_MAP:
 					case CCPCP_ITEM_IMAP:
 					case CCPCP_ITEM_META: {
-						bool is_val = (curr_item_cont_state->item_count % 2) == 0;
-						if(is_val) {
-							ccpon_pack_key_delim(out_ctx);
+						bool is_key = (curr_item_cont_state->item_count % 2);
+						if(is_key) {
+							if(!meta_just_closed)
+								ccpon_pack_field_delim(out_ctx, curr_item_cont_state->item_count == 1);
 						}
 						else {
-							// pack key
-							ccpon_pack_field_delim(out_ctx, curr_item_cont_state->item_count == 1);
+							// delimite value
+							ccpon_pack_key_val_delim(out_ctx);
 						}
 						break;
 					}
