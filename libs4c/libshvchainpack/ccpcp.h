@@ -85,17 +85,19 @@ typedef enum
 bool ccpcp_item_type_is_value(ccpcp_item_types t);
 bool ccpcp_item_type_is_container_end(ccpcp_item_types t);
 
+#ifndef CCPCP_MAX_STRING_KEY_LEN
+#define CCPCP_STRING_CHUNK_BUFF_LEN 256
+#endif
+
 typedef struct {
-	const char* start;
+	char default_chunk_buff[CCPCP_STRING_CHUNK_BUFF_LEN];
 	long string_size;
-	struct {
-		size_t chunk_length;
-		long size_to_load;
-		uint16_t chunk_cnt;
-		char escaped_byte;
-		//uint8_t string_entered: 1;
-		uint8_t last_chunk: 1;
-	} parse_status;
+	long size_to_load;
+	char* chunk_start;
+	size_t chunk_size;
+	size_t chunk_buff_len;
+	uint16_t chunk_cnt;
+	uint8_t last_chunk: 1;
 } ccpcp_string;
 
 void ccpcp_string_init(ccpcp_string *str_it);
@@ -116,7 +118,6 @@ typedef struct {
 } ccpcp_decimal;
 
 typedef struct {
-	ccpcp_item_types type;
 	union
 	{
 		ccpcp_string String;
@@ -129,6 +130,9 @@ typedef struct {
 		double Double;
 		bool Bool;
 	} as;
+	ccpcp_item_types type;
+	//ccpcp_item_types container_type; // type of container owning this item
+	//size_t item_count; // number of items in owning container
 } ccpcp_item;
 /*
 typedef enum {
@@ -139,9 +143,9 @@ typedef enum {
 */
 typedef struct {
 	ccpcp_item_types container_type;
-	//ccpc_field_state field_state;
 	size_t item_count;
 	size_t container_size;
+	uint8_t current_item_is_key: 1;
 } ccpcp_container_state;
 
 void ccpcp_container_state_init(ccpcp_container_state *self, ccpcp_item_types cont_type);

@@ -745,149 +745,47 @@ static void ccpon_unpack_string(ccpcp_unpack_context* unpack_context)
 
 	const char *p;
 	ccpcp_string *it = &unpack_context->item.as.String;
-	if(it->parse_status.chunk_cnt == 0) {
+	if(it->chunk_cnt == 0) {
 		// must start with '"'
 		UNPACK_ASSERT_BYTE();
 		if (*p != '"') {
 			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT);
 		}
 	}
-	UNPACK_ASSERT_BYTE();
-	it->parse_status.chunk_length = 0;
-	it->start = p;
-	for (; unpack_context->current <= unpack_context->end; ) {
+	for(it->chunk_size = 0; it->chunk_buff_len; ) {
+		UNPACK_ASSERT_BYTE();
 		if(*p == '\\') {
-			if(it->parse_status.chunk_length > 0) {
-				// finish current chunk, esc sequence wil have own, because it can be in 2 buffers
-				unpack_context->current--;
-				break;
-			}
 			UNPACK_ASSERT_BYTE();
 			if(!p)
 				return;
 			switch (*p) {
-			case '\\': it->parse_status.escaped_byte = '\\'; break;
-			case '"' : it->parse_status.escaped_byte = '"'; break;
-			case 'b': it->parse_status.escaped_byte = '\b'; break;
-			case 'f': it->parse_status.escaped_byte = '\f'; break;
-			case 'n': it->parse_status.escaped_byte = '\n'; break;
-			case 'r': it->parse_status.escaped_byte = '\r'; break;
-			case 't': it->parse_status.escaped_byte = '\t'; break;
-			case '0': it->parse_status.escaped_byte = '\0'; break;
-			default: it->parse_status.escaped_byte = *p; break;
+			case '\\': (it->chunk_start)[it->chunk_size++] = '\\'; break;
+			case '"' : (it->chunk_start)[it->chunk_size++] = '"'; break;
+			case 'b': (it->chunk_start)[it->chunk_size++] = '\b'; break;
+			case 'f': (it->chunk_start)[it->chunk_size++] = '\f'; break;
+			case 'n': (it->chunk_start)[it->chunk_size++] = '\n'; break;
+			case 'r': (it->chunk_start)[it->chunk_size++] = '\r'; break;
+			case 't': (it->chunk_start)[it->chunk_size++] = '\t'; break;
+			case '0': (it->chunk_start)[it->chunk_size++] = '\0'; break;
+			default: (it->chunk_start)[it->chunk_size++] = *p; break;
 			}
-			it->start = &(it->parse_status.escaped_byte);
-			it->parse_status.chunk_length = 1;
 			break;
 		}
 		else {
 			if (*p == '"') {
 				// end of string
 				//unpack_context->current++;
-				it->parse_status.last_chunk = 1;
+				it->last_chunk = 1;
 				break;
 			}
 			else {
-				it->parse_status.chunk_length++;
-				p = unpack_context->current++;
+				(it->chunk_start)[it->chunk_size++] = *p;
 			}
 		}
 	}
-	it->parse_status.chunk_cnt++;
+	it->chunk_cnt++;
 }
 
-#if 0
-			if(is_octal(*p)) {
-				it->parse_status.escape_stage = CCPON_STRING_ESC_NONE;
-				it->parse_status.escaped_len++;
-				//it->parse_status.escaped_val = (*p - '0');
-			}
-			else if(*p == 'x') {
-				it->parse_status.escape_stage = CCPON_STRING_ESC_HEX;
-			}
-			else if(*p == 'u') {
-				it->parse_status.escape_stage = CCPON_STRING_ESC_U16;
-			}
-			else {
-				it->parse_status.escape_stage = CCPON_STRING_ESC_NONE;
-			}
-		}
-		else if(it->parse_status.escape_stage == CCPON_STRING_ESC_OCTAL) {
-			if(is_octal(*p)) {
-				it->parse_status.escaped_len++;
-				/// according to https://en.cppreference.com/w/cpp/language/escape we should take up to 3
-				if(it->parse_status.escaped_len == 3)
-					it->parse_status.escape_stage = CCPON_STRING_ESC_NONE;
-			}
-			else {
-				it->parse_status.escape_stage = CCPON_STRING_ESC_NONE;
-				// non OCTAL char, examine this char again
-				unpack_context->current--;
-			}
-		}
-		else if(it->parse_status.escape_stage == CCPON_STRING_ESC_HEX) {
-			/// according to https://en.cppreference.com/w/cpp/language/escape we should take chars until they are HEX
-			/// but we take up to 2, since longer sequence cannot fit uint8_t
-			if(is_hex(*p)) {
-				//it->parse_status.escaped_val = 16 * it->parse_status.escaped_val + ((*p <= '9')? *p-'0': (*p <= 'f')? *p-'f': *p-'F');
-				it->parse_status.escaped_len++;
-				if(it->parse_status.escaped_len == 2)
-					it->parse_status.escape_stage = CCPON_STRING_ESC_NONE;
-			}
-			else {
-				it->parse_status.escape_stage = CCPON_STRING_ESC_NONE;
-				// non HEX char, examine this char again
-				unpack_context->current--;
-			}
-		}
-		else if(it->parse_status.escape_stage == CCPON_STRING_ESC_U16) {
-			/// take any 4
-			it->parse_status.escaped_len++;
-			if(it->parse_status.escaped_len == 4)
-				it->parse_status.escape_stage = CCPON_STRING_ESC_NONE;
-		}
-		else {
-			UNPACK_ERROR(CCPCP_RC_LOGICAL_ERROR);
-		}
-static void ccpon_unpack_string(ccpcp_unpack_context* unpack_context)
-{
-	if(unpack_context->item.type != CCPCP_ITEM_STRING)
-		UNPACK_ERROR(CCPCP_RC_LOGICAL_ERROR);
-
-	ccpon_string *it = &unpack_context->item.as.String;
-	char *p1 = unpack_context->current;
-	it->start = p1;
-	for (; unpack_context->current < unpack_context->end; unpack_context->current++) {
-		char *p = unpack_context->current;
-		if(!it->parse_status.in_escape) {
-			if (*p == '"') {
-				if(it->parse_status.chunk_cnt || p > p1) {
-					// end of string
-					unpack_context->current++;
-					it->parse_status.last_chunk = 1;
-					it->length = (p - it->start);
-					break;
-				}
-				else {
-					// begin of string
-					//it->parse_status.begin = 1;
-					it->start = p+1;
-					//continue;
-				}
-			}
-			else if (*p == '\\') {
-				it->parse_status.in_escape = 1;
-				//it->parse_status.escaped_val = 0;
-				//it->parse_status.escaped_len = 0;
-			}
-		}
-		else {
-			it->parse_status.in_escape = 0;
-		}
-	}
-	it->parse_status.chunk_cnt++;
-}
-#endif
 void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 {
 	if (unpack_context->err_no)
@@ -898,7 +796,7 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 	const char *p;
 	if(unpack_context->item.type == CCPCP_ITEM_STRING) {
 		ccpcp_string *str_it = &unpack_context->item.as.String;
-		if(!str_it->parse_status.last_chunk) {
+		if(!str_it->last_chunk) {
 			//UNPACK_ASSERT_BYTE();
 			//unpack_context->current--;
 			ccpon_unpack_string(unpack_context);
@@ -1171,6 +1069,7 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 	}
 	}
 
+	bool is_container_end = false;
 	switch(unpack_context->item.type) {
 	case CCPCP_ITEM_LIST:
 	//case CCPCP_ITEM_ARRAY:
@@ -1185,12 +1084,22 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 	case CCPCP_ITEM_IMAP_END:
 	case CCPCP_ITEM_META_END:
 		ccpc_unpack_context_pop_container_state(unpack_context);
+		is_container_end = true;
 		break;
 	default:
 		break;
 	}
-	if(top_cont_state)
+
+	if(top_cont_state && !is_container_end) {
+		top_cont_state->current_item_is_key = 0;
 		top_cont_state->item_count++;
+		if(top_cont_state->container_type == CCPCP_ITEM_MAP
+				|| top_cont_state->container_type == CCPCP_ITEM_IMAP
+				|| top_cont_state->container_type == CCPCP_ITEM_META)
+		{
+			top_cont_state->current_item_is_key = top_cont_state->item_count % 2;
+		}
+	}
 }
 
 void ccpon_pack_field_delim(ccpcp_pack_context *pack_context, bool is_first_field)

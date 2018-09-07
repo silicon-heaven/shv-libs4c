@@ -120,7 +120,7 @@ static void pack_uint_data_helper(ccpcp_pack_context* pack_context, uint64_t num
 	}
 }
 
-static void cchainpack_pack_uint_data(ccpcp_pack_context* pack_context, uint64_t num)
+void cchainpack_pack_uint_data(ccpcp_pack_context* pack_context, uint64_t num)
 {
 	const int UINT_BYTES_MAX = 18;
 	if(sizeof(num) > UINT_BYTES_MAX) {
@@ -130,6 +130,11 @@ static void cchainpack_pack_uint_data(ccpcp_pack_context* pack_context, uint64_t
 
 	int bitlen = significant_bits_part_length(num);
 	pack_uint_data_helper(pack_context, num, bitlen);
+}
+
+void cchainpack_pack_uint_key(ccpcp_pack_context *pack_context, uint64_t key)
+{
+	cchainpack_pack_uint_data(pack_context, key);
 }
 
 /*
@@ -216,7 +221,7 @@ void cchainpack_pack_double(ccpcp_pack_context* pack_context, double d)
 	ccpcp_pack_copy_byte(pack_context, CP_Double);
 
 	const uint8_t*bytes = (const uint8_t*)&d;
-	size_t len = sizeof(double);
+	int len = sizeof(double);
 
 	int n = 1;
 	if(*(char *)&n == 1) {
@@ -397,6 +402,18 @@ void cchainpack_pack_string_cont (ccpcp_pack_context* pack_context, const char* 
 	ccpcp_pack_copy_bytes(pack_context, buff, buff_len);
 }
 
+void cchainpack_pack_string_key(ccpcp_pack_context *pack_context, const char *str, size_t str_len)
+{
+	cchainpack_pack_uint_data(pack_context, str_len);
+	ccpcp_pack_copy_bytes(pack_context, str, str_len);
+}
+
+void cchainpack_pack_string_key_meta(ccpcp_pack_context *pack_context, const char *str, size_t str_len)
+{
+	ccpcp_pack_copy_byte(pack_context, CP_STRING_META_KEY_PREFIX);
+	cchainpack_pack_string_key(pack_context, str, str_len);
+}
+
 void cchainpack_pack_cstring (ccpcp_pack_context* pack_context, const char* buff, size_t buff_len)
 {
 	cchainpack_pack_cstring_start(pack_context, buff, buff_len);
@@ -483,62 +500,45 @@ void unpack_string(ccpcp_unpack_context* unpack_context)
 	if(unpack_context->item.type != CCPCP_ITEM_STRING)
 		UNPACK_ERROR(CCPCP_RC_LOGICAL_ERROR);
 
-	ccpcp_string *it = &unpack_context->item.as.String;
-
 	const char *p;
-	UNPACK_ASSERT_BYTE();
+	ccpcp_string *it = &unpack_context->item.as.String;
 
 	bool is_cstr = it->string_size < 0;
 	if(is_cstr) {
-		it->parse_status.chunk_length = 0;
-		it->start = p;
-		for (unpack_context->current = p; unpack_context->current < unpack_context->end; unpack_context->current++) {
-			p = unpack_context->current;
+		for(it->chunk_size = 0; it->chunk_size < it->chunk_buff_len; ) {
+			UNPACK_ASSERT_BYTE();
 			if(*p == '\\') {
-				if(it->parse_status.chunk_length > 0) {
-					// finish current chunk, esc sequence wil have own one byte long
-					//unpack_context->current--;
-					break;
-				}
-				unpack_context->current++;
 				UNPACK_ASSERT_BYTE();
 				if(!p)
 					return;
 				switch (*p) {
-				case '\\': it->parse_status.escaped_byte = '\\'; break;
-				case '0' : it->parse_status.escaped_byte = 0; break;
-				default: it->parse_status.escaped_byte = *p; break;
+				case '\\': (it->chunk_start)[it->chunk_size++] = '\\'; break;
+				case '0': (it->chunk_start)[it->chunk_size++] = '\0'; break;
+				default: (it->chunk_start)[it->chunk_size++] = *p; break;
 				}
-				it->start = &(it->parse_status.escaped_byte);
-				it->parse_status.chunk_length = 1;
 				break;
 			}
 			else {
-				if (*p == 0) {
+				if (*p == '\0') {
 					// end of string
-					unpack_context->current++;
-					it->parse_status.last_chunk = 1;
+					it->last_chunk = 1;
 					break;
 				}
 				else {
-					it->parse_status.chunk_length++;
+					(it->chunk_start)[it->chunk_size++] = *p;
 				}
 			}
 		}
 	}
 	else {
-		it->start = p;
-		int64_t buffered_len = unpack_context->end - p;
-		if(buffered_len > it->parse_status.size_to_load)
-			buffered_len = it->parse_status.size_to_load;
-		it->parse_status.chunk_length = buffered_len;
-		it->parse_status.size_to_load -= buffered_len;
-		if(it->parse_status.size_to_load == 0)
-			it->parse_status.last_chunk = 1;
-		unpack_context->current = p + it->parse_status.chunk_length;
-
+		while(it->size_to_load > 0 && it->chunk_size < it->chunk_buff_len) {
+			UNPACK_ASSERT_BYTE();
+			(it->chunk_start)[it->chunk_size++] = *p;
+			it->size_to_load--;
+		}
+		it->last_chunk = (it->size_to_load == 0);
 	}
-	it->parse_status.chunk_cnt++;
+	it->chunk_cnt++;
 }
 
 void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
@@ -546,32 +546,55 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 	if (unpack_context->err_no)
 		return;
 
-	const char *p;
 	if(unpack_context->item.type == CCPCP_ITEM_STRING) {
 		ccpcp_string *str_it = &unpack_context->item.as.String;
-		if(!str_it->parse_status.last_chunk) {
+		if(!str_it->last_chunk) {
 			unpack_string(unpack_context);
 			return;
 		}
 	}
 
-	{
-		ccpcp_container_state *state = ccpc_unpack_context_top_container_state(unpack_context);
-		if(state) {
-			state->item_count++;
+	const char *p;
+	UNPACK_ASSERT_BYTE();
+
+	uint8_t packing_schema = *p;
+
+	ccpcp_container_state *top_cont_state = ccpc_unpack_context_top_container_state(unpack_context);
+	if(top_cont_state && packing_schema != CP_TERM) {
+		top_cont_state->item_count++;
+		top_cont_state->current_item_is_key = 0;
+		if(top_cont_state->container_type == CCPCP_ITEM_MAP
+				|| top_cont_state->container_type == CCPCP_ITEM_IMAP
+				|| top_cont_state->container_type == CCPCP_ITEM_META)
+		{
+			top_cont_state->current_item_is_key = top_cont_state->item_count % 2;
 		}
 	}
 
 	unpack_context->item.type = CCPCP_ITEM_INVALID;
 
-	UNPACK_ASSERT_BYTE();
-
-	uint8_t packing_schema = *p;
-	if(packing_schema == CP_STRING_META_KEY_PREFIX) {
-		ccpcp_container_state *state = ccpc_unpack_context_top_container_state(unpack_context);
-		if(state && state->container_type == CCPCP_ITEM_META && (state->item_count % 2) == 1) {
+	if(top_cont_state && top_cont_state->current_item_is_key) {
+		switch(top_cont_state->container_type) {
+		case CCPCP_ITEM_MAP:
 			packing_schema = CP_String;
-			UNPACK_ASSERT_BYTE();
+			unpack_context->current--;
+			break;
+		case CCPCP_ITEM_IMAP:
+			packing_schema = CP_UInt;
+			unpack_context->current--;
+			break;
+		case CCPCP_ITEM_META: {
+			if(packing_schema == CP_STRING_META_KEY_PREFIX) {
+				packing_schema = CP_String;
+			}
+			else {
+				packing_schema = CP_UInt;
+				unpack_context->current--;
+			}
+			break;
+		}
+		default:
+			UNPACK_ERROR(CCPCP_RC_LOGICAL_ERROR);
 		}
 	}
 
@@ -627,7 +650,7 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 		case CP_Double: {
 			unpack_context->item.type = CCPCP_ITEM_DOUBLE;
 			uint8_t*bytes = (uint8_t*)&(unpack_context->item.as.Double);
-			size_t len = sizeof(double);
+			int len = sizeof(double);
 
 			int n = 1;
 			if(*(char *)&n == 1) {
@@ -689,7 +712,7 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 			break;
 		}
 		case CP_IMap: {
-			unpack_context->item.type = CCPCP_ITEM_MAP;
+			unpack_context->item.type = CCPCP_ITEM_IMAP;
 			ccpc_unpack_context_push_container_state(unpack_context, unpack_context->item.type);
 			break;
 		}
@@ -729,7 +752,7 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 			unpack_uint(unpack_context, &str_len, NULL);
 			if(unpack_context->err_no == CCPCP_RC_OK) {
 				it->string_size = str_len;
-				it->parse_status.size_to_load = it->string_size;
+				it->size_to_load = it->string_size;
 				unpack_string(unpack_context);
 			}
 			break;
@@ -739,11 +762,14 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 			ccpcp_string *it = &unpack_context->item.as.String;
 			ccpcp_string_init(it);
 			it->string_size = -1;
-			it->parse_status.size_to_load = it->string_size;
+			it->size_to_load = it->string_size;
 			unpack_string(unpack_context);
 			break;
 		}
 		}
 	}
 }
+
+
+
 

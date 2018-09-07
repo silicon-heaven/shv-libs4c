@@ -3,8 +3,8 @@
 
 void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, ccpcp_pack_context* out_ctx, ccpcp_pack_format out_format)
 {
-	bool o_cpon_input = in_format == CCPCP_Cpon;
-	bool o_chainpack_output = out_format == CCPCP_ChainPack;
+	bool o_cpon_input = (in_format == CCPCP_Cpon);
+	bool o_chainpack_output = (out_format == CCPCP_ChainPack);
 	int prev_item = CCPCP_ITEM_INVALID;
 	do {
 		if(o_cpon_input)
@@ -14,13 +14,72 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 		if(in_ctx->err_no != CCPCP_RC_OK)
 			break;
 
-		if(!o_chainpack_output) {
-			ccpcp_container_state *curr_item_cont_state = ccpc_unpack_context_current_item_container_state(in_ctx);
+		ccpcp_container_state *curr_item_cont_state = ccpc_unpack_context_current_item_container_state(in_ctx);
+		if(o_chainpack_output) {
+			if(curr_item_cont_state && curr_item_cont_state->current_item_is_key) {
+				if(in_ctx->item.type == CCPCP_ITEM_STRING) {
+					ccpcp_string *it = &(in_ctx->item.as.String);
+					if(!(it->chunk_cnt == 1 && it->last_chunk)) {
+						// string key cannot be multichunk
+						in_ctx->err_no = CCPCP_RC_LOGICAL_ERROR;
+						return;
+					}
+				}
+				switch(curr_item_cont_state->container_type) {
+				case CCPCP_ITEM_MAP: {
+					if(in_ctx->item.type == CCPCP_ITEM_STRING) {
+						ccpcp_string *it = &(in_ctx->item.as.String);
+						cchainpack_pack_string_key(out_ctx, it->chunk_start, it->chunk_size);
+					}
+					else {
+						// invalid key type
+						in_ctx->err_no = CCPCP_RC_LOGICAL_ERROR;
+					}
+					break;
+				}
+				case CCPCP_ITEM_IMAP: {
+					if(in_ctx->item.type == CCPCP_ITEM_INT) {
+						cchainpack_pack_uint_key(out_ctx, (uint64_t)in_ctx->item.as.Int);
+					}
+					else if(in_ctx->item.type == CCPCP_ITEM_UINT) {
+						cchainpack_pack_uint_key(out_ctx, in_ctx->item.as.UInt);
+					}
+					else {
+						// invalid key type
+						in_ctx->err_no = CCPCP_RC_LOGICAL_ERROR;
+					}
+					break;
+				}
+				case CCPCP_ITEM_META: {
+					if(in_ctx->item.type == CCPCP_ITEM_STRING) {
+						ccpcp_string *it = &(in_ctx->item.as.String);
+						cchainpack_pack_string_key_meta(out_ctx, it->chunk_start, it->chunk_size);
+					}
+					else if(in_ctx->item.type == CCPCP_ITEM_INT) {
+						cchainpack_pack_uint_key(out_ctx, (uint64_t)in_ctx->item.as.Int);
+					}
+					else if(in_ctx->item.type == CCPCP_ITEM_UINT) {
+						cchainpack_pack_uint_key(out_ctx, in_ctx->item.as.UInt);
+					}
+					else {
+						// invalid key type
+						in_ctx->err_no = CCPCP_RC_LOGICAL_ERROR;
+					}
+					break;
+				}
+				default:
+					in_ctx->err_no = CCPCP_RC_LOGICAL_ERROR;
+					break;
+				}
+				continue;
+			}
+		}
+		else {
 			if(curr_item_cont_state != NULL) {
 				bool is_string_concat = 0;
 				if(in_ctx->item.type == CCPCP_ITEM_STRING) {
 					ccpcp_string *it = &(in_ctx->item.as.String);
-					if(it->parse_status.chunk_cnt > 1) {
+					if(it->chunk_cnt > 1) {
 						// multichunk string
 						// this can happen, when parsed string is greater than unpack_context buffer
 						// or escape sequence is encountered
@@ -137,33 +196,33 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 		case CCPCP_ITEM_STRING: {
 			ccpcp_string *it = &in_ctx->item.as.String;
 			if(o_chainpack_output) {
-				if(it->parse_status.chunk_cnt == 1 && it->parse_status.last_chunk) {
+				if(it->chunk_cnt == 1 && it->last_chunk) {
 					// one chunk string with known length is always packed as RAW
-					cchainpack_pack_string(out_ctx, it->start, it->parse_status.chunk_length);
+					cchainpack_pack_string(out_ctx, it->chunk_start, it->chunk_size);
 				}
 				else if(it->string_size >= 0) {
-					if(it->parse_status.chunk_cnt == 1)
-						cchainpack_pack_string_start(out_ctx, it->string_size, it->start, it->string_size);
+					if(it->chunk_cnt == 1)
+						cchainpack_pack_string_start(out_ctx, it->string_size, it->chunk_start, it->string_size);
 					else
-						cchainpack_pack_string_cont(out_ctx, it->start, it->parse_status.chunk_length);
+						cchainpack_pack_string_cont(out_ctx, it->chunk_start, it->chunk_size);
 				}
 				else {
 					// cstring
-					if(it->parse_status.chunk_cnt == 1)
-						cchainpack_pack_cstring_start(out_ctx, it->start, it->parse_status.chunk_length);
+					if(it->chunk_cnt == 1)
+						cchainpack_pack_cstring_start(out_ctx, it->chunk_start, it->chunk_size);
 					else
-						cchainpack_pack_cstring_cont(out_ctx, it->start, it->parse_status.chunk_length);
-					if(it->parse_status.last_chunk)
+						cchainpack_pack_cstring_cont(out_ctx, it->chunk_start, it->chunk_size);
+					if(it->last_chunk)
 						cchainpack_pack_cstring_finish(out_ctx);
 				}
 			}
 			else {
 				// Cpon
-				if(it->parse_status.chunk_cnt == 1)
-					ccpon_pack_string_start(out_ctx, it->start, it->parse_status.chunk_length);
+				if(it->chunk_cnt == 1)
+					ccpon_pack_string_start(out_ctx, it->chunk_start, it->chunk_size);
 				else
-					ccpon_pack_string_cont(out_ctx, it->start, it->parse_status.chunk_length);
-				if(it->parse_status.last_chunk)
+					ccpon_pack_string_cont(out_ctx, it->chunk_start, it->chunk_size);
+				if(it->last_chunk)
 					ccpon_pack_string_finish(out_ctx);
 			}
 			break;
@@ -220,7 +279,7 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 			ccpcp_container_state *top_state = ccpc_unpack_context_top_container_state(in_ctx);
 			// take just one object from stream
 			if(!top_state) {
-				if(in_ctx->item.type == CCPCP_ITEM_STRING && !in_ctx->item.as.String.parse_status.last_chunk) {
+				if(in_ctx->item.type == CCPCP_ITEM_STRING && !in_ctx->item.as.String.last_chunk) {
 					// do not stop parsing in the middle of the string
 				}
 				else {

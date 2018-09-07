@@ -94,6 +94,7 @@ void ccpcp_container_state_init(ccpcp_container_state *self, ccpcp_item_types co
 	self->container_type = cont_type;
 	self->container_size = 0;
 	self->item_count = 0;
+	self->current_item_is_key = 0;
 }
 
 void ccpc_container_stack_init(ccpcp_container_stack *self, ccpcp_container_state *states, size_t capacity, ccpcp_container_stack_overflow_handler hnd)
@@ -231,13 +232,14 @@ bool ccpcp_item_type_is_container_end(ccpcp_item_types t)
 
 void ccpcp_string_init(ccpcp_string *str_it)
 {
-	str_it->start = NULL;
-	str_it->parse_status.chunk_length = 0;
-	str_it->parse_status.chunk_cnt = 0;
-	str_it->parse_status.last_chunk = 0;
+	str_it->chunk_start = NULL;
+	str_it->chunk_size = 0;
+	str_it->chunk_cnt = 0;
+	str_it->last_chunk = 0;
 	str_it->string_size = -1;
-	str_it->parse_status.size_to_load = -1;
-	//str_it->parse_status.string_entered = 0;
+	str_it->size_to_load = -1;
+	str_it->chunk_start = str_it->default_chunk_buff;
+	str_it->chunk_buff_len = sizeof(str_it->default_chunk_buff);
 }
 
 const char* ccpcp_unpack_take_byte(ccpcp_unpack_context* unpack_context)
