@@ -18,13 +18,13 @@ typedef enum
 typedef enum
 {
 	CCPCP_RC_OK = 0,
-	CCPCP_RC_MALLOC_ERROR = -1,
-	CCPCP_RC_BUFFER_OVERFLOW = -2,
-	CCPCP_RC_BUFFER_UNDERFLOW = -3,
-	CCPCP_RC_MALFORMED_INPUT = -4,
-	CCPCP_RC_LOGICAL_ERROR = -5,
-	CCPCP_RC_CONTAINER_STACK_OVERFLOW = -6,
-	CCPCP_RC_CONTAINER_STACK_UNDERFLOW = -7,
+	CCPCP_RC_MALLOC_ERROR,
+	CCPCP_RC_BUFFER_OVERFLOW,
+	CCPCP_RC_BUFFER_UNDERFLOW,
+	CCPCP_RC_MALFORMED_INPUT,
+	CCPCP_RC_LOGICAL_ERROR,
+	CCPCP_RC_CONTAINER_STACK_OVERFLOW,
+	CCPCP_RC_CONTAINER_STACK_UNDERFLOW,
 } ccpcp_error_codes;
 
 //=========================== PACK ============================
@@ -66,24 +66,14 @@ typedef enum
 	CCPCP_ITEM_DOUBLE,
 	CCPCP_ITEM_DECIMAL,
 	CCPCP_ITEM_STRING,
-	//CCPCP_ITEM_CSTRING,
-	//CCPCP_ITEM_BLOB,
 	CCPCP_ITEM_DATE_TIME,
 
 	CCPCP_ITEM_LIST,
-	CCPCP_ITEM_LIST_END,
-	//CCPCP_ITEM_ARRAY,
-	//CCPCP_ITEM_ARRAY_END,
 	CCPCP_ITEM_MAP,
-	CCPCP_ITEM_MAP_END,
 	CCPCP_ITEM_IMAP,
-	CCPCP_ITEM_IMAP_END,
 	CCPCP_ITEM_META,
-	CCPCP_ITEM_META_END,
+	CCPCP_ITEM_CONTAINER_END,
 } ccpcp_item_types;
-
-bool ccpcp_item_type_is_value(ccpcp_item_types t);
-bool ccpcp_item_type_is_container_end(ccpcp_item_types t);
 
 #ifndef CCPCP_MAX_STRING_KEY_LEN
 #define CCPCP_STRING_CHUNK_BUFF_LEN 256
@@ -101,12 +91,7 @@ typedef struct {
 } ccpcp_string;
 
 void ccpcp_string_init(ccpcp_string *str_it);
-/*
-typedef struct {
-	ccpcp_item_types type;
-	int32_t size;
-} ccpcp_array;
-*/
+
 typedef struct {
 	int64_t msecs_since_epoch;
 	int minutes_from_utc;
@@ -121,31 +106,21 @@ typedef struct {
 	union
 	{
 		ccpcp_string String;
-		//ccpcp_string Blob;
 		ccpcp_date_time DateTime;
 		ccpcp_decimal Decimal;
 		uint64_t UInt;
 		int64_t Int;
-		//ccpcp_array Array;
 		double Double;
 		bool Bool;
 	} as;
 	ccpcp_item_types type;
-	//ccpcp_item_types container_type; // type of container owning this item
-	//size_t item_count; // number of items in owning container
+	ccpcp_item_types closed_container_type; // type of container for item CCPCP_ITEM_CONTAINER_END
 } ccpcp_item;
-/*
-typedef enum {
-	CPFLD_Field = 1,
-	CPFLD_Key,
-	CPFLD_Val
-} ccpc_field_state;
-*/
+
 typedef struct {
 	ccpcp_item_types container_type;
 	size_t item_count;
 	size_t container_size;
-	uint8_t current_item_is_key: 1;
 } ccpcp_container_state;
 
 void ccpcp_container_state_init(ccpcp_container_state *self, ccpcp_item_types cont_type);
@@ -187,6 +162,8 @@ ccpcp_container_state* ccpc_unpack_context_current_item_container_state(ccpcp_un
 void ccpc_unpack_context_pop_container_state(ccpcp_unpack_context* self);
 
 const char *ccpcp_unpack_take_byte(ccpcp_unpack_context* unpack_context);
+
+//bool ccpcp_item_is_map_key(ccpcp_unpack_context* unpack_context);
 
 #define UNPACK_ERROR(error_code)                        \
 {                                                       \

@@ -549,23 +549,6 @@ void ccpon_pack_string_finish (ccpcp_pack_context* pack_context)
 	ccpcp_pack_copy_byte(pack_context, '"');
 }
 
-/*
-void ccpon_pack_blob(ccpcp_pack_context* pack_context, const void* v, unsigned l)
-{
-	if (pack_context->err_no)
-		return;
-	char *p = ccpcp_pack_reserve_space(pack_context, sizeof (CCPON_STR_ESC_BLOB_BEGIN) - 1);
-	if(p) {
-		memcpy(p, CCPON_STR_ESC_BLOB_BEGIN, sizeof (CCPON_STR_ESC_BLOB_BEGIN) - 1);
-		p = ccpon_pack_blob_data_escaped(pack_context, v, 4*l);
-		if(p) {
-			p = ccpon_pack_blob_data_escaped(pack_context, v, 1);
-			if(p)
-				*p = '"';
-		}
-	}
-}
-*/
 //============================   U N P A C K   =================================
 
 static const char* ccpon_unpack_skip_blank(ccpcp_unpack_context* unpack_context)
@@ -774,7 +757,6 @@ static void ccpon_unpack_string(ccpcp_unpack_context* unpack_context)
 		else {
 			if (*p == '"') {
 				// end of string
-				//unpack_context->current++;
 				it->last_chunk = 1;
 				break;
 			}
@@ -820,24 +802,16 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		//unpack_context->item.type = CCPON_ITEM_FIELD_DELIM;
 		ccpon_unpack_next(unpack_context);
 		return;
-	case CCPON_C_MAP_END: {
+	case CCPON_C_LIST_END:
+	case CCPON_C_MAP_END:
+	case CCPON_C_META_END:  {
 		ccpcp_container_state *top_cont_state = ccpc_unpack_context_top_container_state(unpack_context);
 		if(!top_cont_state)
 			UNPACK_ERROR(CCPCP_RC_CONTAINER_STACK_UNDERFLOW)
-		unpack_context->item.type = (top_cont_state->container_type == CCPCP_ITEM_MAP)? CCPCP_ITEM_MAP_END: CCPCP_ITEM_IMAP_END;
+		unpack_context->item.type = CCPCP_ITEM_CONTAINER_END;
+		unpack_context->item.closed_container_type = top_cont_state->container_type;
 		break;
 	}
-	case CCPON_C_LIST_END: {
-		ccpcp_container_state *top_cont_state = ccpc_unpack_context_top_container_state(unpack_context);
-		if(!top_cont_state)
-			UNPACK_ERROR(CCPCP_RC_CONTAINER_STACK_UNDERFLOW);
-		//unpack_context->item.type = (top_cont_state->container_type == CCPCP_ITEM_LIST)? CCPCP_ITEM_LIST_END: CCPCP_ITEM_ARRAY_END;
-		unpack_context->item.type = CCPCP_ITEM_LIST_END;
-		break;
-	}
-	case CCPON_C_META_END:
-		unpack_context->item.type = CCPCP_ITEM_META_END;
-		break;
 	case CCPON_C_META_BEGIN:
 		unpack_context->item.type = CCPCP_ITEM_META;
 		break;
@@ -854,21 +828,6 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		unpack_context->item.type = CCPCP_ITEM_IMAP;
 		break;
 	}
-	/*
-	case 'a': {
-		int64_t size;
-		int n = unpack_int(unpack_context, &size);
-		if(n == 0)
-			size = -1;
-		//	UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT)
-		UNPACK_ASSERT_BYTE();
-		if(*p != '[')
-			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT)
-		unpack_context->item.type = CCPCP_ITEM_ARRAY;
-		unpack_context->item.as.Array.size = size;
-		break;
-	}
-	*/
 	case 'd': {
 		UNPACK_ASSERT_BYTE();
 		if(!p || *p != '"')
@@ -882,29 +841,6 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT)
 		break;
 	}
-		/*
-	case 'x': {
-		UNPACK_ASSERT_BYTE();
-		unpack_context->item.type = CCPCP_ITEM_STRING;
-		ccpon_string *str_it = &unpack_context->item.as.String;
-		ccpcp_string_init(str_it);
-		str_it->format = CCPON_STRING_FORMAT_HEX;
-		ccpon_unpack_string(unpack_context);
-		break;
-	}
-	case 'b': {
-		UNPACK_ASSERT_BYTE();
-		if(*p != '"')
-			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT)
-		if(ccpon_unpack_string(unpack_context) == 0)
-		return;
-		unpack_context->item.type = CCPON_ITEM_BLOB;
-		unpack_context->item.as.String.start = p + 1;
-		unpack_context->item.as.String.length = (int)(unpack_context->current - p - 2);
-		unpack_context->item.as.String.format = CCPON_STRING_FORMAT_UTF8_ESCAPED;
-		break;
-	}
-	*/
 	case 'n': {
 		UNPACK_ASSERT_BYTE();
 		if(*p == 'u') {
@@ -1078,28 +1014,20 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 	case CCPCP_ITEM_META:
 		ccpc_unpack_context_push_container_state(unpack_context, unpack_context->item.type);
 		break;
-	case CCPCP_ITEM_LIST_END:
-	//case CCPCP_ITEM_ARRAY_END:
-	case CCPCP_ITEM_MAP_END:
-	case CCPCP_ITEM_IMAP_END:
-	case CCPCP_ITEM_META_END:
+	case CCPCP_ITEM_CONTAINER_END:
 		ccpc_unpack_context_pop_container_state(unpack_context);
+		if(top_cont_state)
+			unpack_context->item.closed_container_type = top_cont_state->container_type;
+		else
+			unpack_context->item.closed_container_type = CCPCP_ITEM_INVALID;
 		is_container_end = true;
 		break;
 	default:
 		break;
 	}
 
-	if(top_cont_state && !is_container_end) {
-		top_cont_state->current_item_is_key = 0;
+	if(top_cont_state && !is_container_end)
 		top_cont_state->item_count++;
-		if(top_cont_state->container_type == CCPCP_ITEM_MAP
-				|| top_cont_state->container_type == CCPCP_ITEM_IMAP
-				|| top_cont_state->container_type == CCPCP_ITEM_META)
-		{
-			top_cont_state->current_item_is_key = top_cont_state->item_count % 2;
-		}
-	}
 }
 
 void ccpon_pack_field_delim(ccpcp_pack_context *pack_context, bool is_first_field)
@@ -1115,6 +1043,3 @@ void ccpon_pack_key_delim(ccpcp_pack_context *pack_context)
 {
 	ccpcp_pack_copy_bytes(pack_context, ":", 1);
 }
-
-
-

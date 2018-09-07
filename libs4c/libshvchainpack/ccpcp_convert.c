@@ -6,6 +6,7 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 	bool o_cpon_input = (in_format == CCPCP_Cpon);
 	bool o_chainpack_output = (out_format == CCPCP_ChainPack);
 	int prev_item = CCPCP_ITEM_INVALID;
+	bool meta_just_closed = false;
 	do {
 		if(o_cpon_input)
 			ccpon_unpack_next(in_ctx);
@@ -16,7 +17,8 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 
 		ccpcp_container_state *curr_item_cont_state = ccpc_unpack_context_current_item_container_state(in_ctx);
 		if(o_chainpack_output) {
-			if(curr_item_cont_state && curr_item_cont_state->current_item_is_key) {
+#if 0
+			if(ccpcp_item_is_map_key(in_ctx)) {
 				if(in_ctx->item.type == CCPCP_ITEM_STRING) {
 					ccpcp_string *it = &(in_ctx->item.as.String);
 					if(!(it->chunk_cnt == 1 && it->last_chunk)) {
@@ -73,6 +75,7 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 				}
 				continue;
 			}
+#endif
 		}
 		else {
 			if(curr_item_cont_state != NULL) {
@@ -87,11 +90,11 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 						is_string_concat = 1;
 					}
 				}
-				if(!is_string_concat && !ccpcp_item_type_is_container_end(in_ctx->item.type)) {
+				if(!is_string_concat && in_ctx->item.type != CCPCP_ITEM_CONTAINER_END) {
 					switch(curr_item_cont_state->container_type) {
 					case CCPCP_ITEM_LIST:
 					//case CCPCP_ITEM_ARRAY:
-						if(prev_item != CCPCP_ITEM_META_END)
+						if(!meta_just_closed)
 							ccpon_pack_field_delim(out_ctx, curr_item_cont_state->item_count == 1);
 						break;
 					case CCPCP_ITEM_MAP:
@@ -103,8 +106,7 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 						}
 						else {
 							// pack key
-							if(prev_item != CCPCP_ITEM_META_END)
-								ccpon_pack_field_delim(out_ctx, curr_item_cont_state->item_count == 1);
+							ccpon_pack_field_delim(out_ctx, curr_item_cont_state->item_count == 1);
 						}
 						break;
 					}
@@ -114,6 +116,7 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 				}
 			}
 		}
+		meta_just_closed = false;
 		switch(in_ctx->item.type) {
 		case CCPCP_ITEM_INVALID: {
 			// end of input
@@ -156,41 +159,33 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 				ccpon_pack_meta_begin(out_ctx);
 			break;
 		}
-		case CCPCP_ITEM_LIST_END: {
-			if(o_chainpack_output)
+		case CCPCP_ITEM_CONTAINER_END: {
+			if(o_chainpack_output) {
 				cchainpack_pack_container_end(out_ctx);
-			else
-				ccpon_pack_list_end(out_ctx);
-			break;
-		}
-		/*
-		case CCPCP_ITEM_ARRAY_END: {
-			if(o_chainpack_output)
-				;
-			else
-				ccpon_pack_list_end(out_ctx);
-			break;
-		}
-		*/
-		case CCPCP_ITEM_MAP_END: {
-			if(o_chainpack_output)
-				cchainpack_pack_container_end(out_ctx);
-			else
-				ccpon_pack_map_end(out_ctx);
-			break;
-		}
-		case CCPCP_ITEM_IMAP_END: {
-			if(o_chainpack_output)
-				cchainpack_pack_container_end(out_ctx);
-			else
-				ccpon_pack_imap_end(out_ctx);
-			break;
-		}
-		case CCPCP_ITEM_META_END: {
-			if(o_chainpack_output)
-				cchainpack_pack_container_end(out_ctx);
-			else
-				ccpon_pack_meta_end(out_ctx);
+				meta_just_closed = (in_ctx->item.closed_container_type == CCPCP_ITEM_META);
+
+			}
+			else {
+				switch(in_ctx->item.closed_container_type) {
+				case CCPCP_ITEM_LIST:
+					ccpon_pack_list_end(out_ctx);
+					break;
+				case CCPCP_ITEM_MAP:
+					ccpon_pack_map_end(out_ctx);
+					break;
+				case CCPCP_ITEM_IMAP:
+					ccpon_pack_imap_end(out_ctx);
+					break;
+				case CCPCP_ITEM_META:
+					ccpon_pack_meta_end(out_ctx);
+					meta_just_closed = true;
+					break;
+				default:
+					// cannot finish Cpon container without container type info
+					in_ctx->err_no = CCPCP_RC_LOGICAL_ERROR;
+					return;
+				}
+			}
 			break;
 		}
 		case CCPCP_ITEM_STRING: {
@@ -279,8 +274,10 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 			ccpcp_container_state *top_state = ccpc_unpack_context_top_container_state(in_ctx);
 			// take just one object from stream
 			if(!top_state) {
-				if(in_ctx->item.type == CCPCP_ITEM_STRING && !in_ctx->item.as.String.last_chunk) {
+				if((in_ctx->item.type == CCPCP_ITEM_STRING && !in_ctx->item.as.String.last_chunk)
+						|| meta_just_closed) {
 					// do not stop parsing in the middle of the string
+					// or after meta
 				}
 				else {
 					break;

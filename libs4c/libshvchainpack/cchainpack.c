@@ -8,9 +8,6 @@
 // Fri Feb 02 2018 00:00:00 == 1517529600 EPOCH
 static const int64_t SHV_EPOCH_MSEC = 1517529600000;
 
-//static const uint8_t CP_ARRAY_FLAG_MASK = 64; // DEPRECATED
-const uint8_t CP_STRING_META_KEY_PREFIX = 0xFE;
-
 const char* cchainpack_packing_schema_name(int sch)
 {
 	switch (sch) {
@@ -37,7 +34,6 @@ const char* cchainpack_packing_schema_name(int sch)
 
 	case CP_TERM: return "TERM";
 	}
-	//SHVCHP_EXCEPTION("Unknown TypeInfo: " + Utils::toString((int)e));
 	return "";
 }
 
@@ -131,12 +127,12 @@ void cchainpack_pack_uint_data(ccpcp_pack_context* pack_context, uint64_t num)
 	int bitlen = significant_bits_part_length(num);
 	pack_uint_data_helper(pack_context, num, bitlen);
 }
-
+/*
 void cchainpack_pack_uint_key(ccpcp_pack_context *pack_context, uint64_t key)
 {
 	cchainpack_pack_uint_data(pack_context, key);
 }
-
+*/
 /*
  0 ...  7 bits  1  byte  |0|s|x|x|x|x|x|x|<-- LSB
  8 ... 14 bits  2  bytes |1|0|s|x|x|x|x|x| |x|x|x|x|x|x|x|x|<-- LSB
@@ -290,66 +286,7 @@ void cchainpack_pack_boolean(ccpcp_pack_context* pack_context, bool b)
 	else
 		cchainpack_pack_false(pack_context);
 }
-/*
-void cchainpack_pack_array_begin(ccpcp_pack_context* pack_context, ccpcp_item_types type, int size)
-{
-	if (pack_context->err_no)
-		return;
 
-	cchainpack_pack_packing_schema sch = CP_INVALID;
-
-	switch(type) {
-	case CCPCP_ITEM_INVALID:
-	case CCPCP_ITEM_META:
-	case CCPCP_ITEM_META_END:
-	//case CCPCP_ITEM_ARRAY:
-	//case CCPCP_ITEM_ARRAY_END:
-	case CCPCP_ITEM_LIST_END:
-	case CCPCP_ITEM_MAP_END:
-	case CCPCP_ITEM_IMAP_END:
-		pack_context->err_no = CCPCP_RC_LOGICAL_ERROR;
-		break;
-	case CCPCP_ITEM_LIST:
-		sch = CP_List;
-		break;
-	case CCPCP_ITEM_MAP:
-		sch = CP_Map;
-		break;
-	case CCPCP_ITEM_IMAP:
-		sch = CP_IMap;
-		break;
-	case CCPCP_ITEM_NULL:
-		sch = CP_Null;
-		break;
-	case CCPCP_ITEM_BOOLEAN:
-		sch = CP_Bool;
-		break;
-	case CCPCP_ITEM_INT:
-		sch = CP_Int;
-		break;
-	case CCPCP_ITEM_UINT:
-		sch = CP_UInt;
-		break;
-	case CCPCP_ITEM_DOUBLE:
-		sch = CP_Double;
-		break;
-	case CCPCP_ITEM_DECIMAL:
-		sch = CP_Decimal;
-		break;
-	case CCPCP_ITEM_DATE_TIME:
-		sch = CP_DateTime;
-		break;
-	case CCPCP_ITEM_STRING:
-		sch = CP_String;
-		break;
-	}
-
-}
-
-void cchainpack_pack_array_end(ccpcp_pack_context *pack_context)
-{
-}
-*/
 void cchainpack_pack_list_begin(ccpcp_pack_context *pack_context)
 {
 	if (pack_context->err_no)
@@ -400,18 +337,6 @@ void cchainpack_pack_string_start (ccpcp_pack_context* pack_context, size_t stri
 void cchainpack_pack_string_cont (ccpcp_pack_context* pack_context, const char* buff, size_t buff_len)
 {
 	ccpcp_pack_copy_bytes(pack_context, buff, buff_len);
-}
-
-void cchainpack_pack_string_key(ccpcp_pack_context *pack_context, const char *str, size_t str_len)
-{
-	cchainpack_pack_uint_data(pack_context, str_len);
-	ccpcp_pack_copy_bytes(pack_context, str, str_len);
-}
-
-void cchainpack_pack_string_key_meta(ccpcp_pack_context *pack_context, const char *str, size_t str_len)
-{
-	ccpcp_pack_copy_byte(pack_context, CP_STRING_META_KEY_PREFIX);
-	cchainpack_pack_string_key(pack_context, str, str_len);
 }
 
 void cchainpack_pack_cstring (ccpcp_pack_context* pack_context, const char* buff, size_t buff_len)
@@ -562,42 +487,9 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 	ccpcp_container_state *top_cont_state = ccpc_unpack_context_top_container_state(unpack_context);
 	if(top_cont_state && packing_schema != CP_TERM) {
 		top_cont_state->item_count++;
-		top_cont_state->current_item_is_key = 0;
-		if(top_cont_state->container_type == CCPCP_ITEM_MAP
-				|| top_cont_state->container_type == CCPCP_ITEM_IMAP
-				|| top_cont_state->container_type == CCPCP_ITEM_META)
-		{
-			top_cont_state->current_item_is_key = top_cont_state->item_count % 2;
-		}
 	}
 
 	unpack_context->item.type = CCPCP_ITEM_INVALID;
-
-	if(top_cont_state && top_cont_state->current_item_is_key) {
-		switch(top_cont_state->container_type) {
-		case CCPCP_ITEM_MAP:
-			packing_schema = CP_String;
-			unpack_context->current--;
-			break;
-		case CCPCP_ITEM_IMAP:
-			packing_schema = CP_UInt;
-			unpack_context->current--;
-			break;
-		case CCPCP_ITEM_META: {
-			if(packing_schema == CP_STRING_META_KEY_PREFIX) {
-				packing_schema = CP_String;
-			}
-			else {
-				packing_schema = CP_UInt;
-				unpack_context->current--;
-			}
-			break;
-		}
-		default:
-			UNPACK_ERROR(CCPCP_RC_LOGICAL_ERROR);
-		}
-	}
-
 	if(packing_schema < 128) {
 		if(packing_schema & 64) {
 			// tiny Int
@@ -611,13 +503,6 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 		}
 	}
 	else {
-		/*
-		bool is_array = 0;
-		if(packing_schema < CP_FALSE) {
-			is_array = packing_schema & CP_ARRAY_FLAG_MASK;
-			packing_schema &= ~CP_ARRAY_FLAG_MASK;
-		}
-		*/
 		switch(packing_schema) {
 		case CP_Null: {
 			unpack_context->item.type = CCPCP_ITEM_NULL;
@@ -722,25 +607,12 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 			break;
 		}
 		case CP_TERM: {
+			unpack_context->item.type = CCPCP_ITEM_CONTAINER_END;
 			ccpcp_container_state *top_cont_state = ccpc_unpack_context_top_container_state(unpack_context);
-			if(!top_cont_state)
-				UNPACK_ERROR(CCPCP_RC_CONTAINER_STACK_UNDERFLOW)
-			switch(top_cont_state->container_type) {
-			case CCPCP_ITEM_LIST:
-				unpack_context->item.type = CCPCP_ITEM_LIST_END;
-				break;
-			case CCPCP_ITEM_MAP:
-				unpack_context->item.type = CCPCP_ITEM_MAP_END;
-				break;
-			case CCPCP_ITEM_IMAP:
-				unpack_context->item.type = CCPCP_ITEM_IMAP_END;
-				break;
-			case CCPCP_ITEM_META:
-				unpack_context->item.type = CCPCP_ITEM_META_END;
-				break;
-			default:
-				UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT)
-			}
+			if(top_cont_state)
+				unpack_context->item.closed_container_type = top_cont_state->container_type;
+			else
+				unpack_context->item.closed_container_type = CCPCP_ITEM_INVALID;
 			ccpc_unpack_context_pop_container_state(unpack_context);
 			break;
 		}
@@ -769,7 +641,3 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 		}
 	}
 }
-
-
-
-
