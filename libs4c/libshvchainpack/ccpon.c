@@ -860,6 +860,14 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		unpack_context->item.type = CCPCP_ITEM_IMAP;
 		break;
 	}
+	case 'a': {
+		UNPACK_ASSERT_BYTE();
+		if(*p != '[')
+			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT)
+		// unpack unsupported ARRAY type as list
+		unpack_context->item.type = CCPCP_ITEM_LIST;
+		break;
+	}
 	case 'd': {
 		UNPACK_ASSERT_BYTE();
 		if(!p || *p != '"')
