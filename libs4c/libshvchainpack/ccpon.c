@@ -557,8 +557,40 @@ static const char* ccpon_unpack_skip_blank(ccpcp_unpack_context* unpack_context)
 		const char* p = ccpcp_unpack_take_byte(unpack_context);
 		if(!p)
 			return p;
-		if(*p > ' ')
-			return p;
+		if(*p > ' ') {
+			if(*p == '/') {
+				p = ccpcp_unpack_take_byte(unpack_context);
+				if(*p == '*') {
+					//multiline_comment_entered;
+					while(1) {
+						p = ccpcp_unpack_take_byte(unpack_context);
+						if(!p)
+							return p;
+						if(*p == '*') {
+							p = ccpcp_unpack_take_byte(unpack_context);
+							if(*p == '/')
+								break;
+						}
+					}
+				}
+				else if(*p == '/') {
+					// to end of line comment entered;
+					while(1) {
+						p = ccpcp_unpack_take_byte(unpack_context);
+						if(!p)
+							return p;
+						if(*p == '\n')
+							break;
+					}
+				}
+				else {
+					return NULL;
+				}
+			}
+			else {
+				return p;
+			}
+		}
 	}
 }
 
