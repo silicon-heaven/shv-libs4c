@@ -156,10 +156,10 @@ void ccpcp_unpack_context_init(ccpcp_unpack_context* self, const void* data, siz
 							   , ccpcp_unpack_underflow_handler huu
 							   , ccpcp_container_stack *stack);
 
-ccpcp_container_state* ccpc_unpack_context_push_container_state(ccpcp_unpack_context* self, ccpcp_item_types container_type);
-ccpcp_container_state* ccpc_unpack_context_top_container_state(ccpcp_unpack_context* self);
-ccpcp_container_state* ccpc_unpack_context_current_item_container_state(ccpcp_unpack_context* self);
-void ccpc_unpack_context_pop_container_state(ccpcp_unpack_context* self);
+ccpcp_container_state* ccpcp_unpack_context_push_container_state(ccpcp_unpack_context* self, ccpcp_item_types container_type);
+ccpcp_container_state* ccpcp_unpack_context_top_container_state(ccpcp_unpack_context* self);
+ccpcp_container_state* ccpcp_unpack_context_current_item_container_state(ccpcp_unpack_context* self);
+void ccpcp_unpack_context_pop_container_state(ccpcp_unpack_context* self);
 
 const char *ccpcp_unpack_take_byte(ccpcp_unpack_context* unpack_context);
 

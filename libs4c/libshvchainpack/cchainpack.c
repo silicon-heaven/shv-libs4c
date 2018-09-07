@@ -484,7 +484,7 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 
 	uint8_t packing_schema = *p;
 
-	ccpcp_container_state *top_cont_state = ccpc_unpack_context_top_container_state(unpack_context);
+	ccpcp_container_state *top_cont_state = ccpcp_unpack_context_top_container_state(unpack_context);
 	if(top_cont_state && packing_schema != CP_TERM) {
 		top_cont_state->item_count++;
 	}
@@ -588,32 +588,32 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 		}
 		case CP_MetaMap: {
 			unpack_context->item.type = CCPCP_ITEM_META;
-			ccpc_unpack_context_push_container_state(unpack_context, unpack_context->item.type);
+			ccpcp_unpack_context_push_container_state(unpack_context, unpack_context->item.type);
 			break;
 		}
 		case CP_Map: {
 			unpack_context->item.type = CCPCP_ITEM_MAP;
-			ccpc_unpack_context_push_container_state(unpack_context, unpack_context->item.type);
+			ccpcp_unpack_context_push_container_state(unpack_context, unpack_context->item.type);
 			break;
 		}
 		case CP_IMap: {
 			unpack_context->item.type = CCPCP_ITEM_IMAP;
-			ccpc_unpack_context_push_container_state(unpack_context, unpack_context->item.type);
+			ccpcp_unpack_context_push_container_state(unpack_context, unpack_context->item.type);
 			break;
 		}
 		case CP_List: {
 			unpack_context->item.type = CCPCP_ITEM_LIST;
-			ccpc_unpack_context_push_container_state(unpack_context, unpack_context->item.type);
+			ccpcp_unpack_context_push_container_state(unpack_context, unpack_context->item.type);
 			break;
 		}
 		case CP_TERM: {
 			unpack_context->item.type = CCPCP_ITEM_CONTAINER_END;
-			ccpcp_container_state *top_cont_state = ccpc_unpack_context_top_container_state(unpack_context);
+			ccpcp_container_state *top_cont_state = ccpcp_unpack_context_top_container_state(unpack_context);
 			if(top_cont_state)
 				unpack_context->item.closed_container_type = top_cont_state->container_type;
 			else
 				unpack_context->item.closed_container_type = CCPCP_ITEM_INVALID;
-			ccpc_unpack_context_pop_container_state(unpack_context);
+			ccpcp_unpack_context_pop_container_state(unpack_context);
 			break;
 		}
 		case CP_String: {

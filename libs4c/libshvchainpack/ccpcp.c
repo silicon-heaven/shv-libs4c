@@ -90,7 +90,7 @@ void ccpcp_unpack_context_init (ccpcp_unpack_context* self, const void *data, si
 	self->container_stack = stack;
 }
 
-ccpcp_container_state *ccpc_unpack_context_push_container_state(ccpcp_unpack_context *self, ccpcp_item_types container_type)
+ccpcp_container_state *ccpcp_unpack_context_push_container_state(ccpcp_unpack_context *self, ccpcp_item_types container_type)
 {
 	if(!self->container_stack) {
 		self->err_no = CCPCP_RC_CONTAINER_STACK_OVERFLOW;
@@ -117,7 +117,7 @@ ccpcp_container_state *ccpc_unpack_context_push_container_state(ccpcp_unpack_con
 	return NULL;
 }
 
-ccpcp_container_state* ccpc_unpack_context_top_container_state(ccpcp_unpack_context* self)
+ccpcp_container_state* ccpcp_unpack_context_top_container_state(ccpcp_unpack_context* self)
 {
 	if(self->container_stack && self->container_stack->length > 0) {
 		return self->container_stack->container_states + self->container_stack->length - 1;
@@ -125,7 +125,7 @@ ccpcp_container_state* ccpc_unpack_context_top_container_state(ccpcp_unpack_cont
 	return NULL;
 }
 
-ccpcp_container_state *ccpc_unpack_context_current_item_container_state(ccpcp_unpack_context *self)
+ccpcp_container_state *ccpcp_unpack_context_current_item_container_state(ccpcp_unpack_context *self)
 {
 	if(self->container_stack && self->container_stack->length > 0) {
 		ccpcp_container_state *top_st = self->container_stack->container_states + self->container_stack->length - 1;
@@ -140,7 +140,7 @@ ccpcp_container_state *ccpc_unpack_context_current_item_container_state(ccpcp_un
 	return NULL;
 }
 
-void ccpc_unpack_context_pop_container_state(ccpcp_unpack_context* self)
+void ccpcp_unpack_context_pop_container_state(ccpcp_unpack_context* self)
 {
 	if(self->container_stack && self->container_stack->length > 0) {
 		self->container_stack->length--;

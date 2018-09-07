@@ -15,7 +15,7 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 		if(in_ctx->err_no != CCPCP_RC_OK)
 			break;
 
-		ccpcp_container_state *curr_item_cont_state = ccpc_unpack_context_current_item_container_state(in_ctx);
+		ccpcp_container_state *curr_item_cont_state = ccpcp_unpack_context_current_item_container_state(in_ctx);
 		if(o_chainpack_output) {
 #if 0
 			if(ccpcp_item_is_map_key(in_ctx)) {
@@ -272,7 +272,7 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 		}
 		prev_item = in_ctx->item.type;
 		{
-			ccpcp_container_state *top_state = ccpc_unpack_context_top_container_state(in_ctx);
+			ccpcp_container_state *top_state = ccpcp_unpack_context_top_container_state(in_ctx);
 			// take just one object from stream
 			if(!top_state) {
 				if((in_ctx->item.type == CCPCP_ITEM_STRING && !in_ctx->item.as.String.last_chunk)

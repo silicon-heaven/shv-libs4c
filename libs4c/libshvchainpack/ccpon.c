@@ -805,7 +805,7 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 	if (unpack_context->err_no)
 		return;
 
-	ccpcp_container_state *top_cont_state = ccpc_unpack_context_top_container_state(unpack_context);
+	ccpcp_container_state *top_cont_state = ccpcp_unpack_context_top_container_state(unpack_context);
 
 	const char *p;
 	if(unpack_context->item.type == CCPCP_ITEM_STRING) {
@@ -837,7 +837,7 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 	case CCPON_C_LIST_END:
 	case CCPON_C_MAP_END:
 	case CCPON_C_META_END:  {
-		ccpcp_container_state *top_cont_state = ccpc_unpack_context_top_container_state(unpack_context);
+		ccpcp_container_state *top_cont_state = ccpcp_unpack_context_top_container_state(unpack_context);
 		if(!top_cont_state)
 			UNPACK_ERROR(CCPCP_RC_CONTAINER_STACK_UNDERFLOW)
 		unpack_context->item.type = CCPCP_ITEM_CONTAINER_END;
@@ -1052,10 +1052,10 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 	case CCPCP_ITEM_MAP:
 	case CCPCP_ITEM_IMAP:
 	case CCPCP_ITEM_META:
-		ccpc_unpack_context_push_container_state(unpack_context, unpack_context->item.type);
+		ccpcp_unpack_context_push_container_state(unpack_context, unpack_context->item.type);
 		break;
 	case CCPCP_ITEM_CONTAINER_END:
-		ccpc_unpack_context_pop_container_state(unpack_context);
+		ccpcp_unpack_context_pop_container_state(unpack_context);
 		if(top_cont_state)
 			unpack_context->item.closed_container_type = top_cont_state->container_type;
 		else
