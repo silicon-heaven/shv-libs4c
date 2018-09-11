@@ -17,65 +17,6 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 
 		ccpcp_container_state *curr_item_cont_state = ccpcp_unpack_context_current_item_container_state(in_ctx);
 		if(o_chainpack_output) {
-#if 0
-			if(ccpcp_item_is_map_key(in_ctx)) {
-				if(in_ctx->item.type == CCPCP_ITEM_STRING) {
-					ccpcp_string *it = &(in_ctx->item.as.String);
-					if(!(it->chunk_cnt == 1 && it->last_chunk)) {
-						// string key cannot be multichunk
-						in_ctx->err_no = CCPCP_RC_LOGICAL_ERROR;
-						return;
-					}
-				}
-				switch(curr_item_cont_state->container_type) {
-				case CCPCP_ITEM_MAP: {
-					if(in_ctx->item.type == CCPCP_ITEM_STRING) {
-						ccpcp_string *it = &(in_ctx->item.as.String);
-						cchainpack_pack_string_key(out_ctx, it->chunk_start, it->chunk_size);
-					}
-					else {
-						// invalid key type
-						in_ctx->err_no = CCPCP_RC_LOGICAL_ERROR;
-					}
-					break;
-				}
-				case CCPCP_ITEM_IMAP: {
-					if(in_ctx->item.type == CCPCP_ITEM_INT) {
-						cchainpack_pack_uint_key(out_ctx, (uint64_t)in_ctx->item.as.Int);
-					}
-					else if(in_ctx->item.type == CCPCP_ITEM_UINT) {
-						cchainpack_pack_uint_key(out_ctx, in_ctx->item.as.UInt);
-					}
-					else {
-						// invalid key type
-						in_ctx->err_no = CCPCP_RC_LOGICAL_ERROR;
-					}
-					break;
-				}
-				case CCPCP_ITEM_META: {
-					if(in_ctx->item.type == CCPCP_ITEM_STRING) {
-						ccpcp_string *it = &(in_ctx->item.as.String);
-						cchainpack_pack_string_key_meta(out_ctx, it->chunk_start, it->chunk_size);
-					}
-					else if(in_ctx->item.type == CCPCP_ITEM_INT) {
-						cchainpack_pack_uint_key(out_ctx, (uint64_t)in_ctx->item.as.Int);
-					}
-					else if(in_ctx->item.type == CCPCP_ITEM_UINT) {
-						cchainpack_pack_uint_key(out_ctx, in_ctx->item.as.UInt);
-					}
-					else {
-						// invalid key type
-						in_ctx->err_no = CCPCP_RC_LOGICAL_ERROR;
-					}
-					break;
-				}
-				default:
-					in_ctx->err_no = CCPCP_RC_LOGICAL_ERROR;
-					break;
-				}
-				continue;
-			}
-#endif
 		}
 		else {
 			if(curr_item_cont_state != NULL) {
@@ -123,6 +64,13 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 			// end of input
 			break;
 		}
+		case CCPCP_ITEM_NULL: {
+			if(o_chainpack_output)
+				cchainpack_pack_null(out_ctx);
+			else
+				ccpon_pack_null(out_ctx);
+			break;
+		}
 		case CCPCP_ITEM_LIST: {
 			if(o_chainpack_output)
 				cchainpack_pack_list_begin(out_ctx);
@@ -130,15 +78,6 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 				ccpon_pack_list_begin(out_ctx);
 			break;
 		}
-		/*
-		case CCPCP_ITEM_ARRAY: {
-			if(o_chainpack_output)
-				cchainpack_pack_array_begin(out_ctx, in_ctx->item.as.Array.size);
-			else
-				ccpon_pack_array_begin(out_ctx, in_ctx->item.as.Array.size);
-			break;
-		}
-		*/
 		case CCPCP_ITEM_MAP: {
 			if(o_chainpack_output)
 				cchainpack_pack_map_begin(out_ctx);
@@ -263,12 +202,6 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 				ccpon_pack_date_time(out_ctx, it->msecs_since_epoch, it->minutes_from_utc);
 			break;
 		}
-		default:
-			if(o_chainpack_output)
-				cchainpack_pack_null(out_ctx);
-			else
-				ccpon_pack_null(out_ctx);
-			break;
 		}
 		prev_item = in_ctx->item.type;
 		{

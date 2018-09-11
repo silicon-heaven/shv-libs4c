@@ -65,6 +65,7 @@ void cchainpack_pack_meta_begin (ccpcp_pack_context* pack_context);
 
 void cchainpack_pack_container_end(ccpcp_pack_context* pack_context);
 
+uint64_t cchainpack_unpack_uint_data(ccpcp_unpack_context *unpack_context, bool *ok);
 void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context);
 
 #ifdef __cplusplus

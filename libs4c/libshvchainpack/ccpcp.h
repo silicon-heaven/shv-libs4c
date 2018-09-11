@@ -29,6 +29,11 @@ typedef enum
 
 //=========================== PACK ============================
 
+typedef struct {
+	const char *indent;
+	uint8_t json_output: 1;
+} ccpcp_cpon_pack_options;
+
 struct ccpcp_pack_context;
 
 typedef void (*ccpcp_pack_overflow_handler)(struct ccpcp_pack_context*, size_t size_hint);
@@ -37,10 +42,11 @@ typedef struct ccpcp_pack_context {
 	char* start;
 	char* current;
 	char* end;
-	const char *indent;
 	int nest_count;
 	int err_no; /* handlers can save error here */
 	ccpcp_pack_overflow_handler handle_pack_overflow;
+	void *custom_context;
+	ccpcp_cpon_pack_options cpon_options;
 } ccpcp_pack_context;
 
 void ccpcp_pack_context_init(ccpcp_pack_context* pack_context, void *data, size_t length, ccpcp_pack_overflow_handler hpo);
@@ -136,7 +142,7 @@ typedef struct ccpcp_container_stack {
 	ccpcp_container_stack_overflow_handler overflow_handler;
 } ccpcp_container_stack;
 
-void ccpc_container_stack_init(ccpcp_container_stack* self, ccpcp_container_state *states, size_t capacity, ccpcp_container_stack_overflow_handler hnd);
+void ccpcp_container_stack_init(ccpcp_container_stack* self, ccpcp_container_state *states, size_t capacity, ccpcp_container_stack_overflow_handler hnd);
 
 struct ccpcp_unpack_context;
 
@@ -148,8 +154,9 @@ typedef struct ccpcp_unpack_context {
 	const char* current;
 	const char* end; /* logical end of buffer */
 	int err_no; /* handlers can save error here */
-	ccpcp_unpack_underflow_handler handle_unpack_underflow;
 	ccpcp_container_stack *container_stack;
+	ccpcp_unpack_underflow_handler handle_unpack_underflow;
+	void *custom_context;
 } ccpcp_unpack_context;
 
 void ccpcp_unpack_context_init(ccpcp_unpack_context* self, const void* data, size_t length

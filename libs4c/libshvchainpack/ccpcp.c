@@ -72,7 +72,7 @@ void ccpcp_container_state_init(ccpcp_container_state *self, ccpcp_item_types co
 	//self->current_item_is_key = 0;
 }
 
-void ccpc_container_stack_init(ccpcp_container_stack *self, ccpcp_container_state *states, size_t capacity, ccpcp_container_stack_overflow_handler hnd)
+void ccpcp_container_stack_init(ccpcp_container_stack *self, ccpcp_container_state *states, size_t capacity, ccpcp_container_stack_overflow_handler hnd)
 {
 	self->container_states = states;
 	self->capacity = capacity;
@@ -87,6 +87,7 @@ void ccpcp_unpack_context_init (ccpcp_unpack_context* self, const void *data, si
 	self->end = self->start + length;
 	self->err_no = CCPCP_RC_OK;
 	self->handle_unpack_underflow = huu;
+	self->custom_context = NULL;
 	self->container_stack = stack;
 }
 

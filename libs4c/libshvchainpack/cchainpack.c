@@ -1,8 +1,8 @@
 #include "cchainpack.h"
 
 #include <string.h>
-#include <stdio.h>
-#include <math.h>
+//#include <stdio.h>
+//#include <math.h>
 
 // UTC msec since 2.2. 2018 folowed by signed UTC offset in 1/4 hour
 // Fri Feb 02 2018 00:00:00 == 1517529600 EPOCH
@@ -640,4 +640,13 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 		}
 		}
 	}
+}
+
+uint64_t cchainpack_unpack_uint_data(ccpcp_unpack_context *unpack_context, bool *ok)
+{
+	uint64_t n;
+	unpack_uint(unpack_context, &n, NULL);
+	if(ok)
+		*ok = (unpack_context->err_no == CCPCP_RC_OK);
+	return n;
 }

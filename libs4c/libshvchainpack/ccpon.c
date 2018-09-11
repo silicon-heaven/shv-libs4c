@@ -151,8 +151,10 @@ void ccpcp_pack_context_init (ccpcp_pack_context* pack_context, void *data, size
 	pack_context->err_no = 0;
 	pack_context->handle_pack_overflow = hpo;
 	pack_context->err_no = CCPCP_RC_OK;
-	pack_context->indent = NULL;
+	pack_context->cpon_options.indent = NULL;
+	pack_context->cpon_options.json_output = 0;
 	pack_context->nest_count = 0;
+	pack_context->custom_context = NULL;
 }
 
 void ccpon_pack_copy_str(ccpcp_pack_context *pack_context, const void *str)
@@ -168,9 +170,9 @@ static void start_block(ccpcp_pack_context* pack_context)
 
 static void indent_element(ccpcp_pack_context* pack_context)
 {
-	if(pack_context->indent) {
+	if(pack_context->cpon_options.indent) {
 		for (int i = 0; i < pack_context->nest_count; ++i) {
-			ccpon_pack_copy_str(pack_context, pack_context->indent);
+			ccpon_pack_copy_str(pack_context, pack_context->cpon_options.indent);
 		}
 	}
 }
@@ -178,8 +180,8 @@ static void indent_element(ccpcp_pack_context* pack_context)
 static void end_block(ccpcp_pack_context* pack_context)
 {
 	pack_context->nest_count--;
-	if(pack_context->indent) {
-		if(pack_context->indent)
+	if(pack_context->cpon_options.indent) {
+		if(pack_context->cpon_options.indent)
 			ccpcp_pack_copy_bytes(pack_context, "\n", 1);
 		indent_element(pack_context);
 	}
@@ -377,24 +379,6 @@ void ccpon_pack_boolean(ccpcp_pack_context* pack_context, bool b)
 		ccpon_pack_false(pack_context);
 }
 
-void ccpon_pack_array_begin(ccpcp_pack_context* pack_context, int size)
-{
-	if (pack_context->err_no)
-		return;
-
-	ccpcp_pack_copy_bytes(pack_context, "a", 1);
-	if(size >= 0) {
-		ccpon_pack_int(pack_context, size);
-	}
-	ccpcp_pack_copy_bytes(pack_context, "[", 1);
-	start_block(pack_context);
-}
-
-void ccpon_pack_array_end(ccpcp_pack_context *pack_context)
-{
-	ccpon_pack_list_end(pack_context);
-}
-
 void ccpon_pack_list_begin(ccpcp_pack_context *pack_context)
 {
 	if (pack_context->err_no)
@@ -551,7 +535,7 @@ void ccpon_pack_string_finish (ccpcp_pack_context* pack_context)
 
 //============================   U N P A C K   =================================
 
-static const char* ccpon_unpack_skip_blank(ccpcp_unpack_context* unpack_context)
+const char* ccpon_unpack_skip_blank(ccpcp_unpack_context* unpack_context)
 {
 	while(1) {
 		const char* p = ccpcp_unpack_take_byte(unpack_context);
@@ -837,11 +821,14 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 	case CCPON_C_LIST_END:
 	case CCPON_C_MAP_END:
 	case CCPON_C_META_END:  {
-		ccpcp_container_state *top_cont_state = ccpcp_unpack_context_top_container_state(unpack_context);
-		if(!top_cont_state)
-			UNPACK_ERROR(CCPCP_RC_CONTAINER_STACK_UNDERFLOW)
 		unpack_context->item.type = CCPCP_ITEM_CONTAINER_END;
-		unpack_context->item.closed_container_type = top_cont_state->container_type;
+		if(unpack_context->container_stack) {
+			ccpcp_container_state *top_cont_state = ccpcp_unpack_context_top_container_state(unpack_context);
+			if(!top_cont_state)
+				UNPACK_ERROR(CCPCP_RC_CONTAINER_STACK_UNDERFLOW)
+			else
+				unpack_context->item.closed_container_type = top_cont_state->container_type;
+		}
 		break;
 	}
 	case CCPON_C_META_BEGIN:
@@ -1074,7 +1061,7 @@ void ccpon_pack_field_delim(ccpcp_pack_context *pack_context, bool is_first_fiel
 {
 	if(!is_first_field)
 		ccpcp_pack_copy_bytes(pack_context, ",", 1);
-	if(pack_context->indent)
+	if(pack_context->cpon_options.indent)
 		ccpcp_pack_copy_bytes(pack_context, "\n", 1);
 	indent_element(pack_context);
 }
