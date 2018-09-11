@@ -94,7 +94,8 @@ void ccpcp_unpack_context_init (ccpcp_unpack_context* self, const void *data, si
 ccpcp_container_state *ccpcp_unpack_context_push_container_state(ccpcp_unpack_context *self, ccpcp_item_types container_type)
 {
 	if(!self->container_stack) {
-		self->err_no = CCPCP_RC_CONTAINER_STACK_OVERFLOW;
+		// C++ implementation does not require container states stack
+		//self->err_no = CCPCP_RC_CONTAINER_STACK_OVERFLOW;
 		return NULL;
 	}
 	if(self->container_stack->length == self->container_stack->capacity) {
