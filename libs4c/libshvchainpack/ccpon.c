@@ -826,8 +826,6 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 			ccpcp_container_state *top_cont_state = ccpcp_unpack_context_top_container_state(unpack_context);
 			if(!top_cont_state)
 				UNPACK_ERROR(CCPCP_RC_CONTAINER_STACK_UNDERFLOW)
-			else
-				unpack_context->item.closed_container_type = top_cont_state->container_type;
 		}
 		break;
 	}
@@ -1043,10 +1041,6 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		break;
 	case CCPCP_ITEM_CONTAINER_END:
 		ccpcp_unpack_context_pop_container_state(unpack_context);
-		if(top_cont_state)
-			unpack_context->item.closed_container_type = top_cont_state->container_type;
-		else
-			unpack_context->item.closed_container_type = CCPCP_ITEM_INVALID;
 		is_container_end = true;
 		break;
 	default:

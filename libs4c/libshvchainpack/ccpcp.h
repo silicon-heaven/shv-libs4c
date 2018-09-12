@@ -120,7 +120,6 @@ typedef struct {
 		bool Bool;
 	} as;
 	ccpcp_item_types type;
-	ccpcp_item_types closed_container_type; // type of container for item CCPCP_ITEM_CONTAINER_END
 } ccpcp_item;
 
 typedef struct {
@@ -167,6 +166,7 @@ void ccpcp_unpack_context_init(ccpcp_unpack_context* self, const void* data, siz
 ccpcp_container_state* ccpcp_unpack_context_push_container_state(ccpcp_unpack_context* self, ccpcp_item_types container_type);
 ccpcp_container_state* ccpcp_unpack_context_top_container_state(ccpcp_unpack_context* self);
 ccpcp_container_state* ccpcp_unpack_context_current_item_container_state(ccpcp_unpack_context* self);
+ccpcp_container_state* ccpcp_unpack_context_closed_container_state(ccpcp_unpack_context* self);
 void ccpcp_unpack_context_pop_container_state(ccpcp_unpack_context* self);
 
 const char *ccpcp_unpack_take_byte(ccpcp_unpack_context* unpack_context);

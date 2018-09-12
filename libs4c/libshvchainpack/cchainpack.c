@@ -608,11 +608,6 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 		}
 		case CP_TERM: {
 			unpack_context->item.type = CCPCP_ITEM_CONTAINER_END;
-			ccpcp_container_state *top_cont_state = ccpcp_unpack_context_top_container_state(unpack_context);
-			if(top_cont_state)
-				unpack_context->item.closed_container_type = top_cont_state->container_type;
-			else
-				unpack_context->item.closed_container_type = CCPCP_ITEM_INVALID;
 			ccpcp_unpack_context_pop_container_state(unpack_context);
 			break;
 		}

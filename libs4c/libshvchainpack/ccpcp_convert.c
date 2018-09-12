@@ -100,13 +100,18 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 			break;
 		}
 		case CCPCP_ITEM_CONTAINER_END: {
+			ccpcp_container_state *st = ccpcp_unpack_context_closed_container_state(in_ctx);
+			if(!st) {
+				in_ctx->err_no = CCPCP_RC_CONTAINER_STACK_UNDERFLOW;
+				return;
+			}
+			meta_just_closed = (st->container_type == CCPCP_ITEM_META);
+
 			if(o_chainpack_output) {
 				cchainpack_pack_container_end(out_ctx);
-				meta_just_closed = (in_ctx->item.closed_container_type == CCPCP_ITEM_META);
-
 			}
 			else {
-				switch(in_ctx->item.closed_container_type) {
+				switch(st->container_type) {
 				case CCPCP_ITEM_LIST:
 					ccpon_pack_list_end(out_ctx);
 					break;
@@ -118,7 +123,6 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 					break;
 				case CCPCP_ITEM_META:
 					ccpon_pack_meta_end(out_ctx);
-					meta_just_closed = true;
 					break;
 				default:
 					// cannot finish Cpon container without container type info

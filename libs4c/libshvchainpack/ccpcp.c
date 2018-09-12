@@ -142,6 +142,15 @@ ccpcp_container_state *ccpcp_unpack_context_current_item_container_state(ccpcp_u
 	return NULL;
 }
 
+ccpcp_container_state *ccpcp_unpack_context_closed_container_state(ccpcp_unpack_context *self)
+{
+	if(self->container_stack && self->item.type == CCPCP_ITEM_CONTAINER_END) {
+		ccpcp_container_state *st = self->container_stack->container_states + self->container_stack->length;
+		return st;
+	}
+	return NULL;
+}
+
 void ccpcp_unpack_context_pop_container_state(ccpcp_unpack_context* self)
 {
 	if(self->container_stack && self->container_stack->length > 0) {
@@ -199,3 +208,4 @@ bool ccpcp_item_is_map_key(ccpcp_unpack_context *unpack_context)
 	return false;
 }
 */
+
