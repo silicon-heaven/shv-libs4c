@@ -69,7 +69,7 @@ void ccpcp_container_state_init(ccpcp_container_state *self, ccpcp_item_types co
 	self->container_type = cont_type;
 	self->container_size = 0;
 	self->item_count = 0;
-	//self->current_item_is_key = 0;
+	self->custom_context = NULL;
 }
 
 void ccpcp_container_stack_init(ccpcp_container_stack *self, ccpcp_container_state *states, size_t capacity, ccpcp_container_stack_overflow_handler hnd)

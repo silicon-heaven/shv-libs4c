@@ -195,7 +195,7 @@ void ccpon_pack_uint(ccpcp_pack_context* pack_context, uint64_t i)
 	// at least 21 characters for 64-bit types.
 	static const unsigned LEN = 32;
 	char str[LEN];
-	int n = snprintf(str, LEN, "%luu", i);
+	int n = snprintf(str, LEN, "%lluu", (unsigned long long)i);
 	if(n < 0) {
 		pack_context->err_no = CCPCP_RC_LOGICAL_ERROR;
 		return;
@@ -211,7 +211,7 @@ void ccpon_pack_int(ccpcp_pack_context* pack_context, int64_t i)
 	// at least 21 characters for 64-bit types.
 	static const unsigned LEN = 32;
 	char str[LEN];
-	int n = snprintf(str, LEN, "%ld", i);
+	int n = snprintf(str, LEN, "%lld", (long long)i);
 	if(n < 0) {
 		pack_context->err_no = CCPCP_RC_LOGICAL_ERROR;
 		return;
