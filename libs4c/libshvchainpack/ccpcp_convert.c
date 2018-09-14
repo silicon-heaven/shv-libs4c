@@ -195,7 +195,10 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 			break;
 		}
 		case CCPCP_ITEM_DOUBLE: {
-			ccpon_pack_double(out_ctx, in_ctx->item.as.Double);
+			if(o_chainpack_output)
+				cchainpack_pack_double(out_ctx, in_ctx->item.as.Double);
+			else
+				ccpon_pack_double(out_ctx, in_ctx->item.as.Double);
 			break;
 		}
 		case CCPCP_ITEM_DATE_TIME: {
