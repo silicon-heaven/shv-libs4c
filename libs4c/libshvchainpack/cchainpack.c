@@ -456,6 +456,7 @@ void unpack_string(ccpcp_unpack_context* unpack_context)
 		}
 	}
 	else {
+		it->chunk_size = 0;
 		while(it->size_to_load > 0 && it->chunk_size < it->chunk_buff_len) {
 			UNPACK_ASSERT_BYTE();
 			(it->chunk_start)[it->chunk_size++] = *p;
