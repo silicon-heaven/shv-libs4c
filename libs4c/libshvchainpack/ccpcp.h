@@ -126,7 +126,7 @@ typedef struct {
 	ccpcp_item_types container_type;
 	size_t item_count;
 	size_t container_size;
-	void *custom_context;
+	//void *custom_context;
 } ccpcp_container_state;
 
 void ccpcp_container_state_init(ccpcp_container_state *self, ccpcp_item_types cont_type);
@@ -165,14 +165,17 @@ void ccpcp_unpack_context_init(ccpcp_unpack_context* self, const void* data, siz
 
 ccpcp_container_state* ccpcp_unpack_context_push_container_state(ccpcp_unpack_context* self, ccpcp_item_types container_type);
 ccpcp_container_state* ccpcp_unpack_context_top_container_state(ccpcp_unpack_context* self);
-ccpcp_container_state* ccpcp_unpack_context_current_item_container_state(ccpcp_unpack_context* self);
+ccpcp_container_state* ccpcp_unpack_context_parent_container_state(ccpcp_unpack_context* self);
 ccpcp_container_state* ccpcp_unpack_context_closed_container_state(ccpcp_unpack_context* self);
 void ccpcp_unpack_context_pop_container_state(ccpcp_unpack_context* self);
 
 const char *ccpcp_unpack_take_byte(ccpcp_unpack_context* unpack_context);
-
-//bool ccpcp_item_is_map_key(ccpcp_unpack_context* unpack_context);
-
+/*
+bool ccpcp_item_is_string_unfinished(ccpcp_unpack_context* unpack_context);
+bool ccpcp_item_is_list_item(ccpcp_unpack_context* unpack_context);
+bool ccpcp_item_is_map_key(ccpcp_unpack_context* unpack_context);
+bool ccpcp_item_is_map_val(ccpcp_unpack_context* unpack_context);
+*/
 #define UNPACK_ERROR(error_code)                        \
 {                                                       \
     unpack_context->item.type = CCPCP_ITEM_INVALID;        \

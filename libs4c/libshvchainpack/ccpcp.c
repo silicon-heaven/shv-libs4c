@@ -69,7 +69,7 @@ void ccpcp_container_state_init(ccpcp_container_state *self, ccpcp_item_types co
 	self->container_type = cont_type;
 	self->container_size = 0;
 	self->item_count = 0;
-	self->custom_context = NULL;
+	//self->custom_context = NULL;
 }
 
 void ccpcp_container_stack_init(ccpcp_container_stack *self, ccpcp_container_state *states, size_t capacity, ccpcp_container_stack_overflow_handler hnd)
@@ -127,7 +127,7 @@ ccpcp_container_state* ccpcp_unpack_context_top_container_state(ccpcp_unpack_con
 	return NULL;
 }
 
-ccpcp_container_state *ccpcp_unpack_context_current_item_container_state(ccpcp_unpack_context *self)
+ccpcp_container_state *ccpcp_unpack_context_parent_container_state(ccpcp_unpack_context *self)
 {
 	if(self->container_stack && self->container_stack->length > 0) {
 		ccpcp_container_state *top_st = self->container_stack->container_states + self->container_stack->length - 1;
@@ -194,18 +194,75 @@ const char* ccpcp_unpack_take_byte(ccpcp_unpack_context* unpack_context)
 	return p;
 }
 /*
-bool ccpcp_item_is_map_key(ccpcp_unpack_context *unpack_context)
+bool ccpcp_item_is_string_unfinished(ccpcp_unpack_context *unpack_context)
 {
-	ccpcp_container_state *st = ccpc_unpack_context_current_item_container_state(unpack_context);
-	if(st) {
-		if(st->container_type == CCPCP_ITEM_MAP
-				|| st->container_type == CCPCP_ITEM_IMAP
-				|| st->container_type == CCPCP_ITEM_META)
-		{
-			return st->item_count % 2;
+	bool is_string_concat = false;
+	ccpcp_container_state *parent_state = ccpcp_unpack_context_parent_container_state(unpack_context);
+	if(parent_state != NULL) {
+		if(unpack_context->item.type == CCPCP_ITEM_STRING) {
+			ccpcp_string *it = &(unpack_context->item.as.String);
+			if(it->chunk_cnt > 1) {
+				// multichunk string
+				// this can happen, when parsed string is greater than unpack_context buffer
+				// or escape sequence is encountered
+				// concatenate it with previous chunk
+				is_string_concat = true;
+			}
 		}
 	}
-	return false;
+	return is_string_concat;
+}
+
+bool ccpcp_item_is_list_item(ccpcp_unpack_context *unpack_context)
+{
+	ccpcp_container_state *parent_state = ccpcp_unpack_context_parent_container_state(unpack_context);
+	if(parent_state != NULL) {
+		bool is_string_concat = 0;
+		if(unpack_context->item.type == CCPCP_ITEM_STRING) {
+			ccpcp_string *it = &(unpack_context->item.as.String);
+			if(it->chunk_cnt > 1) {
+				// multichunk string
+				// this can happen, when parsed string is greater than unpack_context buffer
+				// or escape sequence is encountered
+				// concatenate it with previous chunk
+				is_string_concat = 1;
+			}
+		}
+		if(!is_string_concat && unpack_context->item.type != CCPCP_ITEM_CONTAINER_END) {
+			switch(parent_state->container_type) {
+			case CCPCP_ITEM_LIST:
+			//case CCPCP_ITEM_ARRAY:
+				if(!meta_just_closed)
+					ccpon_pack_field_delim(out_ctx, parent_state->item_count == 1);
+				break;
+			case CCPCP_ITEM_MAP:
+			case CCPCP_ITEM_IMAP:
+			case CCPCP_ITEM_META: {
+				bool is_key = (parent_state->item_count % 2);
+				if(is_key) {
+					if(!meta_just_closed)
+						ccpon_pack_field_delim(out_ctx, parent_state->item_count == 1);
+				}
+				else {
+					// delimite value
+					ccpon_pack_key_val_delim(out_ctx);
+				}
+				break;
+			}
+			default:
+				break;
+			}
+		}
+	}
+}
+
+bool ccpcp_item_is_map_key(ccpcp_unpack_context *unpack_context)
+{
+
+}
+
+bool ccpcp_item_is_map_val(ccpcp_unpack_context *unpack_context)
+{
+
 }
 */
-
