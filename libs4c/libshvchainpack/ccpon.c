@@ -751,7 +751,7 @@ static void ccpon_unpack_string(ccpcp_unpack_context* unpack_context)
 			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT);
 		}
 	}
-	for(it->chunk_size = 0; it->chunk_buff_len; ) {
+	for(it->chunk_size = 0; it->chunk_size < it->chunk_buff_len; ) {
 		UNPACK_ASSERT_BYTE();
 		if(*p == '\\') {
 			UNPACK_ASSERT_BYTE();
