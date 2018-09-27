@@ -1028,6 +1028,8 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		unpack_context->err_no = CCPCP_RC_OK;
 		break;
 	}
+	default:
+		UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT);
 	}
 
 	bool is_container_end = false;
