@@ -288,6 +288,9 @@ void ccpon_pack_double(ccpcp_pack_context* pack_context, double d)
 		pack_context->err_no = CCPCP_RC_LOGICAL_ERROR;
 		return;
 	}
+	for (int i = 0; i < n; ++i)
+		if(str[i] == ',')
+			str[i] = '.';
 	int has_dot = 0;
 	int has_e = 0;
 	for (int i = 0; i < n; ++i) {
