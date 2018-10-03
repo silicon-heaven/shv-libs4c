@@ -233,7 +233,7 @@ void ccpon_pack_decimal(ccpcp_pack_context *pack_context, int64_t mantisa, int d
 	// at least 21 characters for 64-bit types.
 	static const int LEN = 32;
 	char str[LEN];
-	int n = snprintf(str, LEN, "%ld", mantisa);
+	int n = snprintf(str, LEN, "%lld", mantisa);
 	if(n < 0) {
 		pack_context->err_no = CCPCP_RC_LOGICAL_ERROR;
 		return;
