@@ -200,15 +200,33 @@ void cchainpack_pack_int(ccpcp_pack_context* pack_context, int64_t i)
 	}
 }
 
-void cchainpack_pack_decimal(ccpcp_pack_context *pack_context, int64_t i, int dec_places)
+void cchainpack_pack_decimal(ccpcp_pack_context *pack_context, int64_t i, int exponent)
 {
 	if (pack_context->err_no)
 		return;
 	ccpcp_pack_copy_byte(pack_context, CP_Decimal);
 	cchainpack_pack_int_data(pack_context, i);
-	cchainpack_pack_int_data(pack_context, dec_places);
+	cchainpack_pack_int_data(pack_context, exponent);
+}
+/*
+void cchainpack_pack_exponential_inf(ccpcp_pack_context *pack_context, bool is_neg)
+{
+	if (pack_context->err_no)
+		return;
+	ccpcp_pack_copy_byte(pack_context, CP_Decimal);
+	cchainpack_pack_int_data(pack_context, is_neg? -1: 1);
+	ccpcp_pack_copy_byte(pack_context, CP_TERM);
 }
 
+void cchainpack_pack_exponential_nan(ccpcp_pack_context *pack_context, bool is_quiet)
+{
+	if (pack_context->err_no)
+		return;
+	ccpcp_pack_copy_byte(pack_context, CP_Decimal);
+	cchainpack_pack_int_data(pack_context, is_quiet? 0: 2);
+	ccpcp_pack_copy_byte(pack_context, CP_TERM);
+}
+*/
 void cchainpack_pack_double(ccpcp_pack_context* pack_context, double d)
 {
 	if (pack_context->err_no)
@@ -557,11 +575,11 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 		case CP_Decimal: {
 			int64_t mant;
 			unpack_int(unpack_context, &mant);
-			int64_t dec;
-			unpack_int(unpack_context, &dec);
+			int64_t exp;
+			unpack_int(unpack_context, &exp);
 			unpack_context->item.type = CCPCP_ITEM_DECIMAL;
 			unpack_context->item.as.Decimal.mantisa = mant;
-			unpack_context->item.as.Decimal.dec_places = dec;
+			unpack_context->item.as.Decimal.exponent = exp;
 			break;
 		}
 		case CP_DateTime: {

@@ -105,15 +105,19 @@ typedef struct {
 
 typedef struct {
 	int64_t mantisa;
-	int dec_places;
-} ccpcp_decimal;
+	int exponent;
+} ccpcp_exponentional;
+
+double ccpcp_exponentional_to_double(const int64_t mantisa, const int exponent, const int base);
+double ccpcp_decimal_to_double(const int64_t mantisa, const int exponent);
+int ccpcp_decimal_to_string(char *buff, size_t buff_len, int64_t mantisa, int exponent);
 
 typedef struct {
 	union
 	{
 		ccpcp_string String;
 		ccpcp_date_time DateTime;
-		ccpcp_decimal Decimal;
+		ccpcp_exponentional Decimal;
 		uint64_t UInt;
 		int64_t Int;
 		double Double;

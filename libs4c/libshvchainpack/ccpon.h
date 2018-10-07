@@ -19,7 +19,7 @@ void ccpon_pack_boolean (ccpcp_pack_context* pack_context, bool b);
 void ccpon_pack_int (ccpcp_pack_context* pack_context, int64_t i);
 void ccpon_pack_uint (ccpcp_pack_context* pack_context, uint64_t i);
 void ccpon_pack_double (ccpcp_pack_context* pack_context, double d);
-void ccpon_pack_decimal (ccpcp_pack_context* pack_context, int64_t mantisa, int dec_places);
+void ccpon_pack_decimal (ccpcp_pack_context* pack_context, int64_t mantisa, int exponent);
 //void ccpon_pack_string (ccpcp_pack_context* pack_context, const char* s, unsigned l);
 //void ccpon_pack_cstring (ccpcp_pack_context* pack_context, const char* s);
 //void ccpon_pack_blob (ccpcp_pack_context* pack_context, const void *v, unsigned l);
@@ -46,7 +46,7 @@ void ccpon_pack_imap_end (ccpcp_pack_context* pack_context);
 void ccpon_pack_meta_begin (ccpcp_pack_context* pack_context);
 void ccpon_pack_meta_end (ccpcp_pack_context* pack_context);
 
-void ccpon_pack_copy_str (ccpcp_pack_context* pack_context, const void *str);
+void ccpon_pack_copy_str (ccpcp_pack_context* pack_context, const char *str);
 
 void ccpon_pack_field_delim (ccpcp_pack_context* pack_context, bool is_first_field);
 void ccpon_pack_key_val_delim (ccpcp_pack_context* pack_context);

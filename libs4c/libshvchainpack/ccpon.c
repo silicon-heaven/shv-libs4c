@@ -125,7 +125,7 @@ static const char CCPON_DATE_TIME_BEGIN[] = "d\"";
 #define CCPON_C_MAP_END '}'
 #define CCPON_C_META_BEGIN '<'
 #define CCPON_C_META_END '>'
-#define CCPON_C_DECIMAL_END 'n'
+//#define CCPON_C_DECIMAL_END 'n'
 #define CCPON_C_UNSIGNED_END 'u'
 
 #ifdef FORCE_NO_LIBRARY
@@ -157,7 +157,7 @@ void ccpcp_pack_context_init (ccpcp_pack_context* pack_context, void *data, size
 	pack_context->custom_context = NULL;
 }
 
-void ccpon_pack_copy_str(ccpcp_pack_context *pack_context, const void *str)
+void ccpon_pack_copy_str(ccpcp_pack_context *pack_context, const char *str)
 {
 	size_t len = strlen(str);
 	ccpcp_pack_copy_bytes(pack_context, str, len);
@@ -219,61 +219,19 @@ void ccpon_pack_int(ccpcp_pack_context* pack_context, int64_t i)
 	ccpcp_pack_copy_bytes(pack_context, str, n);
 }
 
-void ccpon_pack_decimal(ccpcp_pack_context *pack_context, int64_t mantisa, int dec_places)
+
+void ccpon_pack_decimal(ccpcp_pack_context *pack_context, int64_t mantisa, int exponent)
 {
-	if (pack_context->err_no)
-		return;
-
-	bool neg = false;
-	if(mantisa < 0) {
-		mantisa = -mantisa;
-		neg = true;
-	}
-
 	// at least 21 characters for 64-bit types.
-	static const int LEN = 32;
-	char str[LEN];
-	const char *fmt = sizeof(long long) == sizeof (int64_t)? "%lld": "%ld";
-	int n = snprintf(str, LEN, fmt, mantisa);
+	static const int LEN = 64;
+	char buff[LEN];
+	int n = ccpcp_decimal_to_string(buff, LEN, mantisa, exponent);
 	if(n < 0) {
 		pack_context->err_no = CCPCP_RC_LOGICAL_ERROR;
 		return;
 	}
-	if(dec_places <= 0) {
-		// not supported since 123000n is ambiguous
-		// maight be (123, -3) or (1230, -2) or (12300, -1) or (123000, 0)
-		pack_context->err_no = CCPCP_RC_LOGICAL_ERROR;
-		return;
-	}
-	static const int BUFFLEN = 256;
-	char buff[BUFFLEN];
-	int ix;
-	char *pc = buff + BUFFLEN - 1;
-	int len = (n > dec_places)? n: dec_places + 2;
-	for(ix = 0; ix < len; ix++) {
-		if(ix < dec_places) {
-			if(ix < n)
-				*pc-- = str[n - ix - 1];
-			else
-				*pc-- = '0';
-		}
-		else if(ix >= dec_places) {
-			if(ix == dec_places)
-				*pc-- = '.';
-			if(ix < n) {
-				*pc-- = str[n - ix - 1];
-			}
-			else {
-				*pc-- = '0';
-				break;
-			}
-		}
-	}
-	if(neg)
-		*pc-- = '-';
-	pc++;
-	ccpcp_pack_copy_bytes(pack_context, pc, buff + BUFFLEN - pc);
-	ccpcp_pack_copy_byte(pack_context, CCPON_C_DECIMAL_END);
+
+	ccpcp_pack_copy_bytes(pack_context, buff, n);
 }
 
 void ccpon_pack_double(ccpcp_pack_context* pack_context, double d)
@@ -948,12 +906,12 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		int dec_cnt = 0;
 		struct {
 			uint8_t is_decimal: 1;
-			uint8_t is_double: 1;
+			//uint8_t is_double: 1;
 			uint8_t is_uint: 1;
 			uint8_t is_neg: 1;
 		} flags;
 		flags.is_decimal = 0;
-		flags.is_double = 0;
+		//flags.is_double = 0;
 		flags.is_uint = 0;
 		flags.is_neg = 0;
 
@@ -970,7 +928,7 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 				break;
 			}
 			if(*p == '.') {
-				flags.is_double = 1;
+				flags.is_decimal = 1;
 				n = unpack_int(unpack_context, &decimals);
 				if(n < 0)
 					UNPACK_ERROR(n)
@@ -978,13 +936,15 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 				p = ccpcp_unpack_take_byte(unpack_context);
 				if(!p)
 					break;
+				/*
 				if(*p == CCPON_C_DECIMAL_END) {
 					flags.is_decimal = 1;
 					break;
 				}
+				*/
 			}
 			if(*p == 'e' || *p == 'E') {
-				flags.is_double = 1;
+				flags.is_decimal = 1;
 				n = unpack_int(unpack_context, &exponent);
 				if(n < 0)
 					UNPACK_ERROR(n)
@@ -1002,8 +962,9 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 			mantisa += decimals;
 			unpack_context->item.type = CCPCP_ITEM_DECIMAL;
 			unpack_context->item.as.Decimal.mantisa = flags.is_neg? -mantisa: mantisa;
-			unpack_context->item.as.Decimal.dec_places = dec_cnt;
+			unpack_context->item.as.Decimal.exponent = exponent - dec_cnt;
 		}
+		/*
 		else if(flags.is_double) {
 			double d = decimals;
 			for (int i = 0; i < dec_cnt; ++i)
@@ -1020,6 +981,7 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 			unpack_context->item.type = CCPCP_ITEM_DOUBLE;
 			unpack_context->item.as.Double = flags.is_neg? -d: d;
 		}
+		*/
 		else if(flags.is_uint) {
 			unpack_context->item.type = CCPCP_ITEM_UINT;
 			unpack_context->item.as.UInt = mantisa;;
@@ -1070,3 +1032,4 @@ void ccpon_pack_key_val_delim(ccpcp_pack_context *pack_context)
 {
 	ccpcp_pack_copy_bytes(pack_context, ":", 1);
 }
+

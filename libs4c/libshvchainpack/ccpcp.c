@@ -266,3 +266,113 @@ bool ccpcp_item_is_map_val(ccpcp_unpack_context *unpack_context)
 
 }
 */
+
+double ccpcp_exponentional_to_double(int64_t const mantisa, const int exponent, const int base)
+{
+	double d = mantisa;
+	for (int i = 0; i < exponent; ++i)
+		d *= base;
+	for (int i = exponent; i < 0; ++i)
+		d /= base;
+	return d;
+}
+
+double ccpcp_decimal_to_double(const int64_t mantisa, const int exponent)
+{
+	return ccpcp_exponentional_to_double(mantisa, exponent, 10);
+}
+
+static int int_to_str(char *buff, size_t buff_len, int64_t val)
+{
+	int n = 0;
+	bool neg = false;
+	char *str = buff;
+	if(val < 0) {
+		neg = true;
+		val = -val;
+		str = buff + 1;
+		buff_len--;
+	}
+	while(val != 0) {
+		int d = val % 10;
+		val /= 10;
+		if((size_t)n == buff_len)
+			return -1;
+		str[n++] = '0' + (char)d;
+	}
+	for (int i = 0; i < n/2; ++i) {
+		char c = str[i];
+		str[i] = str[n - i - 1];
+		str[n - i - 1] = c;
+	}
+	if(neg) {
+		buff[0] = '-';
+		n++;
+	}
+	return n;
+}
+
+int ccpcp_decimal_to_string(char *buff, size_t buff_len, int64_t mantisa, int exponent)
+{
+	bool neg = false;
+	if(mantisa < 0) {
+		mantisa = -mantisa;
+		neg = true;
+	}
+
+	// at least 21 characters for 64-bit types.
+	char *str = buff;
+	if(neg) {
+		str++;
+		buff_len--;
+	}
+	//const char *fmt = sizeof(long long) == sizeof (int64_t)? "%lld": "%ld";
+	int n = int_to_str(str, buff_len, mantisa);
+	if(n < 0) {
+		return n;
+	}
+
+	int dec_places = -exponent;
+	if(dec_places > 0 && dec_places < n) {
+		int dot_ix = n - dec_places;
+		for (int i = dot_ix; i < n; ++i)
+			str[n + dot_ix - i] = str[n + dot_ix - i-1];
+		str[dot_ix] = '.';
+		n++;
+	}
+	else if(dec_places > 0 && dec_places <= 3) {
+		//ret = "0." + std::string(dec_places - ret.length(), '0') + ret;
+		int extra_0_cnt = dec_places - n;
+		for (int i = 0; i < n; ++i)
+			str[n + extra_0_cnt + 1 - i] = str[n + extra_0_cnt - i];
+		str[0] = '0';
+		str[1] = '.';
+		for (int i = 0; i < extra_0_cnt; ++i)
+			str[2 + i] = '0';
+		n += extra_0_cnt + 2;
+	}
+	else if(dec_places < 0 && n + exponent <= 9) {
+		for (int i = 0; i < exponent; ++i)
+			str[n++] = '0';
+		str[n++] = '.';
+	}
+	else if(dec_places == 0) {
+		str[n++] = '.';
+	}
+	else {
+		str[n++] = 'e';
+		int n2 = int_to_str(str+n, buff_len-n, exponent);
+		if(n2 < 0) {
+			return n2;
+		}
+		n += n2;
+	}
+	if(neg) {
+		buff[0] = '-';
+		n++;
+	}
+	return n;
+}
+
+
+
