@@ -52,7 +52,7 @@ void ccpon_pack_field_delim (ccpcp_pack_context* pack_context, bool is_first_fie
 void ccpon_pack_key_val_delim (ccpcp_pack_context* pack_context);
 
 /***************************** U N P A C K ********************************/
-const char* ccpon_unpack_skip_blank(ccpcp_unpack_context* unpack_context);
+const char* ccpon_unpack_skip_insignificant(ccpcp_unpack_context* unpack_context);
 void ccpon_unpack_next (ccpcp_unpack_context* unpack_context);
 //void ccpon_skip_items (ccpcp_unpack_context* unpack_context, long item_count);
 

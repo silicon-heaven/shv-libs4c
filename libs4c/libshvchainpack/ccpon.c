@@ -497,7 +497,7 @@ void ccpon_pack_string_finish (ccpcp_pack_context* pack_context)
 
 //============================   U N P A C K   =================================
 
-const char* ccpon_unpack_skip_blank(ccpcp_unpack_context* unpack_context)
+const char* ccpon_unpack_skip_insignificant(ccpcp_unpack_context* unpack_context)
 {
 	while(1) {
 		const char* p = ccpcp_unpack_take_byte(unpack_context);
@@ -532,6 +532,12 @@ const char* ccpon_unpack_skip_blank(ccpcp_unpack_context* unpack_context)
 				else {
 					return NULL;
 				}
+			}
+			else if(*p == CCPON_C_KEY_DELIM) {
+				continue;
+			}
+			else if(*p == CCPON_C_FIELD_DELIM) {
+				continue;
 			}
 			else {
 				return p;
@@ -766,20 +772,11 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 
 	unpack_context->item.type = CCPCP_ITEM_INVALID;
 
-	p = ccpon_unpack_skip_blank(unpack_context);
+	p = ccpon_unpack_skip_insignificant(unpack_context);
 	if(!p)
 		return;
 
 	switch(*p) {
-	case CCPON_C_KEY_DELIM:
-		//unpack_context->item.type = CCPON_ITEM_KEY_DELIM;
-		// silently ignore
-		ccpon_unpack_next(unpack_context);
-		return;
-	case CCPON_C_FIELD_DELIM:
-		//unpack_context->item.type = CCPON_ITEM_FIELD_DELIM;
-		ccpon_unpack_next(unpack_context);
-		return;
 	case CCPON_C_LIST_END:
 	case CCPON_C_MAP_END:
 	case CCPON_C_META_END:  {
