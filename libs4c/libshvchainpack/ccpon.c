@@ -195,12 +195,14 @@ void ccpon_pack_uint(ccpcp_pack_context* pack_context, uint64_t i)
 	// at least 21 characters for 64-bit types.
 	static const unsigned LEN = 32;
 	char str[LEN];
-	int n = snprintf(str, LEN, "%lluu", (unsigned long long)i);
+	int n = snprintf(str, LEN, "%llu", (unsigned long long)i);
 	if(n < 0) {
 		pack_context->err_no = CCPCP_RC_LOGICAL_ERROR;
 		return;
 	}
 	ccpcp_pack_copy_bytes(pack_context, str, n);
+	if(!pack_context->cpon_options.json_output)
+		ccpcp_pack_copy_byte(pack_context, 'u');
 }
 
 void ccpon_pack_int(ccpcp_pack_context* pack_context, int64_t i)
@@ -275,6 +277,12 @@ void ccpon_pack_date_time(ccpcp_pack_context *pack_context, int64_t epoch_msecs,
 {
 	/// ISO 8601 with msecs extension
 	ccpcp_pack_copy_bytes(pack_context, CCPON_DATE_TIME_BEGIN, sizeof (CCPON_DATE_TIME_BEGIN) - 1);
+	ccpon_pack_date_time_str(pack_context, epoch_msecs, min_from_utc, CCPON_Auto, true);
+	ccpcp_pack_copy_bytes(pack_context, "\"", 1);
+}
+
+void ccpon_pack_date_time_str(ccpcp_pack_context *pack_context, int64_t epoch_msecs, int min_from_utc, ccpon_msec_policy msec_policy, bool with_tz)
+{
 	struct tm tm;
 	ccpon_gmtime(epoch_msecs / 1000, &tm);
 	static const unsigned LEN = 32;
@@ -283,30 +291,31 @@ void ccpon_pack_date_time(ccpcp_pack_context *pack_context, int64_t epoch_msecs,
 	if(n > 0)
 		ccpcp_pack_copy_bytes(pack_context, str, n);
 	int msec = epoch_msecs % 1000;
-	if(msec > 0) {
+	if((msec > 0 && msec_policy == CCPON_Auto) || msec_policy == CCPON_Always) {
 		n = snprintf(str, LEN, ".%03d", msec);
 		if(n > 0)
 			ccpcp_pack_copy_bytes(pack_context, str, n);
 	}
-	if(min_from_utc == 0) {
-		ccpcp_pack_copy_bytes(pack_context, "Z", 1);
-	}
-	else {
-		if(min_from_utc < 0) {
-			ccpcp_pack_copy_bytes(pack_context, "-", 1);
-			min_from_utc = -min_from_utc;
+	if(with_tz) {
+		if(min_from_utc == 0) {
+			ccpcp_pack_copy_bytes(pack_context, "Z", 1);
 		}
 		else {
-			ccpcp_pack_copy_bytes(pack_context, "+", 1);
+			if(min_from_utc < 0) {
+				ccpcp_pack_copy_bytes(pack_context, "-", 1);
+				min_from_utc = -min_from_utc;
+			}
+			else {
+				ccpcp_pack_copy_bytes(pack_context, "+", 1);
+			}
+			if(min_from_utc%60)
+				n = snprintf(str, LEN, "%02d%02d", min_from_utc/60, min_from_utc%60);
+			else
+				n = snprintf(str, LEN, "%02d", min_from_utc/60);
+			if(n > 0)
+				ccpcp_pack_copy_bytes(pack_context, str, n);
 		}
-		if(min_from_utc%60)
-			n = snprintf(str, LEN, "%02d%02d", min_from_utc/60, min_from_utc%60);
-		else
-			n = snprintf(str, LEN, "%02d", min_from_utc/60);
-		if(n > 0)
-			ccpcp_pack_copy_bytes(pack_context, str, n);
 	}
-	ccpcp_pack_copy_bytes(pack_context, "\"", 1);
 }
 
 void ccpon_pack_null(ccpcp_pack_context* pack_context)
@@ -592,7 +601,7 @@ eonumb:
 	return n;
 }
 
-static void unpack_date_time(ccpcp_unpack_context *unpack_context, struct tm *tm, int *msec, int *utc_offset)
+void ccpon_unpack_date_time(ccpcp_unpack_context *unpack_context, struct tm *tm, int *msec, int *utc_offset)
 {
 	tm->tm_year = 0;
 	tm->tm_mon = 0;
@@ -819,7 +828,7 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		struct tm tm;
 		int msec;
 		int utc_offset;
-		unpack_date_time(unpack_context, &tm, &msec, &utc_offset);
+		ccpon_unpack_date_time(unpack_context, &tm, &msec, &utc_offset);
 		UNPACK_ASSERT_BYTE();
 		if(!p || *p != '"')
 			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT)
@@ -1029,4 +1038,5 @@ void ccpon_pack_key_val_delim(ccpcp_pack_context *pack_context)
 {
 	ccpcp_pack_copy_bytes(pack_context, ":", 1);
 }
+
 
