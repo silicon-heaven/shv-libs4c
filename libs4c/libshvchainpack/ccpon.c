@@ -605,7 +605,7 @@ void ccpon_unpack_date_time(ccpcp_unpack_context *unpack_context, struct tm *tm,
 {
 	tm->tm_year = 0;
 	tm->tm_mon = 0;
-	tm->tm_mday = 0;
+	tm->tm_mday = 1;
 	tm->tm_hour = 0;
 	tm->tm_min = 0;
 	tm->tm_sec = 0;
@@ -618,43 +618,67 @@ void ccpon_unpack_date_time(ccpcp_unpack_context *unpack_context, struct tm *tm,
 
 	int64_t val;
 	int n = unpack_int(unpack_context, &val);
-	if(n < 0)
+	if(n <= 0) {
+		unpack_context->err_no = CCPCP_RC_MALFORMED_INPUT;
 		return;
+	}
 	tm->tm_year = (int)val - 1900;
 
 	UNPACK_ASSERT_BYTE();
+	if(*p != '-') {
+		unpack_context->err_no = CCPCP_RC_MALFORMED_INPUT;
+		return;
+	}
 
 	n = unpack_int(unpack_context, &val);
-	if(n < 0)
+	if(n <= 0) {
+		unpack_context->err_no = CCPCP_RC_MALFORMED_INPUT;
 		return;
+	}
 	tm->tm_mon = (int)val - 1;
 
 	UNPACK_ASSERT_BYTE();
+	if(*p != '-') {
+		unpack_context->err_no = CCPCP_RC_MALFORMED_INPUT;
+		return;
+	}
 
 	n = unpack_int(unpack_context, &val);
-	if(n < 0)
+	if(n <= 0) {
+		unpack_context->err_no = CCPCP_RC_MALFORMED_INPUT;
 		return;
+	}
 	tm->tm_mday = (int)val;
 
 	UNPACK_ASSERT_BYTE();
+	if(!(*p == 'T' || *p == ' ')) {
+		unpack_context->err_no = CCPCP_RC_MALFORMED_INPUT;
+		return;
+	}
 
 	n = unpack_int(unpack_context, &val);
-	if(n < 0)
+	if(n <= 0) {
+		unpack_context->err_no = CCPCP_RC_MALFORMED_INPUT;
 		return;
+	}
 	tm->tm_hour = (int)val;
 
 	UNPACK_ASSERT_BYTE();
 
 	n = unpack_int(unpack_context, &val);
-	if(n < 0)
+	if(n <= 0) {
+		unpack_context->err_no = CCPCP_RC_MALFORMED_INPUT;
 		return;
+	}
 	tm->tm_min = (int)val;
 
 	UNPACK_ASSERT_BYTE();
 
 	n = unpack_int(unpack_context, &val);
-	if(n < 0)
+	if(n <= 0) {
+		unpack_context->err_no = CCPCP_RC_MALFORMED_INPUT;
 		return;
+	}
 	tm->tm_sec = (int)val;
 
 	p = ccpcp_unpack_take_byte(unpack_context);
@@ -674,8 +698,6 @@ void ccpon_unpack_date_time(ccpcp_unpack_context *unpack_context, struct tm *tm,
 			else if(b == '+' || b == '-') {
 				// UTC time
 				n = unpack_int(unpack_context, &val);
-				if(n < 0)
-					return;
 				if(!(n == 2 || n == 4))
 					UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT);
 				if(n == 2)
