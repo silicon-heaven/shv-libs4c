@@ -62,6 +62,8 @@ void ccpcp_pack_copy_bytes (ccpcp_pack_context* pack_context, const void *str, s
 
 //=========================== UNPACK ============================
 
+struct ccpcp_unpack_context;
+
 typedef enum
 {
 	CCPCP_ITEM_INVALID = 0,
@@ -86,17 +88,16 @@ typedef enum
 #endif
 
 typedef struct {
-	char default_chunk_buff[CCPCP_STRING_CHUNK_BUFF_LEN];
 	long string_size;
 	long size_to_load;
 	char* chunk_start;
 	size_t chunk_size;
 	size_t chunk_buff_len;
-	uint16_t chunk_cnt;
+	unsigned chunk_cnt;
 	uint8_t last_chunk: 1;
 } ccpcp_string;
 
-void ccpcp_string_init(ccpcp_string *str_it);
+void ccpcp_string_init(ccpcp_string *str_it, struct ccpcp_unpack_context *unpack_context);
 
 typedef struct {
 	int64_t msecs_since_epoch;
@@ -148,8 +149,6 @@ typedef struct ccpcp_container_stack {
 
 void ccpcp_container_stack_init(ccpcp_container_stack* self, ccpcp_container_state *states, size_t capacity, ccpcp_container_stack_overflow_handler hnd);
 
-struct ccpcp_unpack_context;
-
 typedef size_t (*ccpcp_unpack_underflow_handler)(struct ccpcp_unpack_context*);
 
 typedef struct ccpcp_unpack_context {
@@ -158,9 +157,13 @@ typedef struct ccpcp_unpack_context {
 	const char* current;
 	const char* end; /* logical end of buffer */
 	int err_no; /* handlers can save error here */
+	const char *err_msg;
 	ccpcp_container_stack *container_stack;
 	ccpcp_unpack_underflow_handler handle_unpack_underflow;
 	void *custom_context;
+	char default_string_chunk_buff[CCPCP_STRING_CHUNK_BUFF_LEN];
+	char *string_chunk_buff;
+	size_t string_chunk_buff_len;
 } ccpcp_unpack_context;
 
 void ccpcp_unpack_context_init(ccpcp_unpack_context* self, const void* data, size_t length
@@ -180,10 +183,11 @@ bool ccpcp_item_is_list_item(ccpcp_unpack_context* unpack_context);
 bool ccpcp_item_is_map_key(ccpcp_unpack_context* unpack_context);
 bool ccpcp_item_is_map_val(ccpcp_unpack_context* unpack_context);
 */
-#define UNPACK_ERROR(error_code)                        \
+#define UNPACK_ERROR(error_code, error_msg)                        \
 {                                                       \
     unpack_context->item.type = CCPCP_ITEM_INVALID;        \
-    unpack_context->err_no = error_code;           \
+	unpack_context->err_no = error_code;           \
+	unpack_context->err_msg = error_msg;           \
     return;                                             \
 }
 

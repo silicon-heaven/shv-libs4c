@@ -86,9 +86,12 @@ void ccpcp_unpack_context_init (ccpcp_unpack_context* self, const void *data, si
 	self->start = self->current = (const char*)data;
 	self->end = self->start + length;
 	self->err_no = CCPCP_RC_OK;
+	self->err_msg = "";
 	self->handle_unpack_underflow = huu;
 	self->custom_context = NULL;
 	self->container_stack = stack;
+	self->string_chunk_buff = self->default_string_chunk_buff;
+	self->string_chunk_buff_len = sizeof(self->default_string_chunk_buff);
 }
 
 ccpcp_container_state *ccpcp_unpack_context_push_container_state(ccpcp_unpack_context *self, ccpcp_item_types container_type)
@@ -158,16 +161,15 @@ void ccpcp_unpack_context_pop_container_state(ccpcp_unpack_context* self)
 	}
 }
 
-void ccpcp_string_init(ccpcp_string *str_it)
+void ccpcp_string_init(ccpcp_string *self, ccpcp_unpack_context* unpack_context)
 {
-	str_it->chunk_start = NULL;
-	str_it->chunk_size = 0;
-	str_it->chunk_cnt = 0;
-	str_it->last_chunk = 0;
-	str_it->string_size = -1;
-	str_it->size_to_load = -1;
-	str_it->chunk_start = str_it->default_chunk_buff;
-	str_it->chunk_buff_len = sizeof(str_it->default_chunk_buff);
+	self->chunk_size = 0;
+	self->chunk_cnt = 0;
+	self->last_chunk = 0;
+	self->string_size = -1;
+	self->size_to_load = -1;
+	self->chunk_start = unpack_context->string_chunk_buff;
+	self->chunk_buff_len = unpack_context->string_chunk_buff_len;
 }
 
 const char* ccpcp_unpack_take_byte(ccpcp_unpack_context* unpack_context)

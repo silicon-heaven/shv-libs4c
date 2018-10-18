@@ -441,7 +441,7 @@ static void unpack_int(ccpcp_unpack_context* unpack_context, int64_t *pval)
 void unpack_string(ccpcp_unpack_context* unpack_context)
 {
 	if(unpack_context->item.type != CCPCP_ITEM_STRING)
-		UNPACK_ERROR(CCPCP_RC_LOGICAL_ERROR);
+		UNPACK_ERROR(CCPCP_RC_LOGICAL_ERROR, "Unpack chainpack string internal error.");
 
 	const char *p;
 	ccpcp_string *it = &unpack_context->item.as.String;
@@ -633,7 +633,7 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 		case CP_String: {
 			unpack_context->item.type = CCPCP_ITEM_STRING;
 			ccpcp_string *it = &unpack_context->item.as.String;
-			ccpcp_string_init(it);
+			ccpcp_string_init(it, unpack_context);
 			uint64_t str_len;
 			unpack_uint(unpack_context, &str_len, NULL);
 			if(unpack_context->err_no == CCPCP_RC_OK) {
@@ -646,14 +646,14 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 		case CP_CString: {
 			unpack_context->item.type = CCPCP_ITEM_STRING;
 			ccpcp_string *it = &unpack_context->item.as.String;
-			ccpcp_string_init(it);
+			ccpcp_string_init(it, unpack_context);
 			it->string_size = -1;
 			it->size_to_load = it->string_size;
 			unpack_string(unpack_context);
 			break;
 		}
 		default:
-			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT);
+			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Invalid type info.");
 		}
 	}
 }
