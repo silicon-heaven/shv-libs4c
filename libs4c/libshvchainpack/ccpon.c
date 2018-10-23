@@ -37,10 +37,10 @@ static inline int days_from_1jan(int year, int month, int mday)
 	return days[is_leap(year)][month] + mday - 1;
 }
 
-time_t ccpon_timegm(struct tm *tm)
+int64_t ccpon_timegm(struct tm *tm)
 {
 	// leap seconds are not part of Posix
-	time_t res = 0;
+	int64_t res = 0;
 	int year = tm->tm_year + 1900;
 	int month = tm->tm_mon; // 0 - 11
 	int mday = tm->tm_mday; // 1 - 31
@@ -725,7 +725,8 @@ void ccpon_unpack_date_time(ccpcp_unpack_context *unpack_context, struct tm *tm,
 	}
 	unpack_context->err_no = CCPCP_RC_OK;
 	unpack_context->item.type = CCPCP_ITEM_DATE_TIME;
-	int64_t epoch_msec = ccpon_timegm(tm) * 1000;
+	int64_t epoch_msec = ccpon_timegm(tm);
+	epoch_msec *= 1000;
 	ccpcp_date_time *it = &unpack_context->item.as.DateTime;
 	epoch_msec += *msec;
 	it->msecs_since_epoch = epoch_msec;

@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-time_t ccpon_timegm(struct tm *tm);
+int64_t ccpon_timegm(struct tm *tm);
 void ccpon_gmtime(int64_t epoch_sec, struct tm *tm);
 
 /******************************* P A C K **********************************/
