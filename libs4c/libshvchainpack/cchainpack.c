@@ -54,7 +54,7 @@ static void copy_bytes_cstring(ccpcp_pack_context *pack_context, const void *str
 		}
 	}
 }
-
+/*
 static int significant_bits_part_length(uint64_t n)
 {
 	const unsigned bitlen = sizeof(uint64_t) * 8;
@@ -64,6 +64,35 @@ static int significant_bits_part_length(uint64_t n)
 		n <<= 1;
 	}
 	return n? len: 0;
+}
+*/
+// see https://en.wikipedia.org/wiki/Find_first_set#CLZ
+static const uint8_t sig_table_4bit[16] =  { 1, 1, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4 };
+
+static int significant_bits_part_length(uint64_t n)
+{
+	int len = 0;
+	if (!n)
+		return 0;
+
+	if (n & 0xFFFFFFFF00000000) {
+		len += 32;
+		n >>= 32;
+	}
+	if (n & 0xFFFF0000) {
+		len += 16;
+		n >>= 16;
+	}
+	if (n & 0xFF00) {
+		len += 8;
+		n >>= 8;
+	}
+	if (n & 0xF0) {
+		len += 4;
+		n >>= 4;
+	}
+	len += sig_table_4bit[n];
+	return len;
 }
 
 // number of bytes needed to encode bit_len
