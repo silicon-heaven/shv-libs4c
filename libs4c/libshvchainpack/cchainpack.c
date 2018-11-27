@@ -147,7 +147,7 @@ static void pack_uint_data_helper(ccpcp_pack_context* pack_context, uint64_t num
 
 void cchainpack_pack_uint_data(ccpcp_pack_context* pack_context, uint64_t num)
 {
-	const int UINT_BYTES_MAX = 18;
+	const size_t UINT_BYTES_MAX = 18;
 	if(sizeof(num) > UINT_BYTES_MAX) {
 		pack_context->err_no = CCPCP_RC_LOGICAL_ERROR;//("writeData_UInt: value too big to pack!");
 		return;
