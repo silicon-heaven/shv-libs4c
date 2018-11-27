@@ -1,6 +1,7 @@
 #include "cchainpack.h"
 
 #include <string.h>
+#include <limits.h>
 //#include <stdio.h>
 //#include <math.h>
 
@@ -66,14 +67,34 @@ static int significant_bits_part_length(uint64_t n)
 	return n? len: 0;
 }
 */
-// see https://en.wikipedia.org/wiki/Find_first_set#CLZ
-static const uint8_t sig_table_4bit[16] =  { 1, 1, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4 };
+#if defined(__GNUC__) && __GNUC__ >= 4
 
 static int significant_bits_part_length(uint64_t n)
 {
 	int len = 0;
-	if (!n)
+	int llbits = sizeof(long long) * CHAR_BIT;
+
+	if (n == 0)
 		return 0;
+
+	if ((llbits < 64) && (n & 0xFFFFFFFF00000000)) {
+		len += 32;
+		n >>= 32;
+	}
+
+	len += llbits - __builtin_clzll(n);
+
+	return len;
+}
+
+#else /* Fallback for generic compiler */
+
+// see https://en.wikipedia.org/wiki/Find_first_set#CLZ
+static const uint8_t sig_table_4bit[16] =  { 0, 1, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4 };
+
+static int significant_bits_part_length(uint64_t n)
+{
+	int len = 0;
 
 	if (n & 0xFFFFFFFF00000000) {
 		len += 32;
@@ -94,6 +115,8 @@ static int significant_bits_part_length(uint64_t n)
 	len += sig_table_4bit[n];
 	return len;
 }
+
+#endif /* end of significant_bits_part_length function */
 
 // number of bytes needed to encode bit_len
 static int bytes_needed(int bit_len)
