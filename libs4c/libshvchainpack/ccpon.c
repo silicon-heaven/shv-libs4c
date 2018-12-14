@@ -277,7 +277,7 @@ void ccpon_pack_date_time(ccpcp_pack_context *pack_context, int64_t epoch_msecs,
 {
 	/// ISO 8601 with msecs extension
 	ccpcp_pack_copy_bytes(pack_context, CCPON_DATE_TIME_BEGIN, sizeof (CCPON_DATE_TIME_BEGIN) - 1);
-	if (min_from_utc > (-64 * 15)) {
+	if (min_from_utc > CCPCP_INVALID_DATETIME_MIN_FROM_UTC) {
 		ccpon_pack_date_time_str(pack_context, epoch_msecs, min_from_utc, CCPON_Auto, true);
 	}
 	ccpcp_pack_copy_bytes(pack_context, "\"", 1);
@@ -620,9 +620,18 @@ void ccpon_unpack_date_time(ccpcp_unpack_context *unpack_context, struct tm *tm,
 
 	int64_t val;
 	int n = unpack_int(unpack_context, &val);
-	if(n <= 0) {
+	if(n < 0) {
 		unpack_context->err_no = CCPCP_RC_MALFORMED_INPUT;
 		unpack_context->err_msg = "Malformed year in DateTime";
+		return;
+	}
+	if(n == 0 && *(unpack_context->current) == '"') {
+		// d"" invalid data time
+		unpack_context->err_no = CCPCP_RC_OK;
+		unpack_context->item.type = CCPCP_ITEM_DATE_TIME;
+		ccpcp_date_time *it = &unpack_context->item.as.DateTime;
+		it->msecs_since_epoch = 0;
+		it->minutes_from_utc = CCPCP_INVALID_DATETIME_MIN_FROM_UTC;
 		return;
 	}
 	tm->tm_year = (int)val - 1900;
