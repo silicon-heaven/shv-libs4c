@@ -277,7 +277,9 @@ void ccpon_pack_date_time(ccpcp_pack_context *pack_context, int64_t epoch_msecs,
 {
 	/// ISO 8601 with msecs extension
 	ccpcp_pack_copy_bytes(pack_context, CCPON_DATE_TIME_BEGIN, sizeof (CCPON_DATE_TIME_BEGIN) - 1);
-	ccpon_pack_date_time_str(pack_context, epoch_msecs, min_from_utc, CCPON_Auto, true);
+	if (min_from_utc > (-64 * 15)) {
+		ccpon_pack_date_time_str(pack_context, epoch_msecs, min_from_utc, CCPON_Auto, true);
+	}
 	ccpcp_pack_copy_bytes(pack_context, "\"", 1);
 }
 
