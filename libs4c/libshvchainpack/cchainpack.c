@@ -446,7 +446,7 @@ static void unpack_uint(ccpcp_unpack_context* unpack_context, uint64_t *pval, in
 	int bitlen = 0;
 	do {
 		const char *p;
-		UNPACK_ASSERT_BYTE();
+		UNPACK_TAKE_BYTE();
 		uint8_t head = *p;
 
 		int bytes_to_read_cnt;
@@ -460,7 +460,7 @@ static void unpack_uint(ccpcp_unpack_context* unpack_context, uint64_t *pval, in
 		}
 
 		for (int i = 0; i < bytes_to_read_cnt; ++i) {
-			UNPACK_ASSERT_BYTE();
+			UNPACK_TAKE_BYTE();
 			uint8_t r = *p;
 			num = (num << 8) + r;
 		};
@@ -501,9 +501,9 @@ void unpack_string(ccpcp_unpack_context* unpack_context)
 	bool is_cstr = it->string_size < 0;
 	if(is_cstr) {
 		for(it->chunk_size = 0; it->chunk_size < it->chunk_buff_len; ) {
-			UNPACK_ASSERT_BYTE();
+			UNPACK_TAKE_BYTE();
 			if(*p == '\\') {
-				UNPACK_ASSERT_BYTE();
+				UNPACK_TAKE_BYTE();
 				if(!p)
 					return;
 				switch (*p) {
@@ -528,7 +528,7 @@ void unpack_string(ccpcp_unpack_context* unpack_context)
 	else {
 		it->chunk_size = 0;
 		while(it->size_to_load > 0 && it->chunk_size < it->chunk_buff_len) {
-			UNPACK_ASSERT_BYTE();
+			UNPACK_TAKE_BYTE();
 			(it->chunk_start)[it->chunk_size++] = *p;
 			it->size_to_load--;
 		}
@@ -551,7 +551,7 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 	}
 
 	const char *p;
-	UNPACK_ASSERT_BYTE();
+	UNPACK_TAKE_BYTE();
 
 	uint8_t packing_schema = *p;
 
@@ -612,13 +612,13 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 			if(*(char *)&n == 1) {
 				// little endian if true
 				for (int i=0; i<len; i++) {
-					UNPACK_ASSERT_BYTE();
+					UNPACK_TAKE_BYTE();
 					bytes[i] = *p;
 				}
 			}
 			else {
 				for (int i=len-1; i>=0; i--) {
-					UNPACK_ASSERT_BYTE();
+					UNPACK_TAKE_BYTE();
 					bytes[i] = *p;
 				}
 			}
