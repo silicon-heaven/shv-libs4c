@@ -286,7 +286,7 @@ void ccpon_pack_date_time(ccpcp_pack_context *pack_context, int64_t epoch_msecs,
 void ccpon_pack_date_time_str(ccpcp_pack_context *pack_context, int64_t epoch_msecs, int min_from_utc, ccpon_msec_policy msec_policy, bool with_tz)
 {
 	struct tm tm;
-	ccpon_gmtime(epoch_msecs / 1000, &tm);
+	ccpon_gmtime(epoch_msecs / 1000 + min_from_utc * 60, &tm);
 	static const unsigned LEN = 32;
 	char str[LEN];
 	int n = snprintf(str, LEN, "%04d-%02d-%02dT%02d:%02d:%02d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
@@ -736,8 +736,9 @@ void ccpon_unpack_date_time(ccpcp_unpack_context *unpack_context, struct tm *tm,
 	}
 	unpack_context->err_no = CCPCP_RC_OK;
 	unpack_context->item.type = CCPCP_ITEM_DATE_TIME;
-	int64_t epoch_msec = ccpon_timegm(tm);
-	epoch_msec *= 1000;
+	int64_t epoch_sec = ccpon_timegm(tm);
+	epoch_sec -= *utc_offset * 60;
+	int64_t epoch_msec = epoch_sec * 1000;
 	ccpcp_date_time *it = &unpack_context->item.as.DateTime;
 	epoch_msec += *msec;
 	it->msecs_since_epoch = epoch_msec;
