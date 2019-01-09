@@ -277,14 +277,16 @@ void ccpon_pack_date_time(ccpcp_pack_context *pack_context, int64_t epoch_msecs,
 {
 	/// ISO 8601 with msecs extension
 	ccpcp_pack_copy_bytes(pack_context, CCPON_DATE_TIME_BEGIN, sizeof (CCPON_DATE_TIME_BEGIN) - 1);
-	ccpon_pack_date_time_str(pack_context, epoch_msecs, min_from_utc, CCPON_Auto, true);
+	if (min_from_utc > CCPCP_INVALID_DATETIME_MIN_FROM_UTC) {
+		ccpon_pack_date_time_str(pack_context, epoch_msecs, min_from_utc, CCPON_Auto, true);
+	}
 	ccpcp_pack_copy_bytes(pack_context, "\"", 1);
 }
 
 void ccpon_pack_date_time_str(ccpcp_pack_context *pack_context, int64_t epoch_msecs, int min_from_utc, ccpon_msec_policy msec_policy, bool with_tz)
 {
 	struct tm tm;
-	ccpon_gmtime(epoch_msecs / 1000, &tm);
+	ccpon_gmtime(epoch_msecs / 1000 + min_from_utc * 60, &tm);
 	static const unsigned LEN = 32;
 	char str[LEN];
 	int n = snprintf(str, LEN, "%04d-%02d-%02dT%02d:%02d:%02d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
@@ -618,14 +620,23 @@ void ccpon_unpack_date_time(ccpcp_unpack_context *unpack_context, struct tm *tm,
 
 	int64_t val;
 	int n = unpack_int(unpack_context, &val);
-	if(n <= 0) {
+	if(n < 0) {
 		unpack_context->err_no = CCPCP_RC_MALFORMED_INPUT;
 		unpack_context->err_msg = "Malformed year in DateTime";
 		return;
 	}
+	if(n == 0 && *(unpack_context->current) == '"') {
+		// d"" invalid data time
+		unpack_context->err_no = CCPCP_RC_OK;
+		unpack_context->item.type = CCPCP_ITEM_DATE_TIME;
+		ccpcp_date_time *it = &unpack_context->item.as.DateTime;
+		it->msecs_since_epoch = 0;
+		it->minutes_from_utc = CCPCP_INVALID_DATETIME_MIN_FROM_UTC;
+		return;
+	}
 	tm->tm_year = (int)val - 1900;
 
-	UNPACK_ASSERT_BYTE();
+	UNPACK_TAKE_BYTE();
 	if(*p != '-') {
 		unpack_context->err_no = CCPCP_RC_MALFORMED_INPUT;
 		unpack_context->err_msg = "Malformed year-month separator in DateTime";
@@ -640,7 +651,7 @@ void ccpon_unpack_date_time(ccpcp_unpack_context *unpack_context, struct tm *tm,
 	}
 	tm->tm_mon = (int)val - 1;
 
-	UNPACK_ASSERT_BYTE();
+	UNPACK_TAKE_BYTE();
 	if(*p != '-') {
 		unpack_context->err_no = CCPCP_RC_MALFORMED_INPUT;
 		unpack_context->err_msg = "Malformed month-day separator in DateTime";
@@ -655,7 +666,7 @@ void ccpon_unpack_date_time(ccpcp_unpack_context *unpack_context, struct tm *tm,
 	}
 	tm->tm_mday = (int)val;
 
-	UNPACK_ASSERT_BYTE();
+	UNPACK_TAKE_BYTE();
 	if(!(*p == 'T' || *p == ' ')) {
 		unpack_context->err_no = CCPCP_RC_MALFORMED_INPUT;
 		unpack_context->err_msg = "Malformed date-time separator in DateTime";
@@ -670,7 +681,7 @@ void ccpon_unpack_date_time(ccpcp_unpack_context *unpack_context, struct tm *tm,
 	}
 	tm->tm_hour = (int)val;
 
-	UNPACK_ASSERT_BYTE();
+	UNPACK_TAKE_BYTE();
 
 	n = unpack_int(unpack_context, &val);
 	if(n <= 0) {
@@ -680,7 +691,7 @@ void ccpon_unpack_date_time(ccpcp_unpack_context *unpack_context, struct tm *tm,
 	}
 	tm->tm_min = (int)val;
 
-	UNPACK_ASSERT_BYTE();
+	UNPACK_TAKE_BYTE();
 
 	n = unpack_int(unpack_context, &val);
 	if(n <= 0) {
@@ -725,8 +736,9 @@ void ccpon_unpack_date_time(ccpcp_unpack_context *unpack_context, struct tm *tm,
 	}
 	unpack_context->err_no = CCPCP_RC_OK;
 	unpack_context->item.type = CCPCP_ITEM_DATE_TIME;
-	int64_t epoch_msec = ccpon_timegm(tm);
-	epoch_msec *= 1000;
+	int64_t epoch_sec = ccpon_timegm(tm);
+	epoch_sec -= *utc_offset * 60;
+	int64_t epoch_msec = epoch_sec * 1000;
 	ccpcp_date_time *it = &unpack_context->item.as.DateTime;
 	epoch_msec += *msec;
 	it->msecs_since_epoch = epoch_msec;
@@ -755,15 +767,15 @@ static void ccpon_unpack_string(ccpcp_unpack_context* unpack_context)
 	ccpcp_string *it = &unpack_context->item.as.String;
 	if(it->chunk_cnt == 0) {
 		// must start with '"'
-		UNPACK_ASSERT_BYTE();
+		UNPACK_TAKE_BYTE();
 		if (*p != '"') {
 			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "String should start with '\"' character.");
 		}
 	}
 	for(it->chunk_size = 0; it->chunk_size < it->chunk_buff_len; ) {
-		UNPACK_ASSERT_BYTE();
+		UNPACK_TAKE_BYTE();
 		if(*p == '\\') {
-			UNPACK_ASSERT_BYTE();
+			UNPACK_TAKE_BYTE();
 			if(!p)
 				return;
 			switch (*p) {
@@ -803,8 +815,6 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 	if(unpack_context->item.type == CCPCP_ITEM_STRING) {
 		ccpcp_string *str_it = &unpack_context->item.as.String;
 		if(!str_it->last_chunk) {
-			//UNPACK_ASSERT_BYTE();
-			//unpack_context->current--;
 			ccpon_unpack_string(unpack_context);
 			return;
 		}
@@ -838,14 +848,14 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		unpack_context->item.type = CCPCP_ITEM_LIST;
 		break;
 	case 'i': {
-		UNPACK_ASSERT_BYTE();
+		UNPACK_TAKE_BYTE();
 		if(*p != '{')
 			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "IMap should start with '{'.")
 		unpack_context->item.type = CCPCP_ITEM_IMAP;
 		break;
 	}
 	case 'a': {
-		UNPACK_ASSERT_BYTE();
+		UNPACK_TAKE_BYTE();
 		if(*p != '[')
 			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "List should start with '['.")
 		// unpack unsupported ARRAY type as list
@@ -853,24 +863,24 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		break;
 	}
 	case 'd': {
-		UNPACK_ASSERT_BYTE();
+		UNPACK_TAKE_BYTE();
 		if(!p || *p != '"')
 			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "DateTime should start with 'd'.")
 		struct tm tm;
 		int msec;
 		int utc_offset;
 		ccpon_unpack_date_time(unpack_context, &tm, &msec, &utc_offset);
-		UNPACK_ASSERT_BYTE();
+		UNPACK_TAKE_BYTE();
 		if(!p || *p != '"')
 			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "DateTime should start with 'd\"'.")
 		break;
 	}
 	case 'n': {
-		UNPACK_ASSERT_BYTE();
+		UNPACK_TAKE_BYTE();
 		if(*p == 'u') {
-			UNPACK_ASSERT_BYTE();
+			UNPACK_TAKE_BYTE();
 			if(*p == 'l') {
-				UNPACK_ASSERT_BYTE();
+				UNPACK_TAKE_BYTE();
 				if(*p == 'l') {
 					unpack_context->item.type = CCPCP_ITEM_NULL;
 					break;
@@ -878,16 +888,15 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 			}
 		}
 		UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Malformed 'null' literal.")
-		break;
 	}
 	case 'f': {
-		UNPACK_ASSERT_BYTE();
+		UNPACK_TAKE_BYTE();
 		if(*p == 'a') {
-			UNPACK_ASSERT_BYTE();
+			UNPACK_TAKE_BYTE();
 			if(*p == 'l') {
-				UNPACK_ASSERT_BYTE();
+				UNPACK_TAKE_BYTE();
 				if(*p == 's') {
-					UNPACK_ASSERT_BYTE();
+					UNPACK_TAKE_BYTE();
 					if(*p == 'e') {
 						unpack_context->item.type = CCPCP_ITEM_BOOLEAN;
 						unpack_context->item.as.Bool = false;
@@ -897,14 +906,13 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 			}
 		}
 		UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Malformed 'false' literal.")
-		break;
 	}
 	case 't': {
-		UNPACK_ASSERT_BYTE();
+		UNPACK_TAKE_BYTE();
 		if(*p == 'r') {
-			UNPACK_ASSERT_BYTE();
+			UNPACK_TAKE_BYTE();
 			if(*p == 'u') {
-				UNPACK_ASSERT_BYTE();
+				UNPACK_TAKE_BYTE();
 				if(*p == 'e') {
 					unpack_context->item.type = CCPCP_ITEM_BOOLEAN;
 					unpack_context->item.as.Bool = true;
@@ -913,7 +921,6 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 			}
 		}
 		UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Malformed 'true' literal.")
-		break;
 	}
 	case '"': {
 		unpack_context->item.type = CCPCP_ITEM_STRING;

@@ -174,27 +174,31 @@ void ccpcp_string_init(ccpcp_string *self, ccpcp_unpack_context* unpack_context)
 
 const char* ccpcp_unpack_take_byte(ccpcp_unpack_context* unpack_context)
 {
-	size_t more = 1;
-	const char* p = unpack_context->current;
-	const char* nyp = p + more;
-	if (nyp > unpack_context->end) {
+	const char* p = ccpcp_unpack_peek_byte(unpack_context);
+	if(p)
+		unpack_context->current++;
+	return p;
+}
+
+const char *ccpcp_unpack_peek_byte(ccpcp_unpack_context *unpack_context)
+{
+	static const size_t more = 1;
+	if (unpack_context->current >= unpack_context->end) {
 		if (!unpack_context->handle_unpack_underflow) {
 			unpack_context->err_no = CCPCP_RC_BUFFER_UNDERFLOW;
-			//unpack_context->item.type = CCPCP_ITEM_INVALID;
 			return NULL;
 		}
 		size_t sz = unpack_context->handle_unpack_underflow (unpack_context);
 		if (sz < more) {
 			unpack_context->err_no = CCPCP_RC_BUFFER_UNDERFLOW;
-			//unpack_context->item.type = CCPCP_ITEM_INVALID;
 			return NULL;
 		}
-		p = unpack_context->current;
-		nyp = p + more;
+		unpack_context->current = unpack_context->start;
 	}
-	unpack_context->current = nyp;
+	const char* p = unpack_context->current;
 	return p;
 }
+
 /*
 bool ccpcp_item_is_string_unfinished(ccpcp_unpack_context *unpack_context)
 {
@@ -375,6 +379,7 @@ int ccpcp_decimal_to_string(char *buff, size_t buff_len, int64_t mantisa, int ex
 	}
 	return n;
 }
+
 
 
 

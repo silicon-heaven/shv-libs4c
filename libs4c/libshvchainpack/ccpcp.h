@@ -99,6 +99,7 @@ typedef struct {
 
 void ccpcp_string_init(ccpcp_string *str_it, struct ccpcp_unpack_context *unpack_context);
 
+#define CCPCP_INVALID_DATETIME_MIN_FROM_UTC (-64 * 15)
 typedef struct {
 	int64_t msecs_since_epoch;
 	int minutes_from_utc;
@@ -177,6 +178,7 @@ ccpcp_container_state* ccpcp_unpack_context_closed_container_state(ccpcp_unpack_
 void ccpcp_unpack_context_pop_container_state(ccpcp_unpack_context* self);
 
 const char *ccpcp_unpack_take_byte(ccpcp_unpack_context* unpack_context);
+const char *ccpcp_unpack_peek_byte(ccpcp_unpack_context* unpack_context);
 /*
 bool ccpcp_item_is_string_unfinished(ccpcp_unpack_context* unpack_context);
 bool ccpcp_item_is_list_item(ccpcp_unpack_context* unpack_context);
@@ -191,11 +193,18 @@ bool ccpcp_item_is_map_val(ccpcp_unpack_context* unpack_context);
     return;                                             \
 }
 
-#define UNPACK_ASSERT_BYTE()              \
-{                                                       \
-    p = ccpcp_unpack_take_byte(unpack_context);        \
-    if(!p)           \
-        return;                                             \
+#define UNPACK_TAKE_BYTE() \
+{ \
+	p = ccpcp_unpack_take_byte(unpack_context);        \
+	if(!p) \
+		return; \
+}
+
+#define UNPACK_PEEK_BYTE() \
+{ \
+	p = ccpcp_unpack_peek_byte(unpack_context);        \
+	if(!p) \
+		return; \
 }
 
 
