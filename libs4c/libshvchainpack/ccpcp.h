@@ -27,6 +27,8 @@ typedef enum
 	CCPCP_RC_CONTAINER_STACK_UNDERFLOW,
 } ccpcp_error_codes;
 
+const char * ccpcp_error_string(int err_no);
+
 //=========================== PACK ============================
 
 typedef struct {

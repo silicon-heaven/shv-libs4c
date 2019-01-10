@@ -2,6 +2,21 @@
 
 #include <string.h>
 
+const char *ccpcp_error_string(int err_no)
+{
+	switch (err_no) {
+	case CCPCP_RC_OK: return "";
+	case CCPCP_RC_MALLOC_ERROR: return "MALLOC_ERROR";
+	case CCPCP_RC_BUFFER_OVERFLOW: return "BUFFER_OVERFLOW";
+	case CCPCP_RC_BUFFER_UNDERFLOW: return "BUFFER_UNDERFLOW";
+	case CCPCP_RC_MALFORMED_INPUT: return "MALFORMED_INPUT";
+	case CCPCP_RC_LOGICAL_ERROR: return "LOGICAL_ERROR";
+	case CCPCP_RC_CONTAINER_STACK_OVERFLOW: return "CONTAINER_STACK_OVERFLOW";
+	case CCPCP_RC_CONTAINER_STACK_UNDERFLOW: return "CONTAINER_STACK_UNDERFLOW";
+	default: return "UNKNOWN";
+	}
+}
+
 size_t ccpcp_pack_make_space(ccpcp_pack_context* pack_context, size_t size_hint)
 {
 	if(pack_context->err_no != CCPCP_RC_OK)
@@ -379,6 +394,7 @@ int ccpcp_decimal_to_string(char *buff, size_t buff_len, int64_t mantisa, int ex
 	}
 	return n;
 }
+
 
 
 
