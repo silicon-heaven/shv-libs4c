@@ -644,7 +644,7 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 			if(has_tz_offset) {
 				offset = d & 0x7F;
 				offset <<= 1;
-				offset >>= 1;
+				offset >>= 1; // sign extension
 				d >>= 7;
 			}
 			if(has_not_msec)
