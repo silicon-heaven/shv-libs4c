@@ -264,6 +264,8 @@ void ccpon_pack_double(ccpcp_pack_context* pack_context, double d)
 			break;
 		}
 	}
+	if(n == 0)
+		str[n++] = '0';
 	if(!has_dot && !has_e) {
 		str[n++] = '.';
 	}
