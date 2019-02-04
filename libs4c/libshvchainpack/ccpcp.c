@@ -365,7 +365,7 @@ int ccpcp_decimal_to_string(char *buff, size_t buff_len, int64_t mantisa, int ex
 		//ret = "0." + std::string(dec_places - ret.length(), '0') + ret;
 		int extra_0_cnt = dec_places - n;
 		for (int i = 0; i < n; ++i)
-			str[n + extra_0_cnt + 1 - i] = str[n + extra_0_cnt - i];
+			str[n - i - 1 + extra_0_cnt + 2] = str[n - i - 1];
 		str[0] = '0';
 		str[1] = '.';
 		for (int i = 0; i < extra_0_cnt; ++i)
