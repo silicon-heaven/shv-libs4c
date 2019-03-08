@@ -314,7 +314,12 @@ static int int_to_str(char *buff, size_t buff_len, int64_t val)
 		str = buff + 1;
 		buff_len--;
 	}
-	while(val != 0) {
+	if(val == 0) {
+		if((size_t)n == buff_len)
+			return -1;
+		str[n++] = '0';
+	}
+	else while(val != 0) {
 		int d = val % 10;
 		val /= 10;
 		if((size_t)n == buff_len)
