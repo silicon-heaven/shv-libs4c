@@ -107,7 +107,7 @@ static size_t double_to_str(char *buff, size_t buff_len, double d)
 			}
 			else {
 				int exp = 0;
-				unsigned myprec = 1;
+				double myprec = 1;
 				while(d >= 10) {
 					d /= 10;
 					myprec /= 10;
@@ -118,7 +118,8 @@ static size_t double_to_str(char *buff, size_t buff_len, double d)
 					myprec *= 10;
 				}
 				unsigned ud = (unsigned)d;
-				len += uint_dot_uint_to_str(buff + len, (len < buff_len)? buff_len-len: 0, ud/prec_num, ud%prec_num);
+				unsigned myprecnum = (unsigned)myprec;
+				len += uint_dot_uint_to_str(buff + len, (len < buff_len)? buff_len-len: 0, ud/myprecnum, ud%myprecnum);
 			}
 		}
 		else {
@@ -135,7 +136,7 @@ static size_t double_to_str(char *buff, size_t buff_len, double d)
 				len += uint_dot_uint_to_str(buff + len, (len < buff_len)? buff_len-len: 0, ud/prec_num, ud%prec_num);
 			}
 			else {
-				while(d > 10) {
+				while(d >= 10) {
 					d /= 10;
 					exp++;
 				}
