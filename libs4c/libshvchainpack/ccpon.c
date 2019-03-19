@@ -1,8 +1,159 @@
 #include "ccpon.h"
 
 #include <string.h>
-#include <stdio.h>
+//#include <stdio.h>
 #include <math.h>
+
+static size_t uint_to_str(char *buff, size_t buff_len, uint64_t n)
+{
+	size_t len = 0;
+	if(n == 0) {
+		if(len < buff_len)
+			buff[len] = '0';
+		len++;
+	}
+	else while(n > 0) {
+		char r = n % 10;
+		n /= 10;
+		if(len < buff_len)
+			buff[len++] = '0' + r;
+	}
+	if(len < buff_len) {
+		for(size_t i = 0; i < len/2; i++) {
+			char c = buff[i];
+			buff[i] = buff[len-i-1];
+			buff[len-i-1] = c;
+		}
+	}
+	return len;
+}
+
+static size_t uint_to_str_lpad(char *buff, size_t buff_len, uint64_t n, size_t width, char pad_char)
+{
+	size_t len = uint_to_str(buff, buff_len, n);
+	if(len < width && width <= buff_len) {
+		for (size_t i = 0; i < len; ++i) {
+			buff[width-i-1] = buff[len-i-1];
+			buff[len-i-1] = pad_char;
+		}
+		return width;
+	}
+	return len;
+}
+
+static size_t uint_dot_uint_to_str(char *buff, size_t buff_len, uint64_t n1, uint64_t n2)
+{
+	size_t len = uint_to_str(buff, buff_len, n1);
+	if(len < buff_len)
+		buff[len] = '.';
+	size_t dot_pos = len;
+	len++;
+	if(n2 > 0) {
+		len += uint_to_str(buff+len, (len < buff_len)? buff_len-len: 0, n2);
+		if(len < buff_len) {
+			// remove trailing zeros
+			for(; len>dot_pos && buff[len-1] == '0'; len--);
+		}
+	}
+	return len;
+}
+
+static size_t int_to_str(char *buff, size_t buff_len, int64_t n)
+{
+	size_t len = 0;
+	char *buff2 = buff;
+	if(n < 0) {
+		buff2 = buff+1;
+		if(len < buff_len)
+			buff[len] = '-';
+		len++;
+		n = -n;
+	}
+	len += uint_to_str(buff2, buff_len, (uint64_t)n);
+	return len;
+}
+
+static size_t double_to_str(char *buff, size_t buff_len, double d)
+{
+	const int prec = 6;
+	unsigned prec_num = 1;
+	for (int i = 0; i < prec; ++i)
+		prec_num *= 10;
+
+	size_t len = 0;
+	if(d == 0) {
+		if(len < buff_len)
+			buff[len] = '0';
+		len++;
+		if(len < buff_len)
+			buff[len] = '.';
+		len++;
+	}
+	else {
+		bool neg = d < 0;
+		if(neg) {
+			if(len < buff_len)
+				buff[len] = '-';
+			len++;
+			d = -d;
+		}
+		if(d < 1e7 && d >= 0.1) {
+			/// float point notation
+			if(d < 1) {
+				for (int i = 0; i < prec; ++i)
+					d *= 10;
+				unsigned ud = (unsigned)d;
+				len += uint_dot_uint_to_str(buff + len, (len < buff_len)? buff_len-len: 0, 0, ud);
+			}
+			else {
+				int exp = 0;
+				unsigned myprec = 1;
+				while(d >= 10) {
+					d /= 10;
+					myprec /= 10;
+					exp++;
+				}
+				for (int i = 0; i < prec; ++i) {
+					d *= 10;
+					myprec *= 10;
+				}
+				unsigned ud = (unsigned)d;
+				len += uint_dot_uint_to_str(buff + len, (len < buff_len)? buff_len-len: 0, ud/prec_num, ud%prec_num);
+			}
+		}
+		else {
+			/// exponential notation
+			int exp = 0;
+			if(d < 1) {
+				while(d < 1) {
+					d *= 10;
+					exp--;
+				}
+				for (int i = 0; i < prec; ++i)
+					d *= 10;
+				unsigned ud = (unsigned)d;
+				len += uint_dot_uint_to_str(buff + len, (len < buff_len)? buff_len-len: 0, ud/prec_num, ud%prec_num);
+			}
+			else {
+				while(d > 10) {
+					d /= 10;
+					exp++;
+				}
+				for (int i = 0; i < prec; ++i)
+					d *= 10;
+				unsigned ud = (unsigned)d;
+				len += uint_dot_uint_to_str(buff + len, (len < buff_len)? buff_len-len: 0, ud/prec_num, ud%prec_num);
+			}
+			if(len < buff_len && buff[len-1] == '.') // remove trailing dot
+				len--;
+			if(len < buff_len)
+				buff[len] = 'e';
+			len++;
+			len += int_to_str(buff + len, (len < buff_len)? buff_len-len: 0, exp);
+		}
+	}
+	return len;
+}
 
 // see http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap04.html#tag_04_15
 // see https://stackoverflow.com/questions/16647819/timegm-cross-platform
@@ -195,8 +346,8 @@ void ccpon_pack_uint(ccpcp_pack_context* pack_context, uint64_t i)
 	// at least 21 characters for 64-bit types.
 	static const unsigned LEN = 32;
 	char str[LEN];
-	int n = snprintf(str, LEN, "%llu", (unsigned long long)i);
-	if(n < 0) {
+	size_t n = uint_to_str(str, LEN, i);
+	if(n >= LEN) {
 		pack_context->err_no = CCPCP_RC_LOGICAL_ERROR;
 		return;
 	}
@@ -213,8 +364,8 @@ void ccpon_pack_int(ccpcp_pack_context* pack_context, int64_t i)
 	// at least 21 characters for 64-bit types.
 	static const unsigned LEN = 32;
 	char str[LEN];
-	int n = snprintf(str, LEN, "%lld", (long long)i);
-	if(n < 0) {
+	size_t n = int_to_str(str, LEN, i);
+	if(n >= LEN) {
 		pack_context->err_no = CCPCP_RC_LOGICAL_ERROR;
 		return;
 	}
@@ -244,34 +395,14 @@ void ccpon_pack_double(ccpcp_pack_context* pack_context, double d)
 	// at least 21 characters for 64-bit types.
 	static const unsigned LEN = 32;
 	char str[LEN];
-	int n = snprintf(str, LEN, "%lg", d);
-	if(n < 0) {
+	size_t n = double_to_str(str, LEN, d);
+	if(n >= LEN) {
 		pack_context->err_no = CCPCP_RC_LOGICAL_ERROR;
 		return;
 	}
-	for (int i = 0; i < n; ++i)
-		if(str[i] == ',')
-			str[i] = '.';
-	int has_dot = 0;
-	int has_e = 0;
-	for (int i = 0; i < n; ++i) {
-		if(str[i] == 'e') {
-			has_e = 1;
-			break;
-		}
-		if(str[i] == '.') {
-			has_dot = 1;
-			break;
-		}
-	}
-	if(n == 0)
-		str[n++] = '0';
-	if(!has_dot && !has_e) {
-		str[n++] = '.';
-	}
-	char *p = ccpcp_pack_reserve_space(pack_context, (unsigned)n);
+	char *p = ccpcp_pack_reserve_space(pack_context, n);
 	if(p) {
-		memcpy(p, str, (unsigned)n);
+		memcpy(p, str, n);
 	}
 }
 
@@ -291,14 +422,37 @@ void ccpon_pack_date_time_str(ccpcp_pack_context *pack_context, int64_t epoch_ms
 	ccpon_gmtime(epoch_msecs / 1000 + min_from_utc * 60, &tm);
 	static const unsigned LEN = 32;
 	char str[LEN];
-	int n = snprintf(str, LEN, "%04d-%02d-%02dT%02d:%02d:%02d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-	if(n > 0)
-		ccpcp_pack_copy_bytes(pack_context, str, n);
+	//int n = snprintf(str, LEN, "%04d-%02d-%02dT%02d:%02d:%02d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+	size_t len = uint_to_str_lpad(str, LEN, (unsigned)tm.tm_year + 1900, 2, '0');
+	if(len < LEN)
+		str[len] = '-';
+	len++;
+	len += uint_to_str_lpad(str + len, (len < LEN)? LEN - len: 0, (unsigned)tm.tm_mon + 1, 2, '0');
+	if(len < LEN)
+		str[len] = '-';
+	len++;
+	len += uint_to_str_lpad(str + len, (len < LEN)? LEN - len: 0, (unsigned)tm.tm_mday, 2, '0');
+	if(len < LEN)
+		str[len] = 'T';
+	len++;
+	len += uint_to_str_lpad(str + len, (len < LEN)? LEN - len: 0, (unsigned)tm.tm_hour, 2, '0');
+	if(len < LEN)
+		str[len] = ':';
+	len++;
+	len += uint_to_str_lpad(str + len, (len < LEN)? LEN - len: 0, (unsigned)tm.tm_min, 2, '0');
+	if(len < LEN)
+		str[len] = ':';
+	len++;
+	len += uint_to_str_lpad(str + len, (len < LEN)? LEN - len: 0, (unsigned)tm.tm_sec, 2, '0');
+	if(len < LEN)
+		ccpcp_pack_copy_bytes(pack_context, str, len);
 	int msec = epoch_msecs % 1000;
 	if((msec > 0 && msec_policy == CCPON_Auto) || msec_policy == CCPON_Always) {
-		n = snprintf(str, LEN, ".%03d", msec);
-		if(n > 0)
-			ccpcp_pack_copy_bytes(pack_context, str, n);
+		ccpcp_pack_copy_bytes(pack_context, ".", 1);
+		len = 0;
+		len = uint_to_str_lpad(str, LEN, (unsigned)msec, 3, '0');
+		if(len < LEN)
+			ccpcp_pack_copy_bytes(pack_context, str, len);
 	}
 	if(with_tz) {
 		if(min_from_utc == 0) {
@@ -312,12 +466,19 @@ void ccpon_pack_date_time_str(ccpcp_pack_context *pack_context, int64_t epoch_ms
 			else {
 				ccpcp_pack_copy_bytes(pack_context, "+", 1);
 			}
-			if(min_from_utc%60)
-				n = snprintf(str, LEN, "%02d%02d", min_from_utc/60, min_from_utc%60);
-			else
-				n = snprintf(str, LEN, "%02d", min_from_utc/60);
-			if(n > 0)
-				ccpcp_pack_copy_bytes(pack_context, str, n);
+			if(min_from_utc%60) {
+				len = 0;
+				len += uint_to_str_lpad(str + len, (len < LEN)? LEN - len: 0, (unsigned)min_from_utc/60, 2, '0');
+				len += uint_to_str_lpad(str + len, (len < LEN)? LEN - len: 0, (unsigned)min_from_utc%60, 2, '0');
+				//n = snprintf(str, LEN, "%02d%02d", min_from_utc/60, min_from_utc%60);
+			}
+			else {
+				len = 0;
+				len += uint_to_str_lpad(str + len, (len < LEN)? LEN - len: 0, (unsigned)min_from_utc/60, 2, '0');
+				//n = snprintf(str, LEN, "%02d", min_from_utc/60);
+			}
+			if(len < LEN)
+				ccpcp_pack_copy_bytes(pack_context, str, len);
 		}
 	}
 }
