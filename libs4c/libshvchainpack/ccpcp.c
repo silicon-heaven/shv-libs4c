@@ -1,6 +1,28 @@
+#ifdef BR_PLC
+#include <bur/plctypes.h>
+#ifdef __cplusplus
+	extern "C"
+	{
+#endif
+	#include "shv.h"
+#ifdef __cplusplus
+	};
+#endif
+#endif
+
+
 #include "ccpcp.h"
 
 #include <string.h>
+
+
+#ifdef BR_PLC
+/* TODO: Add your comment here */
+void ccpcp(struct ccpcp* inst)
+{
+	/*TODO: Add your code here*/
+}
+#endif
 
 const char *ccpcp_error_string(int err_no)
 {
@@ -291,9 +313,10 @@ bool ccpcp_item_is_map_val(ccpcp_unpack_context *unpack_context)
 double ccpcp_exponentional_to_double(int64_t const mantisa, const int exponent, const int base)
 {
 	double d = mantisa;
-	for (int i = 0; i < exponent; ++i)
+	int i;
+	for (i = 0; i < exponent; ++i)
 		d *= base;
-	for (int i = exponent; i < 0; ++i)
+	for (i = exponent; i < 0; ++i)
 		d /= base;
 	return d;
 }
@@ -308,6 +331,7 @@ static int int_to_str(char *buff, size_t buff_len, int64_t val)
 	int n = 0;
 	bool neg = false;
 	char *str = buff;
+	int i;
 	if(val < 0) {
 		neg = true;
 		val = -val;
@@ -326,7 +350,7 @@ static int int_to_str(char *buff, size_t buff_len, int64_t val)
 			return -1;
 		str[n++] = '0' + (char)d;
 	}
-	for (int i = 0; i < n/2; ++i) {
+	for (i = 0; i < n/2; ++i) {
 		char c = str[i];
 		str[i] = str[n - i - 1];
 		str[n - i - 1] = c;
@@ -341,6 +365,7 @@ static int int_to_str(char *buff, size_t buff_len, int64_t val)
 int ccpcp_decimal_to_string(char *buff, size_t buff_len, int64_t mantisa, int exponent)
 {
 	bool neg = false;
+	int i;
 	if(mantisa < 0) {
 		mantisa = -mantisa;
 		neg = true;
@@ -361,7 +386,7 @@ int ccpcp_decimal_to_string(char *buff, size_t buff_len, int64_t mantisa, int ex
 	int dec_places = -exponent;
 	if(dec_places > 0 && dec_places < n) {
 		int dot_ix = n - dec_places;
-		for (int i = dot_ix; i < n; ++i)
+		for (i = dot_ix; i < n; ++i)
 			str[n + dot_ix - i] = str[n + dot_ix - i-1];
 		str[dot_ix] = '.';
 		n++;
@@ -369,16 +394,16 @@ int ccpcp_decimal_to_string(char *buff, size_t buff_len, int64_t mantisa, int ex
 	else if(dec_places > 0 && dec_places <= 3) {
 		//ret = "0." + std::string(dec_places - ret.length(), '0') + ret;
 		int extra_0_cnt = dec_places - n;
-		for (int i = 0; i < n; ++i)
+		for (i = 0; i < n; ++i)
 			str[n - i - 1 + extra_0_cnt + 2] = str[n - i - 1];
 		str[0] = '0';
 		str[1] = '.';
-		for (int i = 0; i < extra_0_cnt; ++i)
+		for (i = 0; i < extra_0_cnt; ++i)
 			str[2 + i] = '0';
 		n += extra_0_cnt + 2;
 	}
 	else if(dec_places < 0 && n + exponent <= 9) {
-		for (int i = 0; i < exponent; ++i)
+		for (i = 0; i < exponent; ++i)
 			str[n++] = '0';
 		str[n++] = '.';
 	}

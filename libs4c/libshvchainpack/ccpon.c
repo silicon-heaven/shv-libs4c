@@ -1,8 +1,28 @@
+#ifdef BR_PLC
+#include <bur/plctypes.h>
+#ifdef __cplusplus
+	extern "C"
+	{
+#endif
+	#include "shv.h"
+#ifdef __cplusplus
+	};
+#endif
+#endif
+
 #include "ccpon.h"
 
 #include <string.h>
 //#include <stdio.h>
 #include <math.h>
+
+#ifdef BR_PLC
+/* TODO: Add your comment here */
+void ccpon(struct ccpon* inst)
+{
+	/*TODO: Add your code here*/
+}
+#endif
 
 static size_t uint_to_str(char *buff, size_t buff_len, uint64_t n)
 {
@@ -19,7 +39,8 @@ static size_t uint_to_str(char *buff, size_t buff_len, uint64_t n)
 			buff[len++] = '0' + r;
 	}
 	if(len < buff_len) {
-		for(size_t i = 0; i < len/2; i++) {
+		size_t i;
+		for(i = 0; i < len/2; i++) {
 			char c = buff[i];
 			buff[i] = buff[len-i-1];
 			buff[len-i-1] = c;
@@ -32,7 +53,8 @@ static size_t uint_to_str_lpad(char *buff, size_t buff_len, uint64_t n, size_t w
 {
 	size_t len = uint_to_str(buff, buff_len, n);
 	if(len < width && width <= buff_len) {
-		for (size_t i = 0; i < len; ++i) {
+		size_t i;
+		for (i = 0; i < len; ++i) {
 			buff[width-i-1] = buff[len-i-1];
 			buff[len-i-1] = pad_char;
 		}
@@ -77,7 +99,8 @@ static size_t double_to_str(char *buff, size_t buff_len, double d)
 {
 	const int prec = 6;
 	unsigned prec_num = 1;
-	for (int i = 0; i < prec; ++i)
+	int i;
+	for (i = 0; i < prec; ++i)
 		prec_num *= 10;
 
 	size_t len = 0;
@@ -100,7 +123,7 @@ static size_t double_to_str(char *buff, size_t buff_len, double d)
 		if(d < 1e7 && d >= 0.1) {
 			/// float point notation
 			if(d < 1) {
-				for (int i = 0; i < prec; ++i)
+				for ( i = 0; i < prec; ++i)
 					d *= 10;
 				unsigned ud = (unsigned)d;
 				len += uint_dot_uint_to_str(buff + len, (len < buff_len)? buff_len-len: 0, 0, ud);
@@ -113,7 +136,7 @@ static size_t double_to_str(char *buff, size_t buff_len, double d)
 					myprec /= 10;
 					exp++;
 				}
-				for (int i = 0; i < prec; ++i) {
+				for ( i = 0; i < prec; ++i) {
 					d *= 10;
 					myprec *= 10;
 				}
@@ -130,7 +153,7 @@ static size_t double_to_str(char *buff, size_t buff_len, double d)
 					d *= 10;
 					exp--;
 				}
-				for (int i = 0; i < prec; ++i)
+				for ( i = 0; i < prec; ++i)
 					d *= 10;
 				unsigned ud = (unsigned)d;
 				len += uint_dot_uint_to_str(buff + len, (len < buff_len)? buff_len-len: 0, ud/prec_num, ud%prec_num);
@@ -140,7 +163,7 @@ static size_t double_to_str(char *buff, size_t buff_len, double d)
 					d /= 10;
 					exp++;
 				}
-				for (int i = 0; i < prec; ++i)
+				for ( i = 0; i < prec; ++i)
 					d *= 10;
 				unsigned ud = (unsigned)d;
 				len += uint_dot_uint_to_str(buff + len, (len < buff_len)? buff_len-len: 0, ud/prec_num, ud%prec_num);
@@ -159,18 +182,18 @@ static size_t double_to_str(char *buff, size_t buff_len, double d)
 // see http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap04.html#tag_04_15
 // see https://stackoverflow.com/questions/16647819/timegm-cross-platform
 // see https://www.boost.org/doc/libs/1_62_0/boost/chrono/io/time_point_io.hpp
-static inline int is_leap(int y)
+static int is_leap(int y)
 {
 	return (y % 4) == 0 && ((y % 100) != 0 || (y % 400) == 0);
 }
 
-static inline int32_t days_from_0(int32_t year)
+static int32_t days_from_0(int32_t year)
 {
 	year--;
 	return 365 * year + (year / 400) - (year/100) + (year / 4);
 }
 
-static inline int32_t days_from_1970(int32_t year)
+static int32_t days_from_1970(int32_t year)
 {
 	static int32_t days_from_0_to_1970 = 0;
 	if(days_from_0_to_1970 == 0)
@@ -178,7 +201,7 @@ static inline int32_t days_from_1970(int32_t year)
 	return days_from_0(year) - days_from_0_to_1970;
 }
 
-static inline int days_from_1jan(int year, int month, int mday)
+static int days_from_1jan(int year, int month, int mday)
 {
 	static const int days[2][12] =
 	{
@@ -323,7 +346,8 @@ static void start_block(ccpcp_pack_context* pack_context)
 static void indent_element(ccpcp_pack_context* pack_context)
 {
 	if(pack_context->cpon_options.indent) {
-		for (int i = 0; i < pack_context->nest_count; ++i) {
+		int i;
+		for (i = 0; i < pack_context->nest_count; ++i) {
 			ccpon_pack_copy_str(pack_context, pack_context->cpon_options.indent);
 		}
 	}
@@ -601,7 +625,8 @@ void ccpon_pack_meta_end(ccpcp_pack_context *pack_context)
 
 static char* copy_data_escaped(ccpcp_pack_context* pack_context, const void* str, size_t len)
 {
-	for (size_t i = 0; i < len; ++i) {
+	size_t i;
+	for (i = 0; i < len; ++i) {
 		if(pack_context->err_no != CCPCP_RC_OK)
 			return NULL;
 		uint8_t ch = ((const uint8_t*)str)[i];
@@ -1165,7 +1190,8 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 			break;
 		}
 		if(flags.is_decimal) {
-			for (int i = 0; i < dec_cnt; ++i)
+			int i;
+			for (i = 0; i < dec_cnt; ++i)
 				mantisa *= 10;
 			mantisa += decimals;
 			unpack_context->item.type = CCPCP_ITEM_DECIMAL;
