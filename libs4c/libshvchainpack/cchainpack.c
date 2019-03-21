@@ -1,9 +1,29 @@
+#ifdef BR_PLC
+#include <bur/plctypes.h>
+#ifdef __cplusplus
+	extern "C"
+	{
+#endif
+	#include "shv.h"
+#ifdef __cplusplus
+	};
+#endif
+#endif
+
 #include "cchainpack.h"
 
 #include <string.h>
 #include <limits.h>
 //#include <stdio.h>
 //#include <math.h>
+
+#ifdef BR_PLC
+/* TODO: Add your comment here */
+void cchainpack(struct cchainpack* inst)
+{
+	/*TODO: Add your code here*/
+}
+#endif
 
 // UTC msec since 2.2. 2018 folowed by signed UTC offset in 1/4 hour
 // Fri Feb 02 2018 00:00:00 == 1517529600 EPOCH
@@ -40,7 +60,8 @@ const char* cchainpack_packing_schema_name(int sch)
 
 static void copy_bytes_cstring(ccpcp_pack_context *pack_context, const void *str, size_t len)
 {
-	for (size_t i = 0; i < len; ++i) {
+	size_t i;
+	for (i = 0; i < len; ++i) {
 		if(pack_context->err_no != CCPCP_RC_OK)
 			return;
 		uint8_t ch = ((const uint8_t*)str)[i];
@@ -145,7 +166,8 @@ static void pack_uint_data_helper(ccpcp_pack_context* pack_context, uint64_t num
 {
 	int byte_cnt = bytes_needed(bit_len);
 	uint8_t bytes[byte_cnt];
-	for (int i = byte_cnt-1; i >= 0; --i) {
+	int i;
+	for (i = byte_cnt-1; i >= 0; --i) {
 		uint8_t r = num & 255;
 		bytes[i] = r;
 		num = num >> 8;
@@ -162,7 +184,7 @@ static void pack_uint_data_helper(ccpcp_pack_context* pack_context, uint64_t num
 		*head = 0xf0 | (byte_cnt - 5);
 	}
 
-	for (int i = 0; i < byte_cnt; ++i) {
+	for ( i = 0; i < byte_cnt; ++i) {
 		uint8_t r = bytes[i];
 		ccpcp_pack_copy_byte(pack_context, r);
 	}
@@ -290,13 +312,14 @@ void cchainpack_pack_double(ccpcp_pack_context* pack_context, double d)
 	int len = sizeof(double);
 
 	int n = 1;
+	int i;
 	if(*(char *)&n == 1) {
 		// little endian if true
-		for (int i=0; i<len; i++)
+		for (i=0; i<len; i++)
 			ccpcp_pack_copy_byte(pack_context, bytes[i]);
 	}
 	else {
-		for (int i=len-1; i>=0; i--)
+		for (i=len-1; i>=0; i--)
 			ccpcp_pack_copy_byte(pack_context, bytes[i]);
 	}
 }
@@ -458,8 +481,8 @@ static void unpack_uint(ccpcp_unpack_context* unpack_context, uint64_t *pval, in
 		bytes_to_read_cnt = (head & 0xf) + 4;
 		bitlen = bytes_to_read_cnt * 8;
 	}
-
-	for (int i = 0; i < bytes_to_read_cnt; ++i) {
+	int i;
+	for (i = 0; i < bytes_to_read_cnt; ++i) {
 		UNPACK_TAKE_BYTE();
 		uint8_t r = *p;
 		num = (num << 8) + r;
@@ -609,15 +632,16 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 			int len = sizeof(double);
 
 			int n = 1;
+			int i;
 			if(*(char *)&n == 1) {
 				// little endian if true
-				for (int i=0; i<len; i++) {
+				for (i=0; i<len; i++) {
 					UNPACK_TAKE_BYTE();
 					bytes[i] = *p;
 				}
 			}
 			else {
-				for (int i=len-1; i>=0; i--) {
+				for (i=len-1; i>=0; i--) {
 					UNPACK_TAKE_BYTE();
 					bytes[i] = *p;
 				}
