@@ -101,7 +101,7 @@ typedef struct {
 
 void ccpcp_string_init(ccpcp_string *str_it, struct ccpcp_unpack_context *unpack_context);
 
-#define CCPCP_INVALID_DATETIME_MIN_FROM_UTC (-64 * 15)
+//#define CCPCP_INVALID_DATETIME_MIN_FROM_UTC (-64 * 15)
 typedef struct {
 	int64_t msecs_since_epoch;
 	int minutes_from_utc;
