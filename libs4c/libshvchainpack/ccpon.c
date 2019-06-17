@@ -748,6 +748,7 @@ static int unpack_int(ccpcp_unpack_context* unpack_context, int64_t *p_val)
 {
 	int64_t val = 0;
 	int neg = 0;
+	int base = 10;
 	int n = 0;
 	for (; ; n++) {
 		const char *p = ccpcp_unpack_take_byte(unpack_context);
@@ -764,6 +765,17 @@ static int unpack_int(ccpcp_unpack_context* unpack_context, int64_t *p_val)
 			if(b == '-')
 				neg = 1;
 			break;
+		case 'x':
+			if(n == 1 && val != 0) {
+				unpack_context->current--;
+				goto eonumb;
+			}
+			if(n != 1) {
+				unpack_context->current--;
+				goto eonumb;
+			}
+			base = 16;
+			break;
 		case '0':
 		case '1':
 		case '2':
@@ -774,8 +786,34 @@ static int unpack_int(ccpcp_unpack_context* unpack_context, int64_t *p_val)
 		case '7':
 		case '8':
 		case '9':
-			val *= 10;
+			val *= base;
 			val += b - '0';
+			break;
+		case 'a':
+		case 'b':
+		case 'c':
+		case 'd':
+		case 'e':
+		case 'f':
+			if(base != 16) {
+				unpack_context->current--;
+				goto eonumb;
+			}
+			val *= base;
+			val += b - 'a' + 10;
+			break;
+		case 'A':
+		case 'B':
+		case 'C':
+		case 'D':
+		case 'E':
+		case 'F':
+			if(base != 16) {
+				unpack_context->current--;
+				goto eonumb;
+			}
+			val *= base;
+			val += b - 'A' + 10;
 			break;
 		default:
 			unpack_context->current--;
@@ -1139,12 +1177,10 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		int dec_cnt = 0;
 		struct {
 			uint8_t is_decimal: 1;
-			//uint8_t is_double: 1;
 			uint8_t is_uint: 1;
 			uint8_t is_neg: 1;
 		} flags;
 		flags.is_decimal = 0;
-		//flags.is_double = 0;
 		flags.is_uint = 0;
 		flags.is_neg = 0;
 
@@ -1169,12 +1205,6 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 				p = ccpcp_unpack_take_byte(unpack_context);
 				if(!p)
 					break;
-				/*
-				if(*p == CCPON_C_DECIMAL_END) {
-					flags.is_decimal = 1;
-					break;
-				}
-				*/
 			}
 			if(*p == 'e' || *p == 'E') {
 				flags.is_decimal = 1;
@@ -1198,27 +1228,9 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 			unpack_context->item.as.Decimal.mantisa = flags.is_neg? -mantisa: mantisa;
 			unpack_context->item.as.Decimal.exponent = exponent - dec_cnt;
 		}
-		/*
-		else if(flags.is_double) {
-			double d = decimals;
-			for (int i = 0; i < dec_cnt; ++i)
-				d /= 10;
-			d += mantisa;
-			if(exponent < 0) {
-				for (int i=0; i>exponent; i--)
-					d /= 10;
-			}
-			else {
-				for (int i=0; i<exponent; i++)
-					d *= 10;
-			}
-			unpack_context->item.type = CCPCP_ITEM_DOUBLE;
-			unpack_context->item.as.Double = flags.is_neg? -d: d;
-		}
-		*/
 		else if(flags.is_uint) {
 			unpack_context->item.type = CCPCP_ITEM_UINT;
-			unpack_context->item.as.UInt = mantisa;;
+			unpack_context->item.as.UInt = (uint64_t)mantisa;
 
 		}
 		else {
