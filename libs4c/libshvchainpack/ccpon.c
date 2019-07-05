@@ -1102,6 +1102,12 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "DateTime should start with 'd\"'.")
 		break;
 	}
+	/*
+	case '@': {
+		unpack_context->item.type = CCPCP_ITEM_NULL;
+		break;
+	}
+	*/
 	case 'n': {
 		UNPACK_TAKE_BYTE();
 		if(*p == 'u') {
