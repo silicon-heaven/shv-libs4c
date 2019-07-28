@@ -36,7 +36,7 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 					case CCPCP_ITEM_LIST:
 					//case CCPCP_ITEM_ARRAY:
 						if(!meta_just_closed)
-							ccpon_pack_field_delim(out_ctx, parent_state->item_count == 1);
+							ccpon_pack_field_delim(out_ctx, parent_state->item_count == 1, false);
 						break;
 					case CCPCP_ITEM_MAP:
 					case CCPCP_ITEM_IMAP:
@@ -44,7 +44,7 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 						bool is_key = (parent_state->item_count % 2);
 						if(is_key) {
 							if(!meta_just_closed)
-								ccpon_pack_field_delim(out_ctx, parent_state->item_count == 1);
+								ccpon_pack_field_delim(out_ctx, parent_state->item_count == 1, false);
 						}
 						else {
 							// delimite value
@@ -113,16 +113,16 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 			else {
 				switch(st->container_type) {
 				case CCPCP_ITEM_LIST:
-					ccpon_pack_list_end(out_ctx);
+					ccpon_pack_list_end(out_ctx, false);
 					break;
 				case CCPCP_ITEM_MAP:
-					ccpon_pack_map_end(out_ctx);
+					ccpon_pack_map_end(out_ctx, false);
 					break;
 				case CCPCP_ITEM_IMAP:
-					ccpon_pack_imap_end(out_ctx);
+					ccpon_pack_imap_end(out_ctx, false);
 					break;
 				case CCPCP_ITEM_META:
-					ccpon_pack_meta_end(out_ctx);
+					ccpon_pack_meta_end(out_ctx, false);
 					break;
 				default:
 					// cannot finish Cpon container without container type info

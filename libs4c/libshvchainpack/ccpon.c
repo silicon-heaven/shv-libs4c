@@ -343,23 +343,28 @@ static void start_block(ccpcp_pack_context* pack_context)
 	pack_context->nest_count++;
 }
 
-static void indent_element(ccpcp_pack_context* pack_context)
+static void indent_element(ccpcp_pack_context* pack_context, bool is_oneliner, bool is_first_field)
 {
 	if(pack_context->cpon_options.indent) {
-		int i;
-		for (i = 0; i < pack_context->nest_count; ++i) {
-			ccpon_pack_copy_str(pack_context, pack_context->cpon_options.indent);
+		if(is_oneliner) {
+			if(!is_first_field)
+				ccpcp_pack_copy_byte(pack_context, ' ');
+		}
+		else {
+			ccpcp_pack_copy_bytes(pack_context, "\n", 1);
+			int i;
+			for (i = 0; i < pack_context->nest_count; ++i) {
+				ccpon_pack_copy_str(pack_context, pack_context->cpon_options.indent);
+			}
 		}
 	}
 }
 
-static void end_block(ccpcp_pack_context* pack_context)
+static void end_block(ccpcp_pack_context* pack_context, bool is_oneliner)
 {
 	pack_context->nest_count--;
 	if(pack_context->cpon_options.indent) {
-		if(pack_context->cpon_options.indent)
-			ccpcp_pack_copy_bytes(pack_context, "\n", 1);
-		indent_element(pack_context);
+		indent_element(pack_context, is_oneliner, true);
 	}
 }
 
@@ -547,15 +552,14 @@ void ccpon_pack_list_begin(ccpcp_pack_context *pack_context)
 	if(p)
 		*p = CCPON_C_LIST_BEGIN;
 	start_block(pack_context);
-
 }
 
-void ccpon_pack_list_end(ccpcp_pack_context *pack_context)
+void ccpon_pack_list_end(ccpcp_pack_context *pack_context, bool is_oneliner)
 {
 	if (pack_context->err_no)
 		return;
 
-	end_block(pack_context);
+	end_block(pack_context, is_oneliner);
 	char *p = ccpcp_pack_reserve_space(pack_context, 1);
 	if(p)
 		*p = CCPON_C_LIST_END;
@@ -572,12 +576,12 @@ void ccpon_pack_map_begin(ccpcp_pack_context *pack_context)
 	start_block(pack_context);
 }
 
-void ccpon_pack_map_end(ccpcp_pack_context *pack_context)
+void ccpon_pack_map_end(ccpcp_pack_context *pack_context, bool is_oneliner)
 {
 	if (pack_context->err_no)
 		return;
 
-	end_block(pack_context);
+	end_block(pack_context, is_oneliner);
 	char *p = ccpcp_pack_reserve_space(pack_context, 1);
 	if(p) {
 		*p = CCPON_C_MAP_END;
@@ -593,9 +597,9 @@ void ccpon_pack_imap_begin(ccpcp_pack_context* pack_context)
 	start_block(pack_context);
 }
 
-void ccpon_pack_imap_end(ccpcp_pack_context *pack_context)
+void ccpon_pack_imap_end(ccpcp_pack_context *pack_context, bool is_oneliner)
 {
-	ccpon_pack_map_end(pack_context);
+	ccpon_pack_map_end(pack_context, is_oneliner);
 }
 
 void ccpon_pack_meta_begin(ccpcp_pack_context *pack_context)
@@ -609,12 +613,12 @@ void ccpon_pack_meta_begin(ccpcp_pack_context *pack_context)
 	start_block(pack_context);
 }
 
-void ccpon_pack_meta_end(ccpcp_pack_context *pack_context)
+void ccpon_pack_meta_end(ccpcp_pack_context *pack_context, bool is_oneliner)
 {
 	if (pack_context->err_no)
 		return;
 
-	end_block(pack_context);
+	end_block(pack_context, is_oneliner);
 	char *p = ccpcp_pack_reserve_space(pack_context, 1);
 	if(p) {
 		*p = CCPON_C_META_END;
@@ -1271,13 +1275,11 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		top_cont_state->item_count++;
 }
 
-void ccpon_pack_field_delim(ccpcp_pack_context *pack_context, bool is_first_field)
+void ccpon_pack_field_delim(ccpcp_pack_context *pack_context, bool is_first_field, bool is_oneliner)
 {
 	if(!is_first_field)
 		ccpcp_pack_copy_bytes(pack_context, ",", 1);
-	if(pack_context->cpon_options.indent)
-		ccpcp_pack_copy_bytes(pack_context, "\n", 1);
-	indent_element(pack_context);
+	indent_element(pack_context, is_oneliner, is_first_field);
 }
 
 void ccpon_pack_key_val_delim(ccpcp_pack_context *pack_context)

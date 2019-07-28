@@ -38,20 +38,20 @@ void ccpon_pack_string_finish (ccpcp_pack_context* pack_context);
 //void ccpon_pack_array_end (ccpcp_pack_context* pack_context);
 
 void ccpon_pack_list_begin (ccpcp_pack_context* pack_context);
-void ccpon_pack_list_end (ccpcp_pack_context* pack_context);
+void ccpon_pack_list_end (ccpcp_pack_context* pack_context, bool is_oneliner);
 
 void ccpon_pack_map_begin (ccpcp_pack_context* pack_context);
-void ccpon_pack_map_end (ccpcp_pack_context* pack_context);
+void ccpon_pack_map_end (ccpcp_pack_context* pack_context, bool is_oneliner);
 
 void ccpon_pack_imap_begin (ccpcp_pack_context* pack_context);
-void ccpon_pack_imap_end (ccpcp_pack_context* pack_context);
+void ccpon_pack_imap_end (ccpcp_pack_context* pack_context, bool is_oneliner);
 
 void ccpon_pack_meta_begin (ccpcp_pack_context* pack_context);
-void ccpon_pack_meta_end (ccpcp_pack_context* pack_context);
+void ccpon_pack_meta_end (ccpcp_pack_context* pack_context, bool is_oneliner);
 
 void ccpon_pack_copy_str (ccpcp_pack_context* pack_context, const char *str);
 
-void ccpon_pack_field_delim (ccpcp_pack_context* pack_context, bool is_first_field);
+void ccpon_pack_field_delim (ccpcp_pack_context* pack_context, bool is_first_field, bool is_oneliner);
 void ccpon_pack_key_val_delim (ccpcp_pack_context* pack_context);
 
 /***************************** U N P A C K ********************************/
