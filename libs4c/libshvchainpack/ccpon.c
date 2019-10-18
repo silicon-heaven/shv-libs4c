@@ -708,7 +708,11 @@ const char* ccpon_unpack_skip_insignificant(ccpcp_unpack_context* unpack_context
 		if(*p > ' ') {
 			if(*p == '/') {
 				p = ccpcp_unpack_take_byte(unpack_context);
-				if(*p == '*') {
+				if(!p) {
+					unpack_context->err_no = CCPCP_RC_MALFORMED_INPUT;
+					unpack_context->err_msg = "Unfinished comment";
+				}
+				else if(*p == '*') {
 					//multiline_comment_entered;
 					while(1) {
 						p = ccpcp_unpack_take_byte(unpack_context);
