@@ -100,6 +100,26 @@ void ccpcp_pack_copy_bytes(ccpcp_pack_context *pack_context, const void *str, si
 }
 
 //================================ UNPACK ================================
+const char *ccpcp_item_type_to_string(ccpcp_item_types t)
+{
+	switch(t) {
+	case CCPCP_ITEM_INVALID: break;
+	case CCPCP_ITEM_NULL: return "NULL";
+	case CCPCP_ITEM_BOOLEAN: return "BOOLEAN";
+	case CCPCP_ITEM_INT: return "INT";
+	case CCPCP_ITEM_UINT: return "UINT";
+	case CCPCP_ITEM_DOUBLE: return "DOUBLE";
+	case CCPCP_ITEM_DECIMAL: return "DECIMAL";
+	case CCPCP_ITEM_STRING: return "STRING";
+	case CCPCP_ITEM_DATE_TIME: return "DATE_TIME";
+	case CCPCP_ITEM_LIST: return "LIST";
+	case CCPCP_ITEM_MAP: return "MAP";
+	case CCPCP_ITEM_IMAP: return "IMAP";
+	case CCPCP_ITEM_META: return "META";
+	case CCPCP_ITEM_CONTAINER_END: return "CONTAINER_END";
+	}
+	return "INVALID";
+}
 
 void ccpcp_container_state_init(ccpcp_container_state *self, ccpcp_item_types cont_type)
 {
@@ -424,8 +444,4 @@ int ccpcp_decimal_to_string(char *buff, size_t buff_len, int64_t mantisa, int ex
 	}
 	return n;
 }
-
-
-
-
 

@@ -85,6 +85,8 @@ typedef enum
 	CCPCP_ITEM_CONTAINER_END,
 } ccpcp_item_types;
 
+const char* ccpcp_item_type_to_string(ccpcp_item_types t);
+
 #ifndef CCPCP_MAX_STRING_KEY_LEN
 #define CCPCP_STRING_CHUNK_BUFF_LEN 256
 #endif
