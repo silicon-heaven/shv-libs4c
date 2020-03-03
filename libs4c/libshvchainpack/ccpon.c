@@ -1249,7 +1249,7 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		}
 		else {
 			unpack_context->item.type = CCPCP_ITEM_INT;
-			unpack_context->item.as.Int = flags.is_neg? -mantisa: mantisa;;
+			unpack_context->item.as.Int = flags.is_neg? -mantisa: mantisa;
 		}
 		unpack_context->err_no = CCPCP_RC_OK;
 		break;
