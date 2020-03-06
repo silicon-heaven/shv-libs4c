@@ -705,6 +705,8 @@ const char* ccpon_unpack_skip_insignificant(ccpcp_unpack_context* unpack_context
 		const char* p = ccpcp_unpack_take_byte(unpack_context);
 		if(!p)
 			return p;
+		if(*p == '\n')
+			unpack_context->parser_line_no++;
 		if(*p > ' ') {
 			if(*p == '/') {
 				p = ccpcp_unpack_take_byte(unpack_context);
@@ -718,6 +720,8 @@ const char* ccpon_unpack_skip_insignificant(ccpcp_unpack_context* unpack_context
 						p = ccpcp_unpack_take_byte(unpack_context);
 						if(!p)
 							return p;
+						if(*p == '\n')
+							unpack_context->parser_line_no++;
 						if(*p == '*') {
 							p = ccpcp_unpack_take_byte(unpack_context);
 							if(*p == '/')
@@ -731,8 +735,10 @@ const char* ccpon_unpack_skip_insignificant(ccpcp_unpack_context* unpack_context
 						p = ccpcp_unpack_take_byte(unpack_context);
 						if(!p)
 							return p;
-						if(*p == '\n')
+						if(*p == '\n') {
+							unpack_context->parser_line_no++;
 							break;
+						}
 					}
 				}
 				else {

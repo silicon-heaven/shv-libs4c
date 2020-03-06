@@ -162,6 +162,7 @@ typedef struct ccpcp_unpack_context {
 	const char* current;
 	const char* end; /* logical end of buffer */
 	int err_no; /* handlers can save error here */
+	int parser_line_no; /* helps to find parser error line */
 	const char *err_msg;
 	ccpcp_container_stack *container_stack;
 	ccpcp_unpack_underflow_handler handle_unpack_underflow;

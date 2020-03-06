@@ -143,6 +143,7 @@ void ccpcp_unpack_context_init (ccpcp_unpack_context* self, const void *data, si
 	self->start = self->current = (const char*)data;
 	self->end = self->start + length;
 	self->err_no = CCPCP_RC_OK;
+	self->parser_line_no = 1;
 	self->err_msg = "";
 	self->handle_unpack_underflow = huu;
 	self->custom_context = NULL;
