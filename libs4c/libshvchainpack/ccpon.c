@@ -668,6 +668,31 @@ static char* copy_data_escaped(ccpcp_pack_context* pack_context, const void* str
 	return pack_context->current;
 }
 
+void ccpon_pack_blob(ccpcp_pack_context* pack_context, const char* s, size_t l)
+{
+	ccpcp_pack_copy_byte(pack_context, 'x');
+	ccpcp_pack_copy_byte(pack_context, '"');
+	ccpcp_pack_copy_bytes(pack_context, s, l);
+	ccpcp_pack_copy_byte(pack_context, '"');
+}
+
+void ccpon_pack_blob_start (ccpcp_pack_context* pack_context, const char*buff, size_t buff_len)
+{
+	ccpcp_pack_copy_byte(pack_context, 'x');
+	ccpcp_pack_copy_byte(pack_context, '"');
+	ccpcp_pack_copy_bytes(pack_context, buff, buff_len);
+}
+
+void ccpon_pack_blob_cont (ccpcp_pack_context* pack_context, const char*buff, unsigned buff_len)
+{
+	ccpcp_pack_copy_bytes(pack_context, buff, buff_len);
+}
+
+void ccpon_pack_blob_finish (ccpcp_pack_context* pack_context)
+{
+	ccpcp_pack_copy_byte(pack_context, '"');
+}
+
 void ccpon_pack_string(ccpcp_pack_context* pack_context, const char* s, size_t l)
 {
 	ccpcp_pack_copy_byte(pack_context, '"');
@@ -999,6 +1024,51 @@ static inline int is_hex(uint8_t b)
 			|| (b >= 'A' && b <= 'F');
 }
 */
+static inline int unhex(uint8_t b)
+{
+	if (b >= '0' && b <= '9')
+		return b - '0';
+	if (b >= 'a' && b <= 'z')
+		return b - 'a' + 10;
+	if (b >= 'A' && b <= 'Z')
+		return b - 'A' + 10;
+	return -1;
+}
+static void ccpon_unpack_blob(ccpcp_unpack_context* unpack_context)
+{
+	if(unpack_context->item.type != CCPCP_ITEM_BLOB)
+		UNPACK_ERROR(CCPCP_RC_LOGICAL_ERROR, "Unpack cpon string internal error.");
+
+	const char *p;
+	ccpcp_string *it = &unpack_context->item.as.String;
+	if(it->chunk_cnt == 0) {
+		// must start with '"'
+		UNPACK_TAKE_BYTE();
+		if (*p != '"') {
+			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Blob should start with 'x\"' .");
+		}
+	}
+	for(it->chunk_size = 0; it->chunk_size < it->chunk_buff_len; ) {
+		UNPACK_TAKE_BYTE();
+		if (*p == '"') {
+			// end of string
+			it->last_chunk = 1;
+			break;
+		}
+		int b1 = unhex(*p);
+		if(b1 < 0)
+			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Invalid HEX char.");
+		UNPACK_TAKE_BYTE();
+		if(!p)
+			return;
+		int b2 = unhex(*p);
+		if(b2 < 0)
+			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Invalid HEX char.");
+		(it->chunk_start)[it->chunk_size++] = (uint8_t)(16 * b1 + b2);
+	}
+	it->chunk_cnt++;
+}
+
 static void ccpon_unpack_string(ccpcp_unpack_context* unpack_context)
 {
 	if(unpack_context->item.type != CCPCP_ITEM_STRING)
@@ -1057,6 +1127,13 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		ccpcp_string *str_it = &unpack_context->item.as.String;
 		if(!str_it->last_chunk) {
 			ccpon_unpack_string(unpack_context);
+			return;
+		}
+	}
+	else if(unpack_context->item.type == CCPCP_ITEM_BLOB) {
+		ccpcp_string *str_it = &unpack_context->item.as.String;
+		if(!str_it->last_chunk) {
+			ccpon_unpack_blob(unpack_context);
 			return;
 		}
 	}
@@ -1168,6 +1245,18 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 			}
 		}
 		UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Malformed 'true' literal.")
+	}
+	case 'x': {
+		UNPACK_TAKE_BYTE();
+		if(*p != '"')
+			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "HEX string should start with 'x\"'.")
+		unpack_context->item.type = CCPCP_ITEM_BLOB;
+		ccpcp_string *str_it = &unpack_context->item.as.String;
+		ccpcp_string_init(str_it, unpack_context);
+		//str_it->format = CCPON_STRING_FORMAT_UTF8_ESCAPED;
+		unpack_context->current--;
+		ccpon_unpack_blob(unpack_context);
+		break;
 	}
 	case '"': {
 		unpack_context->item.type = CCPCP_ITEM_STRING;

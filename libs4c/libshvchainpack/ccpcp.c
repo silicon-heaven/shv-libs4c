@@ -110,6 +110,7 @@ const char *ccpcp_item_type_to_string(ccpcp_item_types t)
 	case CCPCP_ITEM_UINT: return "UINT";
 	case CCPCP_ITEM_DOUBLE: return "DOUBLE";
 	case CCPCP_ITEM_DECIMAL: return "DECIMAL";
+	case CCPCP_ITEM_BLOB: return "BLOB";
 	case CCPCP_ITEM_STRING: return "STRING";
 	case CCPCP_ITEM_DATE_TIME: return "DATE_TIME";
 	case CCPCP_ITEM_LIST: return "LIST";
