@@ -244,7 +244,7 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 			ccpcp_container_state *top_state = ccpcp_unpack_context_top_container_state(in_ctx);
 			// take just one object from stream
 			if(!top_state) {
-				if((in_ctx->item.type == CCPCP_ITEM_STRING && !in_ctx->item.as.String.last_chunk)
+				if(((in_ctx->item.type == CCPCP_ITEM_STRING || in_ctx->item.type == CCPCP_ITEM_BLOB)  && !in_ctx->item.as.String.last_chunk)
 						|| meta_just_closed) {
 					// do not stop parsing in the middle of the string
 					// or after meta
