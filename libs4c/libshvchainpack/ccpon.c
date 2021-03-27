@@ -9,14 +9,20 @@ static inline int is_octal(uint8_t b)
 {
 	return b >= '0' && b <= '7';
 }
-
 static inline int is_hex(uint8_t b)
 {
 	return (b >= '0' && b <= '9')
 			|| (b >= 'a' && b <= 'f')
 			|| (b >= 'A' && b <= 'F');
 }
+static inline int is_blank(uint8_t b)
+{
+	return (b >= '0' && b <= '9')
+			|| (b >= 'a' && b <= 'f')
+			|| (b >= 'A' && b <= 'F');
+}
 */
+
 static inline uint8_t hexify(uint8_t b)
 {
 	if (b <= 9)
@@ -724,21 +730,21 @@ static char* copy_blob_escaped(ccpcp_pack_context* pack_context, const void* str
 	return pack_context->current;
 }
 
-void ccpon_pack_blob(ccpcp_pack_context* pack_context, const char* s, size_t l)
+void ccpon_pack_blob(ccpcp_pack_context* pack_context, const uint8_t* buff, size_t buff_len)
 {
 	ccpon_pack_blob_start(pack_context, 0, 0);
-	ccpon_pack_blob_cont(pack_context, s, l);
+	ccpon_pack_blob_cont(pack_context, buff, buff_len);
 	ccpon_pack_blob_finish(pack_context);
 }
 
-void ccpon_pack_blob_start (ccpcp_pack_context* pack_context, const char*buff, size_t buff_len)
+void ccpon_pack_blob_start (ccpcp_pack_context* pack_context, const uint8_t* buff, size_t buff_len)
 {
 	ccpcp_pack_copy_byte(pack_context, 'b');
 	ccpcp_pack_copy_byte(pack_context, '"');
 	copy_blob_escaped(pack_context, buff, buff_len);
 }
 
-void ccpon_pack_blob_cont (ccpcp_pack_context* pack_context, const char*buff, unsigned buff_len)
+void ccpon_pack_blob_cont (ccpcp_pack_context* pack_context, const uint8_t* buff, unsigned buff_len)
 {
 	copy_blob_escaped(pack_context, buff, buff_len);
 }
@@ -1081,21 +1087,26 @@ static void ccpon_unpack_blob_hex(ccpcp_unpack_context* unpack_context)
 		}
 	}
 	for(it->chunk_size = 0; it->chunk_size < it->chunk_buff_len; ) {
-		UNPACK_TAKE_BYTE();
+		do {
+			UNPACK_TAKE_BYTE();
+		} while(*p <= ' ');
 		if (*p == '"') {
 			// end of string
 			it->last_chunk = 1;
 			break;
 		}
+		//if(it->chunk_size == 29)
+		//	printf("chunk size: %lu, ch1: %c\n", it->chunk_size, *p);
 		int b1 = unhex(*p);
 		if(b1 < 0)
-			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Invalid HEX char.");
+			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Invalid HEX char, first digit.");
 		UNPACK_TAKE_BYTE();
 		if(!p)
-			return;
+			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Invalid HEX char, second digit missing.");
+		//printf("ch2: %c\n", *p);
 		int b2 = unhex(*p);
 		if(b2 < 0)
-			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Invalid HEX char.");
+			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Invalid HEX char, second digit.");
 		(it->chunk_start)[it->chunk_size++] = (uint8_t)(16 * b1 + b2);
 	}
 	it->chunk_cnt++;
@@ -1117,30 +1128,42 @@ static void ccpon_unpack_blob_esc(ccpcp_unpack_context* unpack_context)
 	}
 	for(it->chunk_size = 0; it->chunk_size < it->chunk_buff_len; ) {
 		UNPACK_TAKE_BYTE();
-		if (*p == '"') {
+		uint8_t b = *p;
+		if (b == '"') {
 			// end of string
 			it->last_chunk = 1;
 			break;
 		}
-		if(*p == '\\') {
+		if(b == '\\') {
 			UNPACK_TAKE_BYTE();
-			if (*p != 'x') {
-				UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Blob ecaped character should start with '\\x' .");
-			}
-			UNPACK_TAKE_BYTE();
-			int b1 = unhex(*p);
-			if(b1 < 0)
-				UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Invalid HEX char.");
-			UNPACK_TAKE_BYTE();
-			if(!p)
-				return;
-			int b2 = unhex(*p);
-			if(b2 < 0)
-				UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Invalid HEX char.");
-			(it->chunk_start)[it->chunk_size++] = (uint8_t)(16 * b1 + b2);
+			switch((uint8_t)*p) {
+			case '0': (it->chunk_start)[it->chunk_size++] = '\0'; break;
+			case 't': (it->chunk_start)[it->chunk_size++] = '\t'; break;
+			case 'r': (it->chunk_start)[it->chunk_size++] = '\r'; break;
+			case 'n': (it->chunk_start)[it->chunk_size++] = '\n'; break;
+			case '"': (it->chunk_start)[it->chunk_size++] = '"'; break;
+			case '\\': (it->chunk_start)[it->chunk_size++] = '\\'; break;
+			case 'x':
+				UNPACK_TAKE_BYTE();
+				int b1 = unhex(*p);
+				if(b1 < 0)
+					UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Invalid HEX char.");
+				UNPACK_TAKE_BYTE();
+				int b2 = unhex(*p);
+				if(b2 < 0)
+					UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Invalid HEX char.");
+				(it->chunk_start)[it->chunk_size++] = (uint8_t)(16 * b1 + b2);
+				break;
+			default:
+				//printf("chunk size: %lu, ch: '%c'\n", it->chunk_size, *p);
+				UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Blob ecaped character is invalid.");
+			};
+		}
+		else if(b < 128) {
+			(it->chunk_start)[it->chunk_size++] = b;
 		}
 		else {
-			(it->chunk_start)[it->chunk_size++] = (uint8_t)(*p);
+			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Invalid blob char, code >= 128.");
 		}
 	}
 	it->chunk_cnt++;
@@ -1210,7 +1233,10 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 	else if(unpack_context->item.type == CCPCP_ITEM_BLOB) {
 		ccpcp_string *str_it = &unpack_context->item.as.String;
 		if(!str_it->last_chunk) {
-			ccpon_unpack_blob_hex(unpack_context);
+			if(str_it->blob_hex)
+				ccpon_unpack_blob_hex(unpack_context);
+			else
+				ccpon_unpack_blob_esc(unpack_context);
 			return;
 		}
 	}
@@ -1330,7 +1356,7 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		unpack_context->item.type = CCPCP_ITEM_BLOB;
 		ccpcp_string *str_it = &unpack_context->item.as.String;
 		ccpcp_string_init(str_it, unpack_context);
-		//str_it->format = CCPON_STRING_FORMAT_UTF8_ESCAPED;
+		str_it->blob_hex = 1;
 		unpack_context->current--;
 		ccpon_unpack_blob_hex(unpack_context);
 		break;
@@ -1342,7 +1368,7 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		unpack_context->item.type = CCPCP_ITEM_BLOB;
 		ccpcp_string *str_it = &unpack_context->item.as.String;
 		ccpcp_string_init(str_it, unpack_context);
-		//str_it->format = CCPON_STRING_FORMAT_UTF8_ESCAPED;
+		str_it->blob_hex = 0;
 		unpack_context->current--;
 		ccpon_unpack_blob_esc(unpack_context);
 		break;

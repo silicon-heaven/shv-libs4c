@@ -415,19 +415,19 @@ void cchainpack_pack_container_end(ccpcp_pack_context *pack_context)
 	ccpcp_pack_copy_byte(pack_context, CP_TERM);
 }
 
-void cchainpack_pack_blob (ccpcp_pack_context* pack_context, const char* buff, size_t buff_len)
+void cchainpack_pack_blob (ccpcp_pack_context* pack_context, const uint8_t* buff, size_t buff_len)
 {
 	cchainpack_pack_blob_start(pack_context, buff_len, buff, buff_len);
 }
 
-void cchainpack_pack_blob_start (ccpcp_pack_context* pack_context, size_t string_len, const char* buff, size_t buff_len)
+void cchainpack_pack_blob_start (ccpcp_pack_context* pack_context, size_t string_len, const uint8_t* buff, size_t buff_len)
 {
 	ccpcp_pack_copy_byte(pack_context, CP_Blob);
 	cchainpack_pack_uint_data(pack_context, string_len);
 	ccpcp_pack_copy_bytes(pack_context, buff, buff_len);
 }
 
-void cchainpack_pack_blob_cont (ccpcp_pack_context* pack_context, const char* buff, size_t buff_len)
+void cchainpack_pack_blob_cont (ccpcp_pack_context* pack_context, const uint8_t* buff, size_t buff_len)
 {
 	ccpcp_pack_copy_bytes(pack_context, buff, buff_len);
 }

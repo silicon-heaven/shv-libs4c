@@ -229,6 +229,7 @@ void ccpcp_string_init(ccpcp_string *self, ccpcp_unpack_context* unpack_context)
 	self->size_to_load = -1;
 	self->chunk_start = unpack_context->string_chunk_buff;
 	self->chunk_buff_len = unpack_context->string_chunk_buff_len;
+	self->blob_hex = 0;
 }
 
 const char* ccpcp_unpack_take_byte(ccpcp_unpack_context* unpack_context)

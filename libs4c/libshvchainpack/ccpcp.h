@@ -99,7 +99,7 @@ typedef struct {
 	size_t chunk_size;
 	size_t chunk_buff_len;
 	unsigned chunk_cnt;
-	uint8_t last_chunk: 1;
+	uint8_t last_chunk: 1, blob_hex: 1;
 } ccpcp_string;
 
 void ccpcp_string_init(ccpcp_string *str_it, struct ccpcp_unpack_context *unpack_context);
