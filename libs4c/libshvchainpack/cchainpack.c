@@ -41,7 +41,7 @@ const char* cchainpack_packing_schema_name(int sch)
 	case CP_Int: return "Int";
 	case CP_Double: return "Double";
 	case CP_Bool: return "Bool";
-	case CP_Blob_depr: return "Blob_depr";
+	case CP_Blob: return "Blob";
 	case CP_String: return "String";
 	case CP_CString: return "CString";
 	case CP_List: return "List";
@@ -415,6 +415,23 @@ void cchainpack_pack_container_end(ccpcp_pack_context *pack_context)
 	ccpcp_pack_copy_byte(pack_context, CP_TERM);
 }
 
+void cchainpack_pack_blob (ccpcp_pack_context* pack_context, const uint8_t* buff, size_t buff_len)
+{
+	cchainpack_pack_blob_start(pack_context, buff_len, buff, buff_len);
+}
+
+void cchainpack_pack_blob_start (ccpcp_pack_context* pack_context, size_t string_len, const uint8_t* buff, size_t buff_len)
+{
+	ccpcp_pack_copy_byte(pack_context, CP_Blob);
+	cchainpack_pack_uint_data(pack_context, string_len);
+	ccpcp_pack_copy_bytes(pack_context, buff, buff_len);
+}
+
+void cchainpack_pack_blob_cont (ccpcp_pack_context* pack_context, const uint8_t* buff, size_t buff_len)
+{
+	ccpcp_pack_copy_bytes(pack_context, buff, buff_len);
+}
+
 void cchainpack_pack_string (ccpcp_pack_context* pack_context, const char* buff, size_t buff_len)
 {
 	cchainpack_pack_string_start(pack_context, buff_len, buff, buff_len);
@@ -515,8 +532,8 @@ static void unpack_int(ccpcp_unpack_context* unpack_context, int64_t *pval)
 
 void unpack_string(ccpcp_unpack_context* unpack_context)
 {
-	if(unpack_context->item.type != CCPCP_ITEM_STRING)
-		UNPACK_ERROR(CCPCP_RC_LOGICAL_ERROR, "Unpack chainpack string internal error.");
+	//if(unpack_context->item.type != CCPCP_ITEM_STRING)
+	//	UNPACK_ERROR(CCPCP_RC_LOGICAL_ERROR, "Unpack chainpack string internal error.");
 
 	const char *p;
 	ccpcp_string *it = &unpack_context->item.as.String;
@@ -559,13 +576,31 @@ void unpack_string(ccpcp_unpack_context* unpack_context)
 	}
 	it->chunk_cnt++;
 }
+/*
+void unpack_blob(ccpcp_unpack_context* unpack_context)
+{
+	if(unpack_context->item.type != CCPCP_ITEM_BLOB)
+		UNPACK_ERROR(CCPCP_RC_LOGICAL_ERROR, "Unpack chainpack blob internal error.");
 
+	const char *p;
+	ccpcp_string *it = &unpack_context->item.as.String;
+
+	it->chunk_size = 0;
+	while(it->size_to_load > 0 && it->chunk_size < it->chunk_buff_len) {
+		UNPACK_TAKE_BYTE();
+		(it->chunk_start)[it->chunk_size++] = *p;
+		it->size_to_load--;
+	}
+	it->last_chunk = (it->size_to_load == 0);
+	it->chunk_cnt++;
+}
+*/
 void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 {
 	if (unpack_context->err_no)
 		return;
 
-	if(unpack_context->item.type == CCPCP_ITEM_STRING) {
+	if(unpack_context->item.type == CCPCP_ITEM_STRING || unpack_context->item.type == CCPCP_ITEM_BLOB) {
 		ccpcp_string *str_it = &unpack_context->item.as.String;
 		if(!str_it->last_chunk) {
 			unpack_string(unpack_context);
@@ -704,6 +739,19 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 		case CP_TERM: {
 			unpack_context->item.type = CCPCP_ITEM_CONTAINER_END;
 			ccpcp_unpack_context_pop_container_state(unpack_context);
+			break;
+		}
+		case CP_Blob: {
+			unpack_context->item.type = CCPCP_ITEM_BLOB;
+			ccpcp_string *it = &unpack_context->item.as.String;
+			ccpcp_string_init(it, unpack_context);
+			uint64_t str_len;
+			unpack_uint(unpack_context, &str_len, NULL);
+			if(unpack_context->err_no == CCPCP_RC_OK) {
+				it->string_size = str_len;
+				it->size_to_load = it->string_size;
+				unpack_string(unpack_context);
+			}
 			break;
 		}
 		case CP_String: {

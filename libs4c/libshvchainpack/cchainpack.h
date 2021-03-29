@@ -20,8 +20,8 @@ typedef enum {
 	CP_Int,
 	CP_Double,
 	CP_Bool,
-	CP_Blob_depr, // deprecated
-	CP_String,
+	CP_Blob,
+	CP_String, // UTF8 encoded string
 	CP_DateTimeEpoch_depr, // deprecated
 	CP_List,
 	CP_Map,
@@ -49,6 +49,10 @@ void cchainpack_pack_decimal (ccpcp_pack_context* pack_context, int64_t i, int e
 //void cchainpack_pack_exponential_inf (ccpcp_pack_context* pack_context, bool is_neg);
 //void cchainpack_pack_exponential_nan (ccpcp_pack_context* pack_context, bool is_quiet);
 void cchainpack_pack_date_time (ccpcp_pack_context* pack_context, int64_t epoch_msecs, int min_from_utc);
+
+void cchainpack_pack_blob (ccpcp_pack_context* pack_context, const uint8_t *buff, size_t buff_len);
+void cchainpack_pack_blob_start (ccpcp_pack_context* pack_context, size_t string_len, const uint8_t *buff, size_t buff_len);
+void cchainpack_pack_blob_cont (ccpcp_pack_context* pack_context, const uint8_t *buff, size_t buff_len);
 
 void cchainpack_pack_string (ccpcp_pack_context* pack_context, const char* buff, size_t buff_len);
 void cchainpack_pack_string_start (ccpcp_pack_context* pack_context, size_t string_len, const char* buff, size_t buff_len);

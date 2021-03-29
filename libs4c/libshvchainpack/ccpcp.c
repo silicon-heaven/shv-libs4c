@@ -110,6 +110,7 @@ const char *ccpcp_item_type_to_string(ccpcp_item_types t)
 	case CCPCP_ITEM_UINT: return "UINT";
 	case CCPCP_ITEM_DOUBLE: return "DOUBLE";
 	case CCPCP_ITEM_DECIMAL: return "DECIMAL";
+	case CCPCP_ITEM_BLOB: return "BLOB";
 	case CCPCP_ITEM_STRING: return "STRING";
 	case CCPCP_ITEM_DATE_TIME: return "DATE_TIME";
 	case CCPCP_ITEM_LIST: return "LIST";
@@ -228,6 +229,7 @@ void ccpcp_string_init(ccpcp_string *self, ccpcp_unpack_context* unpack_context)
 	self->size_to_load = -1;
 	self->chunk_start = unpack_context->string_chunk_buff;
 	self->chunk_buff_len = unpack_context->string_chunk_buff_len;
+	self->blob_hex = 0;
 }
 
 const char* ccpcp_unpack_take_byte(ccpcp_unpack_context* unpack_context)

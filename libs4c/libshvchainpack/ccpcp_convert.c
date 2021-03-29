@@ -132,6 +132,35 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 			}
 			break;
 		}
+		case CCPCP_ITEM_BLOB: {
+			ccpcp_string *it = &in_ctx->item.as.String;
+			if(o_chainpack_output) {
+				if(it->chunk_cnt == 1 && it->last_chunk) {
+					// one chunk string with known length is always packed as RAW
+					cchainpack_pack_blob(out_ctx, (uint8_t*)it->chunk_start, it->chunk_size);
+				}
+				else if(it->string_size >= 0) {
+					if(it->chunk_cnt == 1)
+						cchainpack_pack_blob_start(out_ctx, it->string_size, (uint8_t*)it->chunk_start, it->string_size);
+					else
+						cchainpack_pack_blob_cont(out_ctx, (uint8_t*)it->chunk_start, it->chunk_size);
+				}
+				else {
+					// cstring
+					// not supported, there is nothing like CBlob
+				}
+			}
+			else {
+				// Cpon
+				if(it->chunk_cnt == 1)
+					ccpon_pack_blob_start(out_ctx, (uint8_t*)it->chunk_start, it->chunk_size);
+				else
+					ccpon_pack_blob_cont(out_ctx, (uint8_t*)it->chunk_start, it->chunk_size);
+				if(it->last_chunk)
+					ccpon_pack_blob_finish(out_ctx);
+			}
+			break;
+		}
 		case CCPCP_ITEM_STRING: {
 			ccpcp_string *it = &in_ctx->item.as.String;
 			if(o_chainpack_output) {
@@ -215,7 +244,7 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 			ccpcp_container_state *top_state = ccpcp_unpack_context_top_container_state(in_ctx);
 			// take just one object from stream
 			if(!top_state) {
-				if((in_ctx->item.type == CCPCP_ITEM_STRING && !in_ctx->item.as.String.last_chunk)
+				if(((in_ctx->item.type == CCPCP_ITEM_STRING || in_ctx->item.type == CCPCP_ITEM_BLOB)  && !in_ctx->item.as.String.last_chunk)
 						|| meta_just_closed) {
 					// do not stop parsing in the middle of the string
 					// or after meta
