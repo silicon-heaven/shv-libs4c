@@ -125,7 +125,7 @@ const char *ccpcp_item_type_to_string(ccpcp_item_types t)
 void ccpcp_container_state_init(ccpcp_container_state *self, ccpcp_item_types cont_type)
 {
 	self->container_type = cont_type;
-	self->container_size = 0;
+	self->current_item_type = CCPCP_ITEM_INVALID;
 	self->item_count = 0;
 	//self->custom_context = NULL;
 }

@@ -48,7 +48,8 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 						}
 						else {
 							// delimite value
-							ccpon_pack_key_val_delim(out_ctx);
+							if(!meta_just_closed)
+								ccpon_pack_key_val_delim(out_ctx);
 						}
 						break;
 					}

@@ -136,8 +136,7 @@ typedef struct {
 typedef struct {
 	ccpcp_item_types container_type;
 	size_t item_count;
-	size_t container_size;
-	//void *custom_context;
+	ccpcp_item_types current_item_type;
 } ccpcp_container_state;
 
 void ccpcp_container_state_init(ccpcp_container_state *self, ccpcp_item_types cont_type);
