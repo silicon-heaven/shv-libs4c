@@ -695,10 +695,6 @@ static char* copy_blob_escaped(ccpcp_pack_context* pack_context, const void* str
 			return NULL;
 		uint8_t ch = ((const uint8_t*)str)[i];
 		switch(ch) {
-		case '\0':
-			ccpcp_pack_copy_byte(pack_context, '\\');
-			ccpcp_pack_copy_byte(pack_context, '0');
-			break;
 		case '\\':
 			ccpcp_pack_copy_byte(pack_context, '\\');
 			ccpcp_pack_copy_byte(pack_context, '\\');
@@ -716,9 +712,8 @@ static char* copy_blob_escaped(ccpcp_pack_context* pack_context, const void* str
 			ccpcp_pack_copy_byte(pack_context, '"');
 			break;
 		default:
-			if(ch > 127) {
+			if(ch < 32 || ch >= 127) {
 				ccpcp_pack_copy_byte(pack_context, '\\');
-				ccpcp_pack_copy_byte(pack_context, 'x');
 				ccpcp_pack_copy_byte(pack_context, hexify(ch / 16));
 				ccpcp_pack_copy_byte(pack_context, hexify(ch % 16));
 			}
@@ -1137,26 +1132,22 @@ static void ccpon_unpack_blob_esc(ccpcp_unpack_context* unpack_context)
 		if(b == '\\') {
 			UNPACK_TAKE_BYTE();
 			switch((uint8_t)*p) {
-			case '0': (it->chunk_start)[it->chunk_size++] = '\0'; break;
 			case 't': (it->chunk_start)[it->chunk_size++] = '\t'; break;
 			case 'r': (it->chunk_start)[it->chunk_size++] = '\r'; break;
 			case 'n': (it->chunk_start)[it->chunk_size++] = '\n'; break;
 			case '"': (it->chunk_start)[it->chunk_size++] = '"'; break;
 			case '\\': (it->chunk_start)[it->chunk_size++] = '\\'; break;
-			case 'x':
-				UNPACK_TAKE_BYTE();
-				int b1 = unhex(*p);
-				if(b1 < 0)
+			default: {
+				int hi = unhex(*p);
+				if(hi < 0)
 					UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Invalid HEX char.");
 				UNPACK_TAKE_BYTE();
-				int b2 = unhex(*p);
-				if(b2 < 0)
+				int lo = unhex(*p);
+				if(lo < 0)
 					UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Invalid HEX char.");
-				(it->chunk_start)[it->chunk_size++] = (uint8_t)(16 * b1 + b2);
+				(it->chunk_start)[it->chunk_size++] = (uint8_t)(16 * hi + lo);
 				break;
-			default:
-				//printf("chunk size: %lu, ch: '%c'\n", it->chunk_size, *p);
-				UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Blob ecaped character is invalid.");
+			}
 			};
 		}
 		else if(b < 128) {
