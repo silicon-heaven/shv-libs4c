@@ -519,9 +519,11 @@ static void unpack_int(ccpcp_unpack_context* unpack_context, int64_t *pval)
 	unpack_uint(unpack_context, &num, &bitlen);
 	if(unpack_context->err_no == CCPCP_RC_OK) {
 		uint64_t sign_bit_mask = (uint64_t)1 << (bitlen - 1);
-		bool neg = num & sign_bit_mask;
 		snum = (int64_t)num;
-		if(neg) {
+
+		// Note: masked value assignment to bool variable would be undefined on some platforms.
+
+		if(num & sign_bit_mask) {
 			snum &= ~sign_bit_mask;
 			snum = -snum;
 		}
