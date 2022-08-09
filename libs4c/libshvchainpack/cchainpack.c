@@ -331,16 +331,18 @@ void cchainpack_pack_date_time(ccpcp_pack_context *pack_context, int64_t epoch_m
 
 	ccpcp_pack_copy_byte(pack_context, CP_DateTime);
 
+	// some arguable optimizations when msec == 0 or TZ_offset == 0
+	// this can save byte in packed date-time, but packing scheme is more complicated
 	int64_t msecs = epoch_msecs - SHV_EPOCH_MSEC;
 	int offset = (min_from_utc / 15) & 0x7F;
 	int ms = msecs % 1000;
 	if(ms == 0)
 		msecs /= 1000;
 	if(offset != 0) {
-		msecs <<= 7;
+		msecs *= 128;
 		msecs |= offset;
 	}
-	msecs <<= 2;
+	msecs *= 4;
 	if(offset != 0)
 		msecs |= 1;
 	if(ms == 0)
