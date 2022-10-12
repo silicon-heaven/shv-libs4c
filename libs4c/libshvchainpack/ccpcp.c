@@ -13,6 +13,7 @@
 
 #include "ccpcp.h"
 
+#include <math.h>
 #include <string.h>
 
 
@@ -335,13 +336,7 @@ bool ccpcp_item_is_map_val(ccpcp_unpack_context *unpack_context)
 
 double ccpcp_exponentional_to_double(int64_t const mantisa, const int exponent, const int base)
 {
-	double d = mantisa;
-	int i;
-	for (i = 0; i < exponent; ++i)
-		d *= base;
-	for (i = exponent; i < 0; ++i)
-		d /= base;
-	return d;
+	return (const double)mantisa * pow(base, exponent);
 }
 
 double ccpcp_decimal_to_double(const int64_t mantisa, const int exponent)
