@@ -15,14 +15,14 @@ int wire_to_double(double *pval, uint_least64_t onwire)
 	int s = 0;
 
 	m = onwire & (((uint_least64_t)1 << 52) - 1);
-	s = (onwire >> 63) & 1;
+	s = (int)((onwire >> 63) & 1);
 	e = (onwire >> 52) & ((1 << 11) - 1);
 
 	if (e == ((1 << 11) - 1)) {
 		if (m)
-			val = NAN;
+			val = (double)NAN;
 		else
-			val = INFINITY;
+			val = (double)INFINITY;
 	} else if(!e && !m) {
 		val = 0.0;
 	} else {
@@ -62,11 +62,11 @@ int wire_from_double(uint_least64_t *ponwire, double val)
 		val = frexp(val, &e);
 		e += (1 << 10) - 2;
 		if (e > 0) {
-			onwire = ldexp (val, 53);
+			onwire = (uint_least64_t)(ldexp (val, 53));
 			onwire &= ~((uint_least64_t)1 << 52);
 		} else {
 			if(e >= -52 + 1)
-				onwire = ldexp (val, 53 - 1 + e);
+				onwire = (uint_least64_t)(ldexp (val, 53 - 1 + e));
 			else
 				onwire = 0;
 			e = 0;

@@ -44,14 +44,14 @@ size_t ccpcp_pack_make_space(ccpcp_pack_context* pack_context, size_t size_hint)
 {
 	if(pack_context->err_no != CCPCP_RC_OK)
 		return 0;
-	size_t free_space = pack_context->end - pack_context->current;
+	size_t free_space = (size_t)(pack_context->end - pack_context->current);
 	if(free_space < size_hint) {
 		if (!pack_context->handle_pack_overflow) {
 			pack_context->err_no = CCPCP_RC_BUFFER_OVERFLOW;
 			return 0;
 		}
 		pack_context->handle_pack_overflow (pack_context, size_hint);
-		free_space = pack_context->end - pack_context->current;
+		free_space = (size_t)(pack_context->end - pack_context->current);
 		if (free_space < 1) {
 			pack_context->err_no = CCPCP_RC_BUFFER_OVERFLOW;
 			return 0;
@@ -79,7 +79,7 @@ void ccpcp_pack_copy_byte(ccpcp_pack_context *pack_context, uint8_t b)
 	char *p = ccpcp_pack_reserve_space(pack_context, 1);
 	if(!p)
 		return;
-	*p = b;
+	*p = (char)b;
 }
 
 void ccpcp_pack_copy_bytes(ccpcp_pack_context *pack_context, const void *str, size_t len)
@@ -362,7 +362,7 @@ static int int_to_str(char *buff, size_t buff_len, int64_t val)
 		str[n++] = '0';
 	}
 	else while(val != 0) {
-		int d = val % 10;
+		int d = (int)(val % 10);
 		val /= 10;
 		if((size_t)n == buff_len)
 			return -1;
