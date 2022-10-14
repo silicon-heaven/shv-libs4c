@@ -1,31 +1,8 @@
-/*
-#ifdef BR_PLC
-#include <bur/plctypes.h>
-#ifdef __cplusplus
-	extern "C"
-	{
-#endif
-	#include "shv.h"
-#ifdef __cplusplus
-	};
-#endif
-#endif
-*/
-
 #include "ccpcp.h"
 
 #include <math.h>
 #include <string.h>
 
-/*
-#ifdef BR_PLC
-// TODO: Add your comment here
-void ccpcp(struct ccpcp* inst)
-{
-	//TODO: Add your code here
-}
-#endif
-*/
 const char *ccpcp_error_string(int err_no)
 {
 	switch (err_no) {
@@ -425,7 +402,7 @@ size_t ccpcp_decimal_to_string(char *buff, size_t buff_len, int64_t mantisa, int
 			str[mantisa_str_len++] = '0';
 		str[mantisa_str_len++] = '.';
 	}
-	else if(dec_places == 0) {
+	else if(exponent == 0) {
 		str[mantisa_str_len++] = '.';
 	}
 	else {
