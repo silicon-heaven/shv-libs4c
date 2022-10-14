@@ -1211,8 +1211,6 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 	if (unpack_context->err_no)
 		return;
 
-	ccpcp_container_state *top_cont_state = ccpcp_unpack_context_top_container_state(unpack_context);
-
 	const char *p;
 	if(unpack_context->item.type == CCPCP_ITEM_STRING) {
 		ccpcp_string *str_it = &unpack_context->item.as.String;
@@ -1477,6 +1475,7 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		break;
 	}
 
+	ccpcp_container_state *top_cont_state = ccpcp_unpack_context_top_container_state(unpack_context);
 	if(top_cont_state && !is_container_end) {
 		if(top_cont_state->current_item_type != CCPCP_ITEM_META)
 			top_cont_state->item_count++;

@@ -1,3 +1,4 @@
+/*
 #ifdef BR_PLC
 #include <bur/plctypes.h>
 #ifdef __cplusplus
@@ -9,22 +10,22 @@
 	};
 #endif
 #endif
-
+*/
 
 #include "ccpcp.h"
 
 #include <math.h>
 #include <string.h>
 
-
+/*
 #ifdef BR_PLC
-/* TODO: Add your comment here */
+// TODO: Add your comment here
 void ccpcp(struct ccpcp* inst)
 {
-	/*TODO: Add your code here*/
+	//TODO: Add your code here
 }
 #endif
-
+*/
 const char *ccpcp_error_string(int err_no)
 {
 	switch (err_no) {
@@ -344,12 +345,12 @@ double ccpcp_decimal_to_double(const int64_t mantisa, const int exponent)
 	return ccpcp_exponentional_to_double(mantisa, exponent, 10);
 }
 
-static int int_to_str(char *buff, size_t buff_len, int64_t val)
+static size_t int_to_str(char *buff, size_t buff_len, int64_t val)
 {
-	int n = 0;
+	size_t n = 0;
 	bool neg = false;
 	char *str = buff;
-	int i;
+	size_t i;
 	if(val < 0) {
 		neg = true;
 		val = -val;
@@ -357,15 +358,15 @@ static int int_to_str(char *buff, size_t buff_len, int64_t val)
 		buff_len--;
 	}
 	if(val == 0) {
-		if((size_t)n == buff_len)
-			return -1;
+		if(n == buff_len)
+			return 0;
 		str[n++] = '0';
 	}
 	else while(val != 0) {
 		int d = (int)(val % 10);
 		val /= 10;
-		if((size_t)n == buff_len)
-			return -1;
+		if(n == buff_len)
+			return 0;
 		str[n++] = '0' + (char)d;
 	}
 	for (i = 0; i < n/2; ++i) {
@@ -380,10 +381,9 @@ static int int_to_str(char *buff, size_t buff_len, int64_t val)
 	return n;
 }
 
-int ccpcp_decimal_to_string(char *buff, size_t buff_len, int64_t mantisa, int exponent)
+size_t ccpcp_decimal_to_string(char *buff, size_t buff_len, int64_t mantisa, int exponent)
 {
 	bool neg = false;
-	int i;
 	if(mantisa < 0) {
 		mantisa = -mantisa;
 		neg = true;
@@ -396,50 +396,50 @@ int ccpcp_decimal_to_string(char *buff, size_t buff_len, int64_t mantisa, int ex
 		buff_len--;
 	}
 	//const char *fmt = sizeof(long long) == sizeof (int64_t)? "%lld": "%ld";
-	int n = int_to_str(str, buff_len, mantisa);
-	if(n < 0) {
-		return n;
+	size_t mantisa_str_len = int_to_str(str, buff_len, mantisa);
+	if(mantisa_str_len == 0) {
+		return mantisa_str_len;
 	}
 
-	int dec_places = -exponent;
-	if(dec_places > 0 && dec_places < n) {
-		int dot_ix = n - dec_places;
-		for (i = dot_ix; i < n; ++i)
-			str[n + dot_ix - i] = str[n + dot_ix - i-1];
+	size_t dec_places = (exponent < 0)? (size_t)(-exponent): 0;
+	if(dec_places > 0 && dec_places < mantisa_str_len) {
+		size_t dot_ix = mantisa_str_len - dec_places;
+		for (size_t i = dot_ix; i < mantisa_str_len; ++i)
+			str[mantisa_str_len + dot_ix - i] = str[mantisa_str_len + dot_ix - i-1];
 		str[dot_ix] = '.';
-		n++;
+		mantisa_str_len++;
 	}
 	else if(dec_places > 0 && dec_places <= 3) {
 		//ret = "0." + std::string(dec_places - ret.length(), '0') + ret;
-		int extra_0_cnt = dec_places - n;
-		for (i = 0; i < n; ++i)
-			str[n - i - 1 + extra_0_cnt + 2] = str[n - i - 1];
+		size_t extra_0_cnt = dec_places - mantisa_str_len;
+		for (size_t i = 0; i < mantisa_str_len; ++i)
+			str[mantisa_str_len - i - 1 + extra_0_cnt + 2] = str[mantisa_str_len - i - 1];
 		str[0] = '0';
 		str[1] = '.';
-		for (i = 0; i < extra_0_cnt; ++i)
+		for (size_t i = 0; i < extra_0_cnt; ++i)
 			str[2 + i] = '0';
-		n += extra_0_cnt + 2;
+		mantisa_str_len += extra_0_cnt + 2;
 	}
-	else if(dec_places < 0 && n + exponent <= 9) {
-		for (i = 0; i < exponent; ++i)
-			str[n++] = '0';
-		str[n++] = '.';
+	else if(exponent > 0 && mantisa_str_len + (unsigned)exponent <= 9) {
+		for (size_t i = 0; i < (unsigned)exponent; ++i)
+			str[mantisa_str_len++] = '0';
+		str[mantisa_str_len++] = '.';
 	}
 	else if(dec_places == 0) {
-		str[n++] = '.';
+		str[mantisa_str_len++] = '.';
 	}
 	else {
-		str[n++] = 'e';
-		int n2 = int_to_str(str+n, buff_len-n, exponent);
-		if(n2 < 0) {
+		str[mantisa_str_len++] = 'e';
+		size_t n2 = int_to_str(str+mantisa_str_len, buff_len - mantisa_str_len, exponent);
+		if(n2 == 0) {
 			return n2;
 		}
-		n += n2;
+		mantisa_str_len += n2;
 	}
 	if(neg) {
 		buff[0] = '-';
-		n++;
+		mantisa_str_len++;
 	}
-	return n;
+	return mantisa_str_len;
 }
 

@@ -117,7 +117,7 @@ typedef struct {
 
 double ccpcp_exponentional_to_double(const int64_t mantisa, const int exponent, const int base);
 double ccpcp_decimal_to_double(const int64_t mantisa, const int exponent);
-int ccpcp_decimal_to_string(char *buff, size_t buff_len, int64_t mantisa, int exponent);
+size_t ccpcp_decimal_to_string(char *buff, size_t buff_len, int64_t mantisa, int exponent);
 
 typedef struct {
 	union
