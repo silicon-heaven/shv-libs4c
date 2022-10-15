@@ -299,7 +299,7 @@ static void test_cpon_helper(const char *cpon, const char *ref_cpon, bool compar
 	assert(in_ctx.err_no == CCPCP_RC_OK && out_ctx.err_no == CCPCP_RC_OK);
 	if(compare_chainpack) {
 		assert(in_ctx.current - in_ctx.start == out_ctx.current - out_ctx.start);
-		assert(!memcmp(in_ctx.start, out_ctx.start, out_ctx.current - out_ctx.start));
+		assert(!memcmp(in_ctx.start, out_ctx.start, (size_t)(out_ctx.current - out_ctx.start)));
 	}
 
 	ccpcp_container_stack_init(&stack, states, STATE_CNT, NULL);
