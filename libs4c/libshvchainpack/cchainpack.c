@@ -175,13 +175,13 @@ static void pack_uint_data_helper(ccpcp_pack_context* pack_context, uint64_t num
 
 	uint8_t *head = bytes;
 	if(bit_len <= 28) {
-		uint8_t mask = 0xf0 << (4 - byte_cnt);
+		uint8_t mask = (uint8_t)(0xf0 << (4 - byte_cnt));
 		*head = *head & ~mask;
 		mask <<= 1;
 		*head = *head | mask;
 	}
 	else {
-		*head = 0xf0 | (byte_cnt - 5);
+		*head = (uint8_t)(0xf0 | (byte_cnt - 5));
 	}
 
 	for ( i = 0; i < byte_cnt; ++i) {
@@ -235,7 +235,7 @@ static int expand_bit_len(int bit_len)
 
 static void cchainpack_pack_int_data(ccpcp_pack_context* pack_context, int64_t snum)
 {
-	uint64_t num = snum < 0? -snum: snum;
+	uint64_t num = (uint64_t)(snum < 0? -snum: snum);
 	bool neg = (snum < 0);
 
 	int bitlen = significant_bits_part_length(num);
@@ -266,7 +266,7 @@ void cchainpack_pack_int(ccpcp_pack_context* pack_context, int64_t i)
 	if (pack_context->err_no)
 		return;
 	if(i >= 0 && i < 64) {
-		ccpcp_pack_copy_byte(pack_context, (i % 64) + 64);
+		ccpcp_pack_copy_byte(pack_context, (uint8_t)((i % 64) + 64));
 	}
 	else {
 		ccpcp_pack_copy_byte(pack_context, CP_Int);
@@ -335,7 +335,7 @@ void cchainpack_pack_date_time(ccpcp_pack_context *pack_context, int64_t epoch_m
 	// this can save byte in packed date-time, but packing scheme is more complicated
 	int64_t msecs = epoch_msecs - SHV_EPOCH_MSEC;
 	int offset = (min_from_utc / 15) & 0x7F;
-	int ms = msecs % 1000;
+	int ms = (int)(msecs % 1000);
 	if(ms == 0)
 		msecs /= 1000;
 	if(offset != 0) {
@@ -489,7 +489,7 @@ static void unpack_uint(ccpcp_unpack_context* unpack_context, uint64_t *pval, in
 
 	const char *p;
 	UNPACK_TAKE_BYTE();
-	uint8_t head = *p;
+	uint8_t head = (uint8_t)(*p);
 
 	int bytes_to_read_cnt;
 	if     ((head & 128) == 0) {bytes_to_read_cnt = 0; num = head & 127; bitlen = 7;}
@@ -503,7 +503,7 @@ static void unpack_uint(ccpcp_unpack_context* unpack_context, uint64_t *pval, in
 	int i;
 	for (i = 0; i < bytes_to_read_cnt; ++i) {
 		UNPACK_TAKE_BYTE();
-		uint8_t r = *p;
+		uint8_t r = (uint8_t)(*p);
 		num = (num << 8) + r;
 	};
 
@@ -520,13 +520,13 @@ static void unpack_int(ccpcp_unpack_context* unpack_context, int64_t *pval)
 	uint64_t num;
 	unpack_uint(unpack_context, &num, &bitlen);
 	if(unpack_context->err_no == CCPCP_RC_OK) {
-		uint64_t sign_bit_mask = (uint64_t)1 << (bitlen - 1);
+		const uint64_t sign_bit_mask = (uint64_t)1 << (bitlen - 1);
 		snum = (int64_t)num;
 
 		// Note: masked value assignment to bool variable would be undefined on some platforms.
 
 		if(num & sign_bit_mask) {
-			snum &= ~sign_bit_mask;
+			snum &= ~(int64_t)sign_bit_mask;
 			snum = -snum;
 		}
 	}
@@ -615,7 +615,7 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 	const char *p;
 	UNPACK_TAKE_BYTE();
 
-	uint8_t packing_schema = *p;
+	uint8_t packing_schema = (uint8_t)(*p);
 
 	ccpcp_container_state *top_cont_state = ccpcp_unpack_context_top_container_state(unpack_context);
 	if(top_cont_state && packing_schema != CP_TERM) {
@@ -676,13 +676,13 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 				// little endian if true
 				for (i=0; i<len; i++) {
 					UNPACK_TAKE_BYTE();
-					bytes[i] = *p;
+					bytes[i] = (uint8_t)(*p);
 				}
 			}
 			else {
 				for (i=len-1; i>=0; i--) {
 					UNPACK_TAKE_BYTE();
-					bytes[i] = *p;
+					bytes[i] = (uint8_t)(*p);
 				}
 			}
 			break;
@@ -694,7 +694,7 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 			unpack_int(unpack_context, &exp);
 			unpack_context->item.type = CCPCP_ITEM_DECIMAL;
 			unpack_context->item.as.Decimal.mantisa = mant;
-			unpack_context->item.as.Decimal.exponent = exp;
+			unpack_context->item.as.Decimal.exponent = (int)exp;
 			break;
 		}
 		case CP_DateTime: {
@@ -752,7 +752,7 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 			uint64_t str_len;
 			unpack_uint(unpack_context, &str_len, NULL);
 			if(unpack_context->err_no == CCPCP_RC_OK) {
-				it->string_size = str_len;
+				it->string_size = (long)str_len;
 				it->size_to_load = it->string_size;
 				unpack_string(unpack_context);
 			}
@@ -765,7 +765,7 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 			uint64_t str_len;
 			unpack_uint(unpack_context, &str_len, NULL);
 			if(unpack_context->err_no == CCPCP_RC_OK) {
-				it->string_size = str_len;
+				it->string_size = (long)(str_len);
 				it->size_to_load = it->string_size;
 				unpack_string(unpack_context);
 			}

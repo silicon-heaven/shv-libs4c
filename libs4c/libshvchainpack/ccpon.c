@@ -52,7 +52,7 @@ static size_t uint_to_str(char *buff, size_t buff_len, uint64_t n)
 		len++;
 	}
 	else while(n > 0) {
-		char r = n % 10;
+		char r = (char)(n % 10);
 		n /= 10;
 		if(len < buff_len)
 			buff[len++] = '0' + r;
@@ -259,9 +259,9 @@ static void civil_from_days(long z, int *py, unsigned *pm, unsigned *pd)
 	unsigned d;
 	z += 719468;
 	const long era = (z >= 0 ? z : z - 146096) / 146097;
-	const unsigned doe = (z - era * 146097);          // [0, 146096]
+	const unsigned doe = (const unsigned)(z - era * 146097);          // [0, 146096]
 	const unsigned yoe = (doe - doe/1460 + doe/36524 - doe/146096) / 365;  // [0, 399]
-	y = ((long)yoe) + era * 400;
+	y = (int)(((long)yoe) + era * 400);
 	const unsigned doy = doe - (365*yoe + yoe/4 - yoe/100);                // [0, 365]
 	const unsigned mp = (5*doy + 2)/153;                                   // [0, 11]
 	d = doy - (153*mp+2)/5 + 1;                             // [1, 31]
@@ -293,11 +293,11 @@ void ccpon_gmtime(int64_t epoch_sec, struct tm *tm)
 	unsigned m, d;
 	civil_from_days(days_since_epoch, &y, &m, &d);
 	tm->tm_year = y - 1900;
-	tm->tm_mon = m;
-	tm->tm_mday = d;
+	tm->tm_mon = (int)m;
+	tm->tm_mday = (int)d;
 
-	tm->tm_hour = hms / 3600;
-	const int ms = hms % 3600;
+	tm->tm_hour = (int)(hms / 3600);
+	const int ms = (int)(hms % 3600);
 	tm->tm_min = ms / 60;
 	tm->tm_sec = ms % 60;
 
@@ -425,15 +425,15 @@ void ccpon_pack_int(ccpcp_pack_context* pack_context, int64_t i)
 void ccpon_pack_decimal(ccpcp_pack_context *pack_context, int64_t mantisa, int exponent)
 {
 	// at least 21 characters for 64-bit types.
-	static const int LEN = 64;
+	static const size_t LEN = 64;
 	char buff[LEN];
-	int n = ccpcp_decimal_to_string(buff, LEN, mantisa, exponent);
-	if(n < 0) {
+	size_t n = ccpcp_decimal_to_string(buff, LEN, mantisa, exponent);
+	if(n == 0) {
 		pack_context->err_no = CCPCP_RC_LOGICAL_ERROR;
 		return;
 	}
 
-	ccpcp_pack_copy_bytes(pack_context, buff, n);
+	ccpcp_pack_copy_bytes(pack_context, buff, (size_t)n);
 }
 
 void ccpon_pack_double(ccpcp_pack_context* pack_context, double d)
@@ -493,7 +493,7 @@ void ccpon_pack_date_time_str(ccpcp_pack_context *pack_context, int64_t epoch_ms
 	len += uint_to_str_lpad(str + len, (len < LEN)? LEN - len: 0, (unsigned)tm.tm_sec, 2, '0');
 	if(len < LEN)
 		ccpcp_pack_copy_bytes(pack_context, str, len);
-	int msec = epoch_msecs % 1000;
+	int msec = (int)(epoch_msecs % 1000);
 	if((msec > 0 && msec_policy == CCPON_Auto) || msec_policy == CCPON_Always) {
 		ccpcp_pack_copy_bytes(pack_context, ".", 1);
 		len = 0;
@@ -728,7 +728,7 @@ static char* copy_blob_escaped(ccpcp_pack_context* pack_context, const void* str
 void ccpon_pack_blob(ccpcp_pack_context* pack_context, const uint8_t* buff, size_t buff_len)
 {
 	ccpon_pack_blob_start(pack_context, 0, 0);
-	ccpon_pack_blob_cont(pack_context, buff, buff_len);
+	ccpon_pack_blob_cont(pack_context, buff, (unsigned int)buff_len);
 	ccpon_pack_blob_finish(pack_context);
 }
 
@@ -849,7 +849,7 @@ static int unpack_int(ccpcp_unpack_context* unpack_context, int64_t *p_val)
 		const char *p = ccpcp_unpack_take_byte(unpack_context);
 		if(!p)
 			goto eonumb;
-		uint8_t b = *p;
+		uint8_t b = (uint8_t)(*p);
 		switch (b) {
 		case '+':
 		case '-':
@@ -1033,7 +1033,7 @@ void ccpon_unpack_date_time(ccpcp_unpack_context *unpack_context, struct tm *tm,
 			p = ccpcp_unpack_take_byte(unpack_context);
 		}
 		if(p) {
-			uint8_t b = *p;
+			uint8_t b = (uint8_t)(*p);
 			if(b == 'Z') {
 				// UTC time
 			}
@@ -1092,17 +1092,17 @@ static void ccpon_unpack_blob_hex(ccpcp_unpack_context* unpack_context)
 		}
 		//if(it->chunk_size == 29)
 		//	printf("chunk size: %lu, ch1: %c\n", it->chunk_size, *p);
-		int b1 = unhex(*p);
+		int b1 = unhex((uint8_t)(*p));
 		if(b1 < 0)
 			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Invalid HEX char, first digit.");
 		UNPACK_TAKE_BYTE();
 		if(!p)
 			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Invalid HEX char, second digit missing.");
 		//printf("ch2: %c\n", *p);
-		int b2 = unhex(*p);
+		int b2 = unhex((uint8_t)(*p));
 		if(b2 < 0)
 			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Invalid HEX char, second digit.");
-		(it->chunk_start)[it->chunk_size++] = (uint8_t)(16 * b1 + b2);
+		(it->chunk_start)[it->chunk_size++] = (char)((uint8_t)(16 * b1 + b2));
 	}
 	it->chunk_cnt++;
 }
@@ -1123,7 +1123,7 @@ static void ccpon_unpack_blob_esc(ccpcp_unpack_context* unpack_context)
 	}
 	for(it->chunk_size = 0; it->chunk_size < it->chunk_buff_len; ) {
 		UNPACK_TAKE_BYTE();
-		uint8_t b = *p;
+		uint8_t b = (uint8_t)(*p);
 		if (b == '"') {
 			// end of string
 			it->last_chunk = 1;
@@ -1138,20 +1138,20 @@ static void ccpon_unpack_blob_esc(ccpcp_unpack_context* unpack_context)
 			case '"': (it->chunk_start)[it->chunk_size++] = '"'; break;
 			case '\\': (it->chunk_start)[it->chunk_size++] = '\\'; break;
 			default: {
-				int hi = unhex(*p);
+				int hi = unhex((uint8_t)(*p));
 				if(hi < 0)
 					UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Invalid HEX char.");
 				UNPACK_TAKE_BYTE();
-				int lo = unhex(*p);
+				int lo = unhex((uint8_t)(*p));
 				if(lo < 0)
 					UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Invalid HEX char.");
-				(it->chunk_start)[it->chunk_size++] = (uint8_t)(16 * hi + lo);
+				(it->chunk_start)[it->chunk_size++] = (char)((uint8_t)(16 * hi + lo));
 				break;
 			}
 			};
 		}
 		else if(b < 128) {
-			(it->chunk_start)[it->chunk_size++] = b;
+			(it->chunk_start)[it->chunk_size++] = (char)b;
 		}
 		else {
 			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Invalid blob char, code >= 128.");
@@ -1210,8 +1210,6 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 {
 	if (unpack_context->err_no)
 		return;
-
-	ccpcp_container_state *top_cont_state = ccpcp_unpack_context_top_container_state(unpack_context);
 
 	const char *p;
 	if(unpack_context->item.type == CCPCP_ITEM_STRING) {
@@ -1441,7 +1439,7 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 			mantisa += decimals;
 			unpack_context->item.type = CCPCP_ITEM_DECIMAL;
 			unpack_context->item.as.Decimal.mantisa = flags.is_neg? -mantisa: mantisa;
-			unpack_context->item.as.Decimal.exponent = exponent - dec_cnt;
+			unpack_context->item.as.Decimal.exponent = (int)(exponent - dec_cnt);
 		}
 		else if(flags.is_uint) {
 			unpack_context->item.type = CCPCP_ITEM_UINT;
@@ -1477,6 +1475,7 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		break;
 	}
 
+	ccpcp_container_state *top_cont_state = ccpcp_unpack_context_top_container_state(unpack_context);
 	if(top_cont_state && !is_container_end) {
 		if(top_cont_state->current_item_type != CCPCP_ITEM_META)
 			top_cont_state->item_count++;

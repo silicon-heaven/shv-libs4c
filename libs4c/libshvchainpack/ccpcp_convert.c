@@ -142,7 +142,7 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 				}
 				else if(it->string_size >= 0) {
 					if(it->chunk_cnt == 1)
-						cchainpack_pack_blob_start(out_ctx, it->string_size, (uint8_t*)it->chunk_start, it->string_size);
+						cchainpack_pack_blob_start(out_ctx, (size_t)(it->string_size), (uint8_t*)it->chunk_start, (size_t)(it->string_size));
 					else
 						cchainpack_pack_blob_cont(out_ctx, (uint8_t*)it->chunk_start, it->chunk_size);
 				}
@@ -156,7 +156,7 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 				if(it->chunk_cnt == 1)
 					ccpon_pack_blob_start(out_ctx, (uint8_t*)it->chunk_start, it->chunk_size);
 				else
-					ccpon_pack_blob_cont(out_ctx, (uint8_t*)it->chunk_start, it->chunk_size);
+					ccpon_pack_blob_cont(out_ctx, (uint8_t*)it->chunk_start, (unsigned)(it->chunk_size));
 				if(it->last_chunk)
 					ccpon_pack_blob_finish(out_ctx);
 			}
@@ -171,7 +171,7 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 				}
 				else if(it->string_size >= 0) {
 					if(it->chunk_cnt == 1)
-						cchainpack_pack_string_start(out_ctx, it->string_size, it->chunk_start, it->string_size);
+						cchainpack_pack_string_start(out_ctx, (size_t)(it->string_size), it->chunk_start, (size_t)(it->string_size));
 					else
 						cchainpack_pack_string_cont(out_ctx, it->chunk_start, it->chunk_size);
 				}
@@ -190,7 +190,7 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 				if(it->chunk_cnt == 1)
 					ccpon_pack_string_start(out_ctx, it->chunk_start, it->chunk_size);
 				else
-					ccpon_pack_string_cont(out_ctx, it->chunk_start, it->chunk_size);
+					ccpon_pack_string_cont(out_ctx, it->chunk_start, (unsigned)(it->chunk_size));
 				if(it->last_chunk)
 					ccpon_pack_string_finish(out_ctx);
 			}
