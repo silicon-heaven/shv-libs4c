@@ -1,9 +1,9 @@
+#define _GNU_SOURCE
 #include <ccpcp.h>
 #include <ccpon.h>
 #include <cchainpack.h>
 #include <ccpcp_convert.h>
 
-#define _XOPEN_SOURCE
 #include <time.h>
 #include <stdio.h>
 #include <string.h>
