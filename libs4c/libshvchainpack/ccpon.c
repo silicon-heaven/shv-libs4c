@@ -425,10 +425,10 @@ void ccpon_pack_int(ccpcp_pack_context* pack_context, int64_t i)
 void ccpon_pack_decimal(ccpcp_pack_context *pack_context, int64_t mantisa, int exponent)
 {
 	// at least 21 characters for 64-bit types.
-	static const int LEN = 64;
+	static const size_t LEN = 64;
 	char buff[LEN];
-	int n = ccpcp_decimal_to_string(buff, (size_t)LEN, mantisa, exponent);
-	if(n < 0) {
+	size_t n = ccpcp_decimal_to_string(buff, LEN, mantisa, exponent);
+	if(n == 0) {
 		pack_context->err_no = CCPCP_RC_LOGICAL_ERROR;
 		return;
 	}
