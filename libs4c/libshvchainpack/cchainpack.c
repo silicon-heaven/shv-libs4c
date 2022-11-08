@@ -484,6 +484,10 @@ void cchainpack_pack_cstring_finish (ccpcp_pack_context* pack_context)
 /// @pbitlen is used to enable same function usage for signed int unpacking
 static void unpack_uint(ccpcp_unpack_context* unpack_context, uint64_t *pval, int *pbitlen)
 {
+	if(pval)
+		*pval = 0;
+	if(pbitlen)
+		*pbitlen = 0;
 	uint64_t num = 0;
 	int bitlen = 0;
 

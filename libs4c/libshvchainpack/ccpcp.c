@@ -139,7 +139,7 @@ ccpcp_container_state *ccpcp_unpack_context_push_container_state(ccpcp_unpack_co
 		return NULL;
 	}
 	if(self->container_stack->length == self->container_stack->capacity) {
-		if(self->container_stack->overflow_handler) {
+		if(!self->container_stack->overflow_handler) {
 			self->err_no = CCPCP_RC_CONTAINER_STACK_OVERFLOW;
 			return NULL;
 		}

@@ -496,7 +496,6 @@ void ccpon_pack_date_time_str(ccpcp_pack_context *pack_context, int64_t epoch_ms
 	int msec = (int)(epoch_msecs % 1000);
 	if((msec > 0 && msec_policy == CCPON_Auto) || msec_policy == CCPON_Always) {
 		ccpcp_pack_copy_bytes(pack_context, ".", 1);
-		len = 0;
 		len = uint_to_str_lpad(str, LEN, (unsigned)msec, 3, '0');
 		if(len < LEN)
 			ccpcp_pack_copy_bytes(pack_context, str, len);
@@ -1048,7 +1047,6 @@ void ccpon_unpack_date_time(ccpcp_unpack_context *unpack_context, struct tm *tm,
 					*utc_offset = (int)(60 * (val / 100) + (val % 100));
 				if(b == '-')
 					*utc_offset = -*utc_offset;
-				p += n;
 			}
 			else {
 				// unget unused char
