@@ -702,6 +702,10 @@ static char* copy_blob_escaped(ccpcp_pack_context* pack_context, const void* str
 			ccpcp_pack_copy_byte(pack_context, '\\');
 			ccpcp_pack_copy_byte(pack_context, 't');
 			break;
+		case '\r':
+			ccpcp_pack_copy_byte(pack_context, '\\');
+			ccpcp_pack_copy_byte(pack_context, 'r');
+			break;
 		case '\n':
 			ccpcp_pack_copy_byte(pack_context, '\\');
 			ccpcp_pack_copy_byte(pack_context, 'n');

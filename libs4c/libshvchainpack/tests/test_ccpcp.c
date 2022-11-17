@@ -541,7 +541,7 @@ void test_cpons()
 		"-1234567890.", "-1234567890.",
 		"\"abc\"", NULL,
 		"x\"abcd\"", "b\"\\ab\\cd\"",
-		"b\"ab\\cd\\t\"", NULL,
+		"b\"ab\\cd\\t\\r\\n\"", NULL,
 		"[]", NULL,
 		"[1]", NULL,
 		"[1,]", "[1]",
