@@ -198,14 +198,14 @@ bool ccpcp_item_is_map_val(ccpcp_unpack_context* unpack_context);
     return;                                             \
 }
 
-#define UNPACK_TAKE_BYTE() \
+#define UNPACK_TAKE_BYTE(p) \
 { \
 	p = ccpcp_unpack_take_byte(unpack_context);        \
 	if(!p) \
 		return; \
 }
 
-#define UNPACK_PEEK_BYTE() \
+#define UNPACK_PEEK_BYTE(p) \
 { \
 	p = ccpcp_unpack_peek_byte(unpack_context);        \
 	if(!p) \
