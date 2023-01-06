@@ -338,19 +338,6 @@ static void	*memcpy(void *dst, const void *src, size_t n)
 #endif
 
 //============================   P A C K   =================================
-void ccpcp_pack_context_init (ccpcp_pack_context* pack_context, void *data, size_t length, ccpcp_pack_overflow_handler hpo)
-{
-	pack_context->start = pack_context->current = (char*)data;
-	pack_context->end = pack_context->start + length;
-	pack_context->err_no = 0;
-	pack_context->handle_pack_overflow = hpo;
-	pack_context->err_no = CCPCP_RC_OK;
-	pack_context->cpon_options.indent = NULL;
-	pack_context->cpon_options.json_output = 0;
-	pack_context->nest_count = 0;
-	pack_context->custom_context = NULL;
-}
-
 void ccpon_pack_copy_str(ccpcp_pack_context *pack_context, const char *str)
 {
 	size_t len = strlen(str);
@@ -449,10 +436,7 @@ void ccpon_pack_double(ccpcp_pack_context* pack_context, double d)
 		pack_context->err_no = CCPCP_RC_LOGICAL_ERROR;
 		return;
 	}
-	char *p = ccpcp_pack_reserve_space(pack_context, n);
-	if(p) {
-		memcpy(p, str, n);
-	}
+	ccpcp_pack_copy_bytes(pack_context, str, n);
 }
 
 void ccpon_pack_date_time(ccpcp_pack_context *pack_context, int64_t epoch_msecs, int min_from_utc)
@@ -566,10 +550,8 @@ void ccpon_pack_list_begin(ccpcp_pack_context *pack_context)
 	if (pack_context->err_no)
 		return;
 
-	char *p = ccpcp_pack_reserve_space(pack_context, 1);
-	if(p)
-		*p = CCPON_C_LIST_BEGIN;
-	start_block(pack_context);
+	if(ccpcp_pack_copy_byte(pack_context, CCPON_C_LIST_BEGIN) > 0)
+		start_block(pack_context);
 }
 
 void ccpon_pack_list_end(ccpcp_pack_context *pack_context, bool is_oneliner)
@@ -578,9 +560,7 @@ void ccpon_pack_list_end(ccpcp_pack_context *pack_context, bool is_oneliner)
 		return;
 
 	end_block(pack_context, is_oneliner);
-	char *p = ccpcp_pack_reserve_space(pack_context, 1);
-	if(p)
-		*p = CCPON_C_LIST_END;
+	ccpcp_pack_copy_byte(pack_context, CCPON_C_LIST_END);
 }
 
 void ccpon_pack_map_begin(ccpcp_pack_context *pack_context)
@@ -588,10 +568,8 @@ void ccpon_pack_map_begin(ccpcp_pack_context *pack_context)
 	if (pack_context->err_no)
 		return;
 
-	char *p = ccpcp_pack_reserve_space(pack_context, 1);
-	if(p)
-		*p = CCPON_C_MAP_BEGIN;
-	start_block(pack_context);
+	if(ccpcp_pack_copy_byte(pack_context, CCPON_C_MAP_BEGIN))
+		start_block(pack_context);
 }
 
 void ccpon_pack_map_end(ccpcp_pack_context *pack_context, bool is_oneliner)
@@ -600,10 +578,7 @@ void ccpon_pack_map_end(ccpcp_pack_context *pack_context, bool is_oneliner)
 		return;
 
 	end_block(pack_context, is_oneliner);
-	char *p = ccpcp_pack_reserve_space(pack_context, 1);
-	if(p) {
-		*p = CCPON_C_MAP_END;
-	}
+	ccpcp_pack_copy_byte(pack_context, CCPON_C_MAP_END);
 }
 
 void ccpon_pack_imap_begin(ccpcp_pack_context* pack_context)
@@ -625,10 +600,8 @@ void ccpon_pack_meta_begin(ccpcp_pack_context *pack_context)
 	if (pack_context->err_no)
 		return;
 
-	char *p = ccpcp_pack_reserve_space(pack_context, 1);
-	if(p)
-		*p = CCPON_C_META_BEGIN;
-	start_block(pack_context);
+	if(ccpcp_pack_copy_byte(pack_context, CCPON_C_META_BEGIN) > 0)
+		start_block(pack_context);
 }
 
 void ccpon_pack_meta_end(ccpcp_pack_context *pack_context, bool is_oneliner)
@@ -637,10 +610,7 @@ void ccpon_pack_meta_end(ccpcp_pack_context *pack_context, bool is_oneliner)
 		return;
 
 	end_block(pack_context, is_oneliner);
-	char *p = ccpcp_pack_reserve_space(pack_context, 1);
-	if(p) {
-		*p = CCPON_C_META_END;
-	}
+	ccpcp_pack_copy_byte(pack_context, CCPON_C_META_END);
 }
 
 static char* copy_data_escaped(ccpcp_pack_context* pack_context, const void* str, size_t len)

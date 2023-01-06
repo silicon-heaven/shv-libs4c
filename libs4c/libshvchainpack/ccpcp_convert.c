@@ -1,8 +1,15 @@
 #include "cchainpack.h"
 #include "ccpon.h"
 
+#include <assert.h>
+
 void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, ccpcp_pack_context* out_ctx, ccpcp_pack_format out_format)
 {
+	if(!in_ctx->container_stack) {
+		// ccpcp_convert() cannot worj without input context container state set
+		in_ctx->err_no = CCPCP_RC_LOGICAL_ERROR;
+		return;
+	}
 	bool o_cpon_input = (in_format == CCPCP_Cpon);
 	bool o_chainpack_output = (out_format == CCPCP_ChainPack);
 	//int prev_item = CCPCP_ITEM_INVALID;
@@ -240,7 +247,6 @@ void ccpcp_convert(ccpcp_unpack_context* in_ctx, ccpcp_pack_format in_format, cc
 			break;
 		}
 		}
-		//prev_item = in_ctx->item.type;
 		{
 			ccpcp_container_state *top_state = ccpcp_unpack_context_top_container_state(in_ctx);
 			// take just one object from stream
