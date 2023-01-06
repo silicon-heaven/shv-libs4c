@@ -961,7 +961,7 @@ void ccpon_unpack_date_time(ccpcp_unpack_context *unpack_context, struct tm *tm,
 	*/
 	tm->tm_year = (int)val - 1900;
 
-	UNPACK_TAKE_BYTE();
+	UNPACK_TAKE_BYTE(p);
 	if(*p != '-') {
 		unpack_context->err_no = CCPCP_RC_MALFORMED_INPUT;
 		unpack_context->err_msg = "Malformed year-month separator in DateTime";
@@ -976,7 +976,7 @@ void ccpon_unpack_date_time(ccpcp_unpack_context *unpack_context, struct tm *tm,
 	}
 	tm->tm_mon = (int)val - 1;
 
-	UNPACK_TAKE_BYTE();
+	UNPACK_TAKE_BYTE(p);
 	if(*p != '-') {
 		unpack_context->err_no = CCPCP_RC_MALFORMED_INPUT;
 		unpack_context->err_msg = "Malformed month-day separator in DateTime";
@@ -991,7 +991,7 @@ void ccpon_unpack_date_time(ccpcp_unpack_context *unpack_context, struct tm *tm,
 	}
 	tm->tm_mday = (int)val;
 
-	UNPACK_TAKE_BYTE();
+	UNPACK_TAKE_BYTE(p);
 	if(!(*p == 'T' || *p == ' ')) {
 		unpack_context->err_no = CCPCP_RC_MALFORMED_INPUT;
 		unpack_context->err_msg = "Malformed date-time separator in DateTime";
@@ -1006,7 +1006,7 @@ void ccpon_unpack_date_time(ccpcp_unpack_context *unpack_context, struct tm *tm,
 	}
 	tm->tm_hour = (int)val;
 
-	UNPACK_TAKE_BYTE();
+	UNPACK_TAKE_BYTE(p);
 
 	n = unpack_int(unpack_context, &val);
 	if(n <= 0) {
@@ -1016,7 +1016,7 @@ void ccpon_unpack_date_time(ccpcp_unpack_context *unpack_context, struct tm *tm,
 	}
 	tm->tm_min = (int)val;
 
-	UNPACK_TAKE_BYTE();
+	UNPACK_TAKE_BYTE(p);
 
 	n = unpack_int(unpack_context, &val);
 	if(n <= 0) {
@@ -1078,14 +1078,14 @@ static void ccpon_unpack_blob_hex(ccpcp_unpack_context* unpack_context)
 	ccpcp_string *it = &unpack_context->item.as.String;
 	if(it->chunk_cnt == 0) {
 		// must start with '"'
-		UNPACK_TAKE_BYTE();
+		UNPACK_TAKE_BYTE(p);
 		if (*p != '"') {
 			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Blob should start with 'x\"' .");
 		}
 	}
 	for(it->chunk_size = 0; it->chunk_size < it->chunk_buff_len; ) {
 		do {
-			UNPACK_TAKE_BYTE();
+			UNPACK_TAKE_BYTE(p);
 		} while(*p <= ' ');
 		if (*p == '"') {
 			// end of string
@@ -1097,7 +1097,7 @@ static void ccpon_unpack_blob_hex(ccpcp_unpack_context* unpack_context)
 		int b1 = unhex((uint8_t)(*p));
 		if(b1 < 0)
 			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Invalid HEX char, first digit.");
-		UNPACK_TAKE_BYTE();
+		UNPACK_TAKE_BYTE(p);
 		if(!p)
 			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Invalid HEX char, second digit missing.");
 		//printf("ch2: %c\n", *p);
@@ -1118,13 +1118,13 @@ static void ccpon_unpack_blob_esc(ccpcp_unpack_context* unpack_context)
 	ccpcp_string *it = &unpack_context->item.as.String;
 	if(it->chunk_cnt == 0) {
 		// must start with '"'
-		UNPACK_TAKE_BYTE();
+		UNPACK_TAKE_BYTE(p);
 		if (*p != '"') {
 			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Blob should start with 'b\"' .");
 		}
 	}
 	for(it->chunk_size = 0; it->chunk_size < it->chunk_buff_len; ) {
-		UNPACK_TAKE_BYTE();
+		UNPACK_TAKE_BYTE(p);
 		uint8_t b = (uint8_t)(*p);
 		if (b == '"') {
 			// end of string
@@ -1132,7 +1132,7 @@ static void ccpon_unpack_blob_esc(ccpcp_unpack_context* unpack_context)
 			break;
 		}
 		if(b == '\\') {
-			UNPACK_TAKE_BYTE();
+			UNPACK_TAKE_BYTE(p);
 			switch((uint8_t)*p) {
 			case 't': (it->chunk_start)[it->chunk_size++] = '\t'; break;
 			case 'r': (it->chunk_start)[it->chunk_size++] = '\r'; break;
@@ -1143,7 +1143,7 @@ static void ccpon_unpack_blob_esc(ccpcp_unpack_context* unpack_context)
 				int hi = unhex((uint8_t)(*p));
 				if(hi < 0)
 					UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Invalid HEX char.");
-				UNPACK_TAKE_BYTE();
+				UNPACK_TAKE_BYTE(p);
 				int lo = unhex((uint8_t)(*p));
 				if(lo < 0)
 					UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Invalid HEX char.");
@@ -1171,15 +1171,15 @@ static void ccpon_unpack_string(ccpcp_unpack_context* unpack_context)
 	ccpcp_string *it = &unpack_context->item.as.String;
 	if(it->chunk_cnt == 0) {
 		// must start with '"'
-		UNPACK_TAKE_BYTE();
+		UNPACK_TAKE_BYTE(p);
 		if (*p != '"') {
 			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "String should start with '\"' character.");
 		}
 	}
 	for(it->chunk_size = 0; it->chunk_size < it->chunk_buff_len; ) {
-		UNPACK_TAKE_BYTE();
+		UNPACK_TAKE_BYTE(p);
 		if(*p == '\\') {
-			UNPACK_TAKE_BYTE();
+			UNPACK_TAKE_BYTE(p);
 			if(!p)
 				return;
 			switch (*p) {
@@ -1260,14 +1260,14 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		unpack_context->item.type = CCPCP_ITEM_LIST;
 		break;
 	case 'i': {
-		UNPACK_TAKE_BYTE();
+		UNPACK_TAKE_BYTE(p);
 		if(*p != '{')
 			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "IMap should start with '{'.")
 		unpack_context->item.type = CCPCP_ITEM_IMAP;
 		break;
 	}
 	case 'a': {
-		UNPACK_TAKE_BYTE();
+		UNPACK_TAKE_BYTE(p);
 		if(*p != '[')
 			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "List should start with '['.")
 		// unpack unsupported ARRAY type as list
@@ -1275,14 +1275,14 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		break;
 	}
 	case 'd': {
-		UNPACK_TAKE_BYTE();
+		UNPACK_TAKE_BYTE(p);
 		if(!p || *p != '"')
 			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "DateTime should start with 'd'.")
 		struct tm tm;
 		int msec;
 		int utc_offset;
 		ccpon_unpack_date_time(unpack_context, &tm, &msec, &utc_offset);
-		UNPACK_TAKE_BYTE();
+		UNPACK_TAKE_BYTE(p);
 		if(!p || *p != '"')
 			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "DateTime should start with 'd\"'.")
 		break;
@@ -1294,11 +1294,11 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 	}
 	*/
 	case 'n': {
-		UNPACK_TAKE_BYTE();
+		UNPACK_TAKE_BYTE(p);
 		if(*p == 'u') {
-			UNPACK_TAKE_BYTE();
+			UNPACK_TAKE_BYTE(p);
 			if(*p == 'l') {
-				UNPACK_TAKE_BYTE();
+				UNPACK_TAKE_BYTE(p);
 				if(*p == 'l') {
 					unpack_context->item.type = CCPCP_ITEM_NULL;
 					break;
@@ -1308,13 +1308,13 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Malformed 'null' literal.")
 	}
 	case 'f': {
-		UNPACK_TAKE_BYTE();
+		UNPACK_TAKE_BYTE(p);
 		if(*p == 'a') {
-			UNPACK_TAKE_BYTE();
+			UNPACK_TAKE_BYTE(p);
 			if(*p == 'l') {
-				UNPACK_TAKE_BYTE();
+				UNPACK_TAKE_BYTE(p);
 				if(*p == 's') {
-					UNPACK_TAKE_BYTE();
+					UNPACK_TAKE_BYTE(p);
 					if(*p == 'e') {
 						unpack_context->item.type = CCPCP_ITEM_BOOLEAN;
 						unpack_context->item.as.Bool = false;
@@ -1326,11 +1326,11 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Malformed 'false' literal.")
 	}
 	case 't': {
-		UNPACK_TAKE_BYTE();
+		UNPACK_TAKE_BYTE(p);
 		if(*p == 'r') {
-			UNPACK_TAKE_BYTE();
+			UNPACK_TAKE_BYTE(p);
 			if(*p == 'u') {
-				UNPACK_TAKE_BYTE();
+				UNPACK_TAKE_BYTE(p);
 				if(*p == 'e') {
 					unpack_context->item.type = CCPCP_ITEM_BOOLEAN;
 					unpack_context->item.as.Bool = true;
@@ -1341,7 +1341,7 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Malformed 'true' literal.")
 	}
 	case 'x': {
-		UNPACK_TAKE_BYTE();
+		UNPACK_TAKE_BYTE(p);
 		if(*p != '"')
 			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "HEX string should start with 'x\"'.")
 		unpack_context->item.type = CCPCP_ITEM_BLOB;
@@ -1353,7 +1353,7 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		break;
 	}
 	case 'b': {
-		UNPACK_TAKE_BYTE();
+		UNPACK_TAKE_BYTE(p);
 		if(*p != '"')
 			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "BLOB string should start with 'b\"'.")
 		unpack_context->item.type = CCPCP_ITEM_BLOB;
