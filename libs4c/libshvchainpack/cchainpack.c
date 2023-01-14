@@ -176,7 +176,7 @@ static void pack_uint_data_helper(ccpcp_pack_context* pack_context, uint64_t num
 	uint8_t *head = bytes;
 	if(bit_len <= 28) {
 		uint8_t mask = (uint8_t)(0xf0 << (4 - byte_cnt));
-		*head = *head & ~mask;
+		*head = (uint8_t)(*head & ~mask);
 		mask <<= 1;
 		*head = *head | mask;
 	}
