@@ -12,7 +12,7 @@
 #include <math.h>
 #include <sys/types.h>
 
-static bool o_silent = true;
+static bool o_verbose = false;
 
 static void binary_dump(const char *buff, ssize_t len)
 {
@@ -98,7 +98,7 @@ void test_pack_decimal(int mantisa, int exponent, const char *res)
 	ccpcp_pack_context_init(&ctx, buff, BUFFLEN, NULL);
 	ccpon_pack_decimal(&ctx, mantisa, exponent);
 	*ctx.current = '\0';
-	if(!o_silent) {
+	if(o_verbose) {
 		printf("pack decimal mantisa %d, exponent %d have: '%s' expected: '%s'\n", mantisa, exponent, buff, res);
 	}
 	if(strcmp(buff, res)) {
@@ -229,16 +229,15 @@ int64_t datetime_str_to_msec_utc(const char *str)
 		assert(false);
 	}
 	ccpcp_date_time *dt = &ctx.item.as.DateTime;
-	printf("datetime str: '%s' have: %ld msec + %d utc min offset\n" , str , dt->msecs_since_epoch, dt->minutes_from_utc);
+	if(o_verbose)
+		printf("datetime str: '%s' have: %ld msec + %d utc min offset\n" , str , dt->msecs_since_epoch, dt->minutes_from_utc);
 	return dt->msecs_since_epoch;
 }
 
 static void test_cpon_helper(const char *cpon, const char *ref_cpon, bool compare_chainpack, bool compare_cpon)
 {
-
-
-	if(!o_silent)
-		printf("-------------------------------------------------\n");
+	if(o_verbose)
+		printf("---------------- test cpon ---------------------\n");
 
 	static const size_t STATE_CNT = 100;
 	ccpcp_container_state states[STATE_CNT];
@@ -251,7 +250,7 @@ static void test_cpon_helper(const char *cpon, const char *ref_cpon, bool compar
 	char out_buff1[1024];
 	ccpcp_pack_context out_ctx;
 
-	if(!o_silent)
+	if(o_verbose)
 		printf("Cpon: %s\n", in_buff);
 
 	ccpcp_container_stack_init(&stack, states, STATE_CNT, NULL);
@@ -262,7 +261,7 @@ static void test_cpon_helper(const char *cpon, const char *ref_cpon, bool compar
 	//	printf("BREAK\n");
 	ccpcp_convert(&in_ctx, CCPCP_Cpon, &out_ctx, CCPCP_Cpon);
 	*out_ctx.current = 0;
-	if(!o_silent)
+	if(o_verbose)
 		printf("1. Cpon->Cpon: %s\n", out_ctx.start);
 	//printf("DDD in err: %d out err: %d\n", in_ctx.err_no, out_ctx.err_no);
 	assert(in_ctx.err_no == CCPCP_RC_OK && out_ctx.err_no == CCPCP_RC_OK);
@@ -273,13 +272,8 @@ static void test_cpon_helper(const char *cpon, const char *ref_cpon, bool compar
 	ccpcp_pack_context_init(&out_ctx, out_buff2, sizeof (out_buff2), NULL);
 
 	ccpcp_convert(&in_ctx, CCPCP_Cpon, &out_ctx, CCPCP_ChainPack);
-	if(o_silent) {
+	if(o_verbose) {
 		printf("%s -> len: %ld data: ", cpon, out_ctx.current - out_ctx.start);
-		binary_dump(out_ctx.start, out_ctx.current - out_ctx.start);
-		printf("\n");
-	}
-	else {
-		printf("2. Cpon->CPack  len: %ld data: ", out_ctx.current - out_ctx.start);
 		binary_dump(out_ctx.start, out_ctx.current - out_ctx.start);
 		printf("\n");
 	}
@@ -290,7 +284,7 @@ static void test_cpon_helper(const char *cpon, const char *ref_cpon, bool compar
 	ccpcp_pack_context_init(&out_ctx, out_buff1, sizeof (out_buff1), NULL);
 
 	ccpcp_convert(&in_ctx, CCPCP_ChainPack, &out_ctx, CCPCP_ChainPack);
-	if(!o_silent) {
+	if(o_verbose) {
 		printf("3. CPack->CPack len: %ld data: ", out_ctx.current - out_ctx.start);
 		binary_dump(out_ctx.start, out_ctx.current - out_ctx.start);
 		printf("\n");
@@ -308,7 +302,7 @@ static void test_cpon_helper(const char *cpon, const char *ref_cpon, bool compar
 
 	ccpcp_convert(&in_ctx, CCPCP_ChainPack, &out_ctx, CCPCP_Cpon);
 	*out_ctx.current = 0;
-	if(!o_silent)
+	if(o_verbose)
 		printf("4. CPack->Cpon: %s\n", out_ctx.start);
 	assert(in_ctx.err_no == CCPCP_RC_OK && out_ctx.err_no == CCPCP_RC_OK);
 
@@ -333,46 +327,107 @@ static void test_cpon2(const char *cpon, const char *ref_cpon)
 {
 	test_cpon_helper(cpon, ref_cpon, false, true);
 }
-/*
-static void test_cpon3(const char *cpon, const char *ref_cpon)
-{
-	test_cpon_helper(cpon, ref_cpon, true, false);
-}
-*/
-#define INIT_OUT_BUFF() \
-	char out_buff1[1024]; \
-	ccpcp_pack_context out_ctx; \
-	ccpcp_pack_context_init(&out_ctx, out_buff1, sizeof (out_buff1), NULL); \
 
-#define INIT_OUT_BUFFS() \
+static void test_dry_run_cpon(const char *cpon)
+{
+	if(o_verbose)
+		printf("---------------- test dry run cpon ---------------------\n");
+
+	size_t dry_run_size;
+	{
+		static const size_t STATE_CNT = 100;
+		ccpcp_container_state states[STATE_CNT];
+		ccpcp_container_stack stack;
+		ccpcp_container_stack_init(&stack, states, STATE_CNT, NULL);
+
+		const char *in_buff = cpon;
+		ccpcp_unpack_context in_ctx;
+		ccpcp_pack_context out_ctx;
+		ccpcp_unpack_context_init(&in_ctx, in_buff, strlen(in_buff), NULL, &stack);
+		ccpcp_pack_context_dry_run_init(&out_ctx);
+		ccpcp_convert(&in_ctx, CCPCP_Cpon, &out_ctx, CCPCP_ChainPack);
+		assert(in_ctx.err_no == CCPCP_RC_OK);
+		dry_run_size = out_ctx.bytes_written;
+	}
+	size_t packed_size;
+	{
+		static const size_t STATE_CNT = 100;
+		ccpcp_container_state states[STATE_CNT];
+		ccpcp_container_stack stack;
+		ccpcp_container_stack_init(&stack, states, STATE_CNT, NULL);
+
+		const char *in_buff = cpon;
+		ccpcp_unpack_context in_ctx;
+		ccpcp_pack_context out_ctx;
+		char out_buff[1024];
+		ccpcp_unpack_context_init(&in_ctx, in_buff, strlen(in_buff), NULL, &stack);
+		ccpcp_pack_context_init(&out_ctx, out_buff, sizeof (out_buff), NULL);
+		ccpcp_convert(&in_ctx, CCPCP_Cpon, &out_ctx, CCPCP_ChainPack);
+		packed_size = out_ctx.current - out_ctx.start;
+		*out_ctx.current = 0;
+		//printf("%s\n", out_ctx.start);
+	}
+	if(o_verbose)
+		printf("%s - dry: %zu, real: %zu\n", cpon, dry_run_size, packed_size);
+	assert(dry_run_size == packed_size);
+}
+
+static void test_dry_run_int(int n)
+{
+	if(o_verbose)
+		printf("---------------- test dry run int ---------------------\n");
+
+	size_t dry_run_size;
+	{
+		ccpcp_pack_context out_ctx;
+		ccpcp_pack_context_dry_run_init(&out_ctx);
+		cchainpack_pack_int(&out_ctx, n);
+		dry_run_size = out_ctx.bytes_written;
+	}
+	size_t packed_size;
+	{
+		ccpcp_pack_context out_ctx;
+		char out_buff[1024];
+		ccpcp_pack_context_init(&out_ctx, out_buff, sizeof (out_buff), NULL);
+		cchainpack_pack_int(&out_ctx, n);
+		packed_size = out_ctx.current - out_ctx.start;
+	}
+	if(o_verbose)
+		printf("%d - dry: %zu, real: %zu\n", n, dry_run_size, packed_size);
+	assert(dry_run_size == packed_size);
+}
+
+#define INIT_OUT_CONTEXT() \
 	char out_buff1[1024]; \
 	ccpcp_pack_context out_ctx; \
 	ccpcp_pack_context_init(&out_ctx, out_buff1, sizeof (out_buff1), NULL); \
-	char out_buff2[1024];
 
 void test_vals()
 {
 	printf("------------- NULL \n");
 	{
-		INIT_OUT_BUFFS();
+		INIT_OUT_CONTEXT();
 		ccpon_pack_null(&out_ctx);
 		*out_ctx.current = 0;
+		char out_buff2[1024];
 		snprintf(out_buff2, sizeof (out_buff2), "null");
 		test_cpon((const char *)out_ctx.start, out_buff2);
 	}
 	printf("------------- BOOL \n");
 	for (unsigned n = 0; n < 2; ++n) {
-		INIT_OUT_BUFFS();
+		INIT_OUT_CONTEXT();
 		ccpon_pack_boolean(&out_ctx, n);
 		*out_ctx.current = 0;
+		char out_buff2[1024];
 		snprintf(out_buff2, sizeof (out_buff2), n? "true": "false");
 		test_cpon((const char *)out_ctx.start, out_buff2);
 	}
 	printf("------------- tiny uint \n");
 	for (unsigned n = 0; n < 64; ++n) {
-		INIT_OUT_BUFFS();
+		INIT_OUT_CONTEXT();
 		ccpon_pack_uint(&out_ctx, n);
 		*out_ctx.current = 0;
+		char out_buff2[1024];
 		snprintf(out_buff2, sizeof (out_buff2), "%du", n);
 		test_cpon((const char *)out_ctx.start, out_buff2);
 	}
@@ -386,9 +441,10 @@ void test_vals()
 				shift_n = max_shift_n;
 			int64_t n = ((int64_t)1) << shift_n;
 			uint64_t un = (uint64_t)n;
-			INIT_OUT_BUFFS();
+			INIT_OUT_CONTEXT();
 			ccpon_pack_uint(&out_ctx, un);
 			*out_ctx.current = 0;
+			char out_buff2[1024];
 			snprintf(out_buff2, sizeof (out_buff2), "%lluu", (unsigned long long)un);
 			test_cpon((const char *)out_ctx.start, out_buff2);
 		}
@@ -398,17 +454,19 @@ void test_vals()
 		n = ~n;
 		// cpon parser can handle only int64_t numbers
 		n /= 2;
-		INIT_OUT_BUFFS();
+		INIT_OUT_CONTEXT();
 		ccpon_pack_uint(&out_ctx, n);
 		*out_ctx.current = 0;
+		char out_buff2[1024];
 		snprintf(out_buff2, sizeof (out_buff2), "%lluu", (unsigned long long)n);
 		test_cpon((const char *)out_ctx.start, out_buff2);
 	}
 	printf("------------- tiny int \n");
 	for (int n = 0; n < 64; ++n) {
-		INIT_OUT_BUFFS();
+		INIT_OUT_CONTEXT();
 		ccpon_pack_int(&out_ctx, n);
 		*out_ctx.current = 0;
+		char out_buff2[1024];
 		snprintf(out_buff2, sizeof (out_buff2), "%i", n);
 		test_cpon((const char *)out_ctx.start, out_buff2);
 	}
@@ -421,9 +479,10 @@ void test_vals()
 				if(shift_n >= max_shift_n)
 					shift_n = max_shift_n;
 				int64_t n = sig * ((int64_t)1 << shift_n);
-				INIT_OUT_BUFFS();
+				INIT_OUT_CONTEXT();
 				ccpon_pack_int(&out_ctx, n);
 				*out_ctx.current = 0;
+				char out_buff2[1024];
 				snprintf(out_buff2, sizeof (out_buff2), "%lli", (long long)n);
 				test_cpon((const char *)out_ctx.start, out_buff2);
 			}
@@ -431,9 +490,10 @@ void test_vals()
 	}
 	for (int i = 0; i < 2; i++) {
 		int64_t n = i? INT64_MAX: INT64_MIN + 1;
-		INIT_OUT_BUFFS();
+		INIT_OUT_CONTEXT();
 		ccpon_pack_int(&out_ctx, n);
 		*out_ctx.current = 0;
+		char out_buff2[1024];
 		snprintf(out_buff2, sizeof (out_buff2), "%lli", (long long)n);
 		test_cpon((const char *)out_ctx.start, out_buff2);
 	}
@@ -444,7 +504,7 @@ void test_vals()
 		int exp_max = 16;
 		int step = 1;
 		for (int exp = exp_min; exp <= exp_max; exp += step) {
-			INIT_OUT_BUFF();
+			INIT_OUT_CONTEXT();
 			ccpon_pack_decimal(&out_ctx, mant, exp);
 			*out_ctx.current = 0;
 			test_cpon((const char *)out_ctx.start, NULL);
@@ -457,7 +517,7 @@ void test_vals()
 			double n_min = -1000000.;
 			double step = (n_max - n_min) / 100.1;
 			for (double n = n_min; n < n_max; n += step) {
-				INIT_OUT_BUFF();
+				INIT_OUT_CONTEXT();
 				cchainpack_pack_double(&out_ctx, n);
 				assert(out_ctx.current - out_ctx.start == sizeof(double) + 1);
 				ccpcp_unpack_context in_ctx;
@@ -473,8 +533,9 @@ void test_vals()
 			double step = -1.23456789e10;
 			//qDebug() << n_min << " - " << n_max << ": " << step << " === " << (n_max / step / 10);
 			for (double n = n_min; n < n_max / -step / 10; n *= step) {
-				INIT_OUT_BUFF();
-				printf("%g\n", n);
+				INIT_OUT_CONTEXT();
+				if(o_verbose)
+					printf("%g\n", n);
 				cchainpack_pack_double(&out_ctx, n);
 				ccpcp_unpack_context in_ctx;
 				ccpcp_unpack_context_init(&in_ctx, out_buff1, sizeof(out_buff1), NULL, NULL);
@@ -503,7 +564,7 @@ void test_vals()
 		};
 		for (size_t i = 0; i < sizeof (cpons) / sizeof(char*); i+=2) {
 			const char *cpon = cpons[i];
-			INIT_OUT_BUFF();
+			INIT_OUT_CONTEXT();
 			test_cpon(cpon, cpons[i+1]);
 		}
 	}
@@ -519,7 +580,7 @@ void test_vals()
 		};
 		for (size_t i = 0; i < sizeof (cpons) / sizeof(char*); i+=2) {
 			const char *cpon = cpons[i];
-			INIT_OUT_BUFF();
+			INIT_OUT_CONTEXT();
 			ccpon_pack_string_terminated(&out_ctx, cpon);
 			*out_ctx.current = 0;
 			test_cpon2(out_ctx.start, cpons[i+1]);
@@ -530,6 +591,7 @@ void test_vals()
 void test_cpons()
 {
 	const char* cpons[] = {
+		"[]", NULL,
 		"null", NULL,
 		//"@", "null",
 		"0.", NULL,
@@ -577,6 +639,7 @@ void test_cpons()
 	size_t cpons_cnt = sizeof (cpons) / sizeof (char*);
 	for(size_t i = 0; i < cpons_cnt; i += 2) {
 		test_cpon(cpons[i], cpons[i+1]);
+		test_dry_run_cpon(cpons[i]);
 	}
 }
 
@@ -584,7 +647,7 @@ int main(int argc, const char * argv[])
 {
 	for (int i = 0; i < argc; ++i) {
 		if(!strcmp(argv[i], "-v")) {
-			o_silent = false;
+			o_verbose = true;
 		}
 	}
 
@@ -674,6 +737,11 @@ int main(int argc, const char * argv[])
 	}
 
 	test_cpons();
+
+	test_dry_run_int(1);
+	test_dry_run_int(128);
+	test_dry_run_int(1234);
+	test_dry_run_int(-12345);
 
 	test_pack_decimal(0, 0, "0.");
 	test_pack_decimal(83, 1, "830.");

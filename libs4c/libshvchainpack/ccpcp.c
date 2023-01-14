@@ -17,7 +17,38 @@ const char *ccpcp_error_string(int err_no)
 	}
 }
 
-size_t ccpcp_pack_make_space(ccpcp_pack_context* pack_context, size_t size_hint)
+//=========================== PACK ============================
+void ccpcp_pack_context_init (ccpcp_pack_context* pack_context, void *data, size_t length, ccpcp_pack_overflow_handler poh)
+{
+	pack_context->start = pack_context->current = (char*)data;
+	pack_context->end = pack_context->start + length;
+	pack_context->err_no = 0;
+	pack_context->handle_pack_overflow = poh;
+	pack_context->err_no = CCPCP_RC_OK;
+	pack_context->cpon_options.indent = NULL;
+	pack_context->cpon_options.json_output = 0;
+	pack_context->nest_count = 0;
+	pack_context->custom_context = NULL;
+	pack_context->bytes_written = 0;
+}
+
+void ccpcp_pack_context_dry_run_init(ccpcp_pack_context *pack_context)
+{
+	ccpcp_pack_context_init(pack_context, NULL, 0, NULL);
+}
+
+static bool is_dry_run(ccpcp_pack_context* pack_context)
+{
+	return pack_context->handle_pack_overflow == NULL
+			&& pack_context->start == NULL
+			&& pack_context->end == NULL
+			&& pack_context->current == NULL;
+}
+
+// try to make size_hint bytes space in pack_context
+// returns number of bytes available in pack_context buffer, can be < size_hint, but always > 0
+// returns 0 if fails
+static size_t ccpcp_pack_make_space(ccpcp_pack_context* pack_context, size_t size_hint)
 {
 	if(pack_context->err_no != CCPCP_RC_OK)
 		return 0;
@@ -37,7 +68,8 @@ size_t ccpcp_pack_make_space(ccpcp_pack_context* pack_context, size_t size_hint)
 	return free_space;
 }
 
-char* ccpcp_pack_reserve_space(ccpcp_pack_context* pack_context, size_t more)
+//alocate more bytes, move current after allocated bytec
+static char* ccpcp_pack_reserve_space(ccpcp_pack_context* pack_context, size_t more)
 {
 	if(pack_context->err_no != CCPCP_RC_OK)
 		return NULL;
@@ -51,22 +83,31 @@ char* ccpcp_pack_reserve_space(ccpcp_pack_context* pack_context, size_t more)
 	return p;
 }
 
-void ccpcp_pack_copy_byte(ccpcp_pack_context *pack_context, uint8_t b)
+size_t ccpcp_pack_copy_byte(ccpcp_pack_context *pack_context, uint8_t b)
 {
+	pack_context->bytes_written += 1;
+	if(is_dry_run(pack_context))
+		return 1;
+
 	char *p = ccpcp_pack_reserve_space(pack_context, 1);
 	if(!p)
-		return;
+		return 0;
 	*p = (char)b;
+	return 1;
 }
 
-void ccpcp_pack_copy_bytes(ccpcp_pack_context *pack_context, const void *str, size_t len)
+size_t ccpcp_pack_copy_bytes(ccpcp_pack_context *pack_context, const void *str, size_t len)
 {
+	pack_context->bytes_written += len;
+	if(is_dry_run(pack_context))
+		return len;
+
 	size_t copied = 0;
 	while (pack_context->err_no == CCPCP_RC_OK && copied < len) {
 		size_t buff_size = ccpcp_pack_make_space(pack_context, len);
 		if(buff_size == 0) {
 			pack_context->err_no = CCPCP_RC_BUFFER_OVERFLOW;
-			return;
+			return 0;
 		}
 		size_t rest = len - copied;
 		if(rest > buff_size)
@@ -75,6 +116,7 @@ void ccpcp_pack_copy_bytes(ccpcp_pack_context *pack_context, const void *str, si
 		copied += rest;
 		pack_context->current += rest;
 	}
+	return copied;
 }
 
 //================================ UNPACK ================================
@@ -237,80 +279,6 @@ const char *ccpcp_unpack_peek_byte(ccpcp_unpack_context *unpack_context)
 	return p;
 }
 
-/*
-bool ccpcp_item_is_string_unfinished(ccpcp_unpack_context *unpack_context)
-{
-	bool is_string_concat = false;
-	ccpcp_container_state *parent_state = ccpcp_unpack_context_parent_container_state(unpack_context);
-	if(parent_state != NULL) {
-		if(unpack_context->item.type == CCPCP_ITEM_STRING) {
-			ccpcp_string *it = &(unpack_context->item.as.String);
-			if(it->chunk_cnt > 1) {
-				// multichunk string
-				// this can happen, when parsed string is greater than unpack_context buffer
-				// or escape sequence is encountered
-				// concatenate it with previous chunk
-				is_string_concat = true;
-			}
-		}
-	}
-	return is_string_concat;
-}
-
-bool ccpcp_item_is_list_item(ccpcp_unpack_context *unpack_context)
-{
-	ccpcp_container_state *parent_state = ccpcp_unpack_context_parent_container_state(unpack_context);
-	if(parent_state != NULL) {
-		bool is_string_concat = 0;
-		if(unpack_context->item.type == CCPCP_ITEM_STRING) {
-			ccpcp_string *it = &(unpack_context->item.as.String);
-			if(it->chunk_cnt > 1) {
-				// multichunk string
-				// this can happen, when parsed string is greater than unpack_context buffer
-				// or escape sequence is encountered
-				// concatenate it with previous chunk
-				is_string_concat = 1;
-			}
-		}
-		if(!is_string_concat && unpack_context->item.type != CCPCP_ITEM_CONTAINER_END) {
-			switch(parent_state->container_type) {
-			case CCPCP_ITEM_LIST:
-			//case CCPCP_ITEM_ARRAY:
-				if(!meta_just_closed)
-					ccpon_pack_field_delim(out_ctx, parent_state->item_count == 1);
-				break;
-			case CCPCP_ITEM_MAP:
-			case CCPCP_ITEM_IMAP:
-			case CCPCP_ITEM_META: {
-				bool is_key = (parent_state->item_count % 2);
-				if(is_key) {
-					if(!meta_just_closed)
-						ccpon_pack_field_delim(out_ctx, parent_state->item_count == 1);
-				}
-				else {
-					// delimite value
-					ccpon_pack_key_val_delim(out_ctx);
-				}
-				break;
-			}
-			default:
-				break;
-			}
-		}
-	}
-}
-
-bool ccpcp_item_is_map_key(ccpcp_unpack_context *unpack_context)
-{
-
-}
-
-bool ccpcp_item_is_map_val(ccpcp_unpack_context *unpack_context)
-{
-
-}
-*/
-
 double ccpcp_exponentional_to_double(int64_t const mantisa, const int exponent, const int base)
 {
 	double d = (double)mantisa;
@@ -424,4 +392,5 @@ size_t ccpcp_decimal_to_string(char *buff, size_t buff_len, int64_t mantisa, int
 	}
 	return mantisa_str_len;
 }
+
 

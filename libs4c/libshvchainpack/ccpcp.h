@@ -49,17 +49,19 @@ typedef struct ccpcp_pack_context {
 	ccpcp_pack_overflow_handler handle_pack_overflow;
 	void *custom_context;
 	ccpcp_cpon_pack_options cpon_options;
+	size_t bytes_written;
 } ccpcp_pack_context;
 
-void ccpcp_pack_context_init(ccpcp_pack_context* pack_context, void *data, size_t length, ccpcp_pack_overflow_handler hpo);
+void ccpcp_pack_context_init(ccpcp_pack_context* pack_context, void *data, size_t length, ccpcp_pack_overflow_handler poh);
+void ccpcp_pack_context_dry_run_init(ccpcp_pack_context* pack_context);
 
 // try to make size_hint bytes space in pack_context
 // returns number of bytes available in pack_context buffer, can be < size_hint, but always > 0
 // returns 0 if fails
-size_t ccpcp_pack_make_space(ccpcp_pack_context* pack_context, size_t size_hint);
-char *ccpcp_pack_reserve_space(ccpcp_pack_context* pack_context, size_t more);
-void ccpcp_pack_copy_byte (ccpcp_pack_context* pack_context, uint8_t b);
-void ccpcp_pack_copy_bytes (ccpcp_pack_context* pack_context, const void *str, size_t len);
+//size_t ccpcp_pack_make_space(ccpcp_pack_context* pack_context, size_t size_hint);
+//char *ccpcp_pack_reserve_space(ccpcp_pack_context* pack_context, size_t more);
+size_t ccpcp_pack_copy_byte(ccpcp_pack_context* pack_context, uint8_t b);
+size_t ccpcp_pack_copy_bytes(ccpcp_pack_context* pack_context, const void *str, size_t len);
 //void ccpcp_pack_copy_bytes_cpon_string_escaped (ccpcp_pack_context* pack_context, const void *str, size_t len);
 
 //=========================== UNPACK ============================
