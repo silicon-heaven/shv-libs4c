@@ -402,7 +402,7 @@ static void test_dry_run_int(int n)
 	ccpcp_pack_context out_ctx; \
 	ccpcp_pack_context_init(&out_ctx, out_buff1, sizeof (out_buff1), NULL); \
 
-void test_vals()
+void test_vals(void)
 {
 	printf("------------- NULL \n");
 	{
@@ -588,7 +588,7 @@ void test_vals()
 	}
 }
 
-void test_cpons()
+void test_cpons(void)
 {
 	const char* cpons[] = {
 		"[]", NULL,
