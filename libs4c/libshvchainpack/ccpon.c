@@ -148,12 +148,10 @@ static size_t double_to_str(char *buff, size_t buff_len, double d)
 				len += uint_dot_uint_to_str(buff + len, (len < buff_len)? buff_len-len: 0, 0, ud);
 			}
 			else {
-				int exp = 0;
 				double myprec = 1;
 				while(d >= 10) {
 					d /= 10;
 					myprec /= 10;
-					exp++;
 				}
 				for ( i = 0; i < prec; ++i) {
 					d *= 10;
