@@ -1,29 +1,7 @@
-#ifdef BR_PLC
-#include <bur/plctypes.h>
-#ifdef __cplusplus
-	extern "C"
-	{
-#endif
-	#include "shv.h"
-#ifdef __cplusplus
-	};
-#endif
-#endif
-
 #include "cchainpack.h"
 
 #include <string.h>
 #include <limits.h>
-//#include <stdio.h>
-//#include <math.h>
-
-#ifdef BR_PLC
-/* TODO: Add your comment here */
-void cchainpack(struct cchainpack* inst)
-{
-	/*TODO: Add your code here*/
-}
-#endif
 
 // UTC msec since 2.2. 2018 folowed by signed UTC offset in 1/4 hour
 // Fri Feb 02 2018 00:00:00 == 1517529600 EPOCH
@@ -482,10 +460,8 @@ void cchainpack_pack_cstring_finish (ccpcp_pack_context* pack_context)
 //============================   U N P A C K   =================================
 
 /// @pbitlen is used to enable same function usage for signed int unpacking
-static void unpack_uint(ccpcp_unpack_context* unpack_context, uint64_t *pval, int *pbitlen)
+static void unpack_uint(ccpcp_unpack_context* unpack_context, int *pbitlen)
 {
-	if(pval)
-		*pval = 0;
 	if(pbitlen)
 		*pbitlen = 0;
 	uint64_t num = 0;
@@ -511,8 +487,8 @@ static void unpack_uint(ccpcp_unpack_context* unpack_context, uint64_t *pval, in
 		num = (num << 8) + r;
 	};
 
-	if(pval)
-		*pval = num;
+	unpack_context->item.as.UInt = num;
+	unpack_context->item.type = CCPCP_ITEM_UINT;
 	if(pbitlen)
 		*pbitlen = bitlen;
 }
@@ -521,10 +497,10 @@ static void unpack_int(ccpcp_unpack_context* unpack_context, int64_t *pval)
 {
 	int64_t snum = 0;
 	int bitlen;
-	uint64_t num;
-	unpack_uint(unpack_context, &num, &bitlen);
+	unpack_uint(unpack_context, &bitlen);
 	if(unpack_context->err_no == CCPCP_RC_OK) {
 		const uint64_t sign_bit_mask = (uint64_t)1 << (bitlen - 1);
+		uint64_t num = unpack_context->item.as.UInt;
 		snum = (int64_t)num;
 
 		// Note: masked value assignment to bool variable would be undefined on some platforms.
@@ -583,6 +559,7 @@ void unpack_string(ccpcp_unpack_context* unpack_context)
 		it->last_chunk = (it->size_to_load == 0);
 	}
 	it->chunk_cnt++;
+	unpack_context->item.type = CCPCP_ITEM_STRING;
 }
 /*
 void unpack_blob(ccpcp_unpack_context* unpack_context)
@@ -663,10 +640,7 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 			break;
 		}
 		case CP_UInt: {
-			uint64_t n;
-			unpack_uint(unpack_context, &n, NULL);
-			unpack_context->item.type = CCPCP_ITEM_UINT;
-			unpack_context->item.as.UInt = n;
+			unpack_uint(unpack_context, NULL);
 			break;
 		}
 		case CP_Double: {
@@ -750,33 +724,29 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 			break;
 		}
 		case CP_Blob: {
-			unpack_context->item.type = CCPCP_ITEM_BLOB;
 			ccpcp_string *it = &unpack_context->item.as.String;
 			ccpcp_string_init(it, unpack_context);
-			uint64_t str_len;
-			unpack_uint(unpack_context, &str_len, NULL);
+			unpack_uint(unpack_context, NULL);
 			if(unpack_context->err_no == CCPCP_RC_OK) {
-				it->string_size = (long)str_len;
+				it->string_size = (long)(unpack_context->item.as.UInt);
 				it->size_to_load = it->string_size;
 				unpack_string(unpack_context);
 			}
+			unpack_context->item.type = CCPCP_ITEM_BLOB;
 			break;
 		}
 		case CP_String: {
-			unpack_context->item.type = CCPCP_ITEM_STRING;
 			ccpcp_string *it = &unpack_context->item.as.String;
 			ccpcp_string_init(it, unpack_context);
-			uint64_t str_len;
-			unpack_uint(unpack_context, &str_len, NULL);
+			unpack_uint(unpack_context, NULL);
 			if(unpack_context->err_no == CCPCP_RC_OK) {
-				it->string_size = (long)(str_len);
+				it->string_size = (long)(unpack_context->item.as.UInt);
 				it->size_to_load = it->string_size;
 				unpack_string(unpack_context);
 			}
 			break;
 		}
 		case CP_CString: {
-			unpack_context->item.type = CCPCP_ITEM_STRING;
 			ccpcp_string *it = &unpack_context->item.as.String;
 			ccpcp_string_init(it, unpack_context);
 			it->string_size = -1;
@@ -801,9 +771,8 @@ uint64_t cchainpack_unpack_uint_data(ccpcp_unpack_context *unpack_context, bool 
 
 uint64_t cchainpack_unpack_uint_data2(ccpcp_unpack_context *unpack_context, int *err_code)
 {
-	uint64_t n;
-	unpack_uint(unpack_context, &n, NULL);
+	unpack_uint(unpack_context, NULL);
 	if(err_code)
 		*err_code = unpack_context->err_no;
-	return n;
+	return unpack_context->item.as.UInt;
 }

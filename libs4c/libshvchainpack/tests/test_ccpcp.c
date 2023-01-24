@@ -273,7 +273,7 @@ static void test_cpon_helper(const char *cpon, const char *ref_cpon, bool compar
 
 	ccpcp_convert(&in_ctx, CCPCP_Cpon, &out_ctx, CCPCP_ChainPack);
 	if(o_verbose) {
-		printf("%s -> len: %ld data: ", cpon, out_ctx.current - out_ctx.start);
+		printf("2. CPon->CPack: %s len: %ld data: ", cpon, out_ctx.current - out_ctx.start);
 		binary_dump(out_ctx.start, out_ctx.current - out_ctx.start);
 		printf("\n");
 	}
