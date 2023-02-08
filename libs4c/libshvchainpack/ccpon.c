@@ -757,9 +757,28 @@ const char* ccpon_unpack_skip_insignificant(ccpcp_unpack_context* unpack_context
 		const char* p = ccpcp_unpack_take_byte(unpack_context);
 		if(!p)
 			return p;
-		if(*p == '\n')
+		if(*p == 0) {
+			continue;
+		}
+		if(*p < 0) {
+			if(*p == '\xEF') {
+				// BOM EF BB BF
+				p = ccpcp_unpack_take_byte(unpack_context);
+				if(*p == '\xBB') {
+					p = ccpcp_unpack_take_byte(unpack_context);
+					if(*p == '\xBF') {
+						continue;
+					}
+				}
+			}
+			unpack_context->err_no = CCPCP_RC_MALFORMED_INPUT;
+			unpack_context->err_msg = "Invalid character";
+			return NULL;
+		}
+		else if(*p == '\n') {
 			unpack_context->parser_line_no++;
-		if(*p > ' ') {
+		}
+		else if(*p > ' ') {
 			if(*p == '/') {
 				p = ccpcp_unpack_take_byte(unpack_context);
 				if(!p) {

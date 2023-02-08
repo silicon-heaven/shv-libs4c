@@ -264,7 +264,14 @@ static void test_cpon_helper(const char *cpon, const char *ref_cpon, bool compar
 	if(o_verbose)
 		printf("1. Cpon->Cpon: %s\n", out_ctx.start);
 	//printf("DDD in err: %d out err: %d\n", in_ctx.err_no, out_ctx.err_no);
-	assert(in_ctx.err_no == CCPCP_RC_OK && out_ctx.err_no == CCPCP_RC_OK);
+	if(in_ctx.err_no != CCPCP_RC_OK) {
+		printf("Input error: %i %s - %s\n", out_ctx.err_no, ccpcp_error_string(out_ctx.err_no), in_ctx.err_msg);
+		assert(false);
+	}
+	if(out_ctx.err_no != CCPCP_RC_OK) {
+		printf("Output error: %i %s\n", out_ctx.err_no, ccpcp_error_string(out_ctx.err_no));
+		assert(false);
+	}
 	//assert(!strcmp(in_buff, (const char *)out_ctx.start));
 
 	ccpcp_container_stack_init(&stack, states, STATE_CNT, NULL);
@@ -277,7 +284,14 @@ static void test_cpon_helper(const char *cpon, const char *ref_cpon, bool compar
 		binary_dump(out_ctx.start, out_ctx.current - out_ctx.start);
 		printf("\n");
 	}
-	assert(in_ctx.err_no == CCPCP_RC_OK && out_ctx.err_no == CCPCP_RC_OK);
+	if(in_ctx.err_no != CCPCP_RC_OK) {
+		printf("Input error: %i %s - %s\n", out_ctx.err_no, ccpcp_error_string(out_ctx.err_no), in_ctx.err_msg);
+		assert(false);
+	}
+	if(out_ctx.err_no != CCPCP_RC_OK) {
+		printf("Output error: %i %s\n", out_ctx.err_no, ccpcp_error_string(out_ctx.err_no));
+		assert(false);
+	}
 
 	ccpcp_container_stack_init(&stack, states, STATE_CNT, NULL);
 	ccpcp_unpack_context_init(&in_ctx, out_buff2, sizeof(out_buff2), NULL, &stack);
@@ -290,7 +304,14 @@ static void test_cpon_helper(const char *cpon, const char *ref_cpon, bool compar
 		printf("\n");
 	}
 	//printf("DDD %d %d\n", in_ctx.current - in_ctx.start, out_ctx.current - out_ctx.start);
-	assert(in_ctx.err_no == CCPCP_RC_OK && out_ctx.err_no == CCPCP_RC_OK);
+	if(in_ctx.err_no != CCPCP_RC_OK) {
+		printf("Input error: %i %s - %s\n", out_ctx.err_no, ccpcp_error_string(out_ctx.err_no), in_ctx.err_msg);
+		assert(false);
+	}
+	if(out_ctx.err_no != CCPCP_RC_OK) {
+		printf("Output error: %i %s\n", out_ctx.err_no, ccpcp_error_string(out_ctx.err_no));
+		assert(false);
+	}
 	if(compare_chainpack) {
 		assert(in_ctx.current - in_ctx.start == out_ctx.current - out_ctx.start);
 		assert(!memcmp(in_ctx.start, out_ctx.start, (size_t)(out_ctx.current - out_ctx.start)));
@@ -304,7 +325,14 @@ static void test_cpon_helper(const char *cpon, const char *ref_cpon, bool compar
 	*out_ctx.current = 0;
 	if(o_verbose)
 		printf("4. CPack->Cpon: %s\n", out_ctx.start);
-	assert(in_ctx.err_no == CCPCP_RC_OK && out_ctx.err_no == CCPCP_RC_OK);
+	if(in_ctx.err_no != CCPCP_RC_OK) {
+		printf("Input error: %i %s - %s\n", out_ctx.err_no, ccpcp_error_string(out_ctx.err_no), in_ctx.err_msg);
+		assert(false);
+	}
+	if(out_ctx.err_no != CCPCP_RC_OK) {
+		printf("Output error: %i %s\n", out_ctx.err_no, ccpcp_error_string(out_ctx.err_no));
+		assert(false);
+	}
 
 	const char *ref_buff = ref_cpon;
 	if(!ref_buff)
@@ -363,7 +391,7 @@ static void test_dry_run_cpon(const char *cpon)
 		ccpcp_unpack_context_init(&in_ctx, in_buff, strlen(in_buff), NULL, &stack);
 		ccpcp_pack_context_init(&out_ctx, out_buff, sizeof (out_buff), NULL);
 		ccpcp_convert(&in_ctx, CCPCP_Cpon, &out_ctx, CCPCP_ChainPack);
-		packed_size = out_ctx.current - out_ctx.start;
+		packed_size = (size_t)(out_ctx.current - out_ctx.start);
 		*out_ctx.current = 0;
 		//printf("%s\n", out_ctx.start);
 	}
@@ -390,7 +418,7 @@ static void test_dry_run_int(int n)
 		char out_buff[1024];
 		ccpcp_pack_context_init(&out_ctx, out_buff, sizeof (out_buff), NULL);
 		cchainpack_pack_int(&out_ctx, n);
-		packed_size = out_ctx.current - out_ctx.start;
+		packed_size = (size_t)(out_ctx.current - out_ctx.start);
 	}
 	if(o_verbose)
 		printf("%d - dry: %zu, real: %zu\n", n, dry_run_size, packed_size);
@@ -602,6 +630,7 @@ void test_cpons(void)
 		"-0.00012", "-12e-5",
 		"-1234567890.", "-1234567890.",
 		"\"abc\"", NULL,
+		"\xef\xbb\xbf\"bom\"", "\"bom\"", // BOM"bom"
 		"x\"abcd\"", "b\"\\ab\\cd\"",
 		"b\"ab\\cd\\t\\r\\n\"", NULL,
 		"[]", NULL,
