@@ -53,7 +53,7 @@ int test_pack_double(double d, const char *res)
 	ccpcp_pack_context_init(&ctx, buff, BUFFLEN, NULL);
 	ccpon_pack_double(&ctx, d);
 	*ctx.current = '\0';
-	if(strcmp(buff, res)) {
+	if(strcmp(buff, res) != 0) {
 		printf("FAIL! pack double %lg have: '%s' expected: '%s'\n", d, buff, res);
 		assert(false);
 	}
@@ -68,7 +68,7 @@ int test_pack_int(long i, const char *res)
 	ccpcp_pack_context_init(&ctx, buff, BUFFLEN, NULL);
 	ccpon_pack_int(&ctx, i);
 	*ctx.current = '\0';
-	if(strcmp(buff, res)) {
+	if(strcmp(buff, res) != 0) {
 		printf("FAIL! pack signed %ld have: '%s' expected: '%s'\n", i, buff, res);
 		assert(false);
 	}
@@ -83,7 +83,7 @@ int test_pack_uint(unsigned long i, const char *res)
 	ccpcp_pack_context_init(&ctx, buff, BUFFLEN, NULL);
 	ccpon_pack_uint(&ctx, i);
 	*ctx.current = '\0';
-	if(strcmp(buff, res)) {
+	if(strcmp(buff, res) != 0) {
 		printf("FAIL! pack unsigned %lu have: '%s' expected: '%s'\n", i, buff, res);
 		assert(false);
 	}
@@ -101,7 +101,7 @@ void test_pack_decimal(int mantisa, int exponent, const char *res)
 	if(o_verbose) {
 		printf("pack decimal mantisa %d, exponent %d have: '%s' expected: '%s'\n", mantisa, exponent, buff, res);
 	}
-	if(strcmp(buff, res)) {
+	if(strcmp(buff, res) != 0) {
 		printf("FAIL! pack decimal mantisa %d, exponent %d have: '%s' expected: '%s'\n", mantisa, exponent, buff, res);
 		assert(false);
 	}
@@ -339,7 +339,7 @@ static void test_cpon_helper(const char *cpon, const char *ref_cpon, bool compar
 		ref_buff = cpon;
 
 	if(compare_cpon) {
-		if(strcmp(out_ctx.start, ref_buff)) {
+		if(strcmp(out_ctx.start, ref_buff) != 0) {
 			printf("FAIL! %s vs %s\n", out_ctx.start, ref_buff);
 			assert(false);
 		}
@@ -631,6 +631,7 @@ void test_cpons(void)
 		"-1234567890.", "-1234567890.",
 		"\"abc\"", NULL,
 		"\xef\xbb\xbf\"bom\"", "\"bom\"", // BOM"bom"
+		"[\xef 1 ,\xbb 2 \xbf\"rubbish\"]", "[1,2,\"rubbish\"]", // ignore rubbish
 		"x\"abcd\"", "b\"\\ab\\cd\"",
 		"b\"ab\\cd\\t\\r\\n\"", NULL,
 		"[]", NULL,
@@ -696,10 +697,10 @@ int main(int argc, const char * argv[])
 	test_vals();
 
 	test_pack_int(1, "1");
-	test_pack_int(-1234567890l, "-1234567890");
+	test_pack_int(-1234567890L, "-1234567890");
 
 	test_pack_uint(1, "1u");
-	test_pack_uint(1234567890l, "1234567890u");
+	test_pack_uint(1234567890L, "1234567890u");
 
 	test_pack_double(0., "0.");
 	test_pack_double(0.1, "0.1");

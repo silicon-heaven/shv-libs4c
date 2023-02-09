@@ -263,7 +263,10 @@ static void civil_from_days(long z, int *py, unsigned *pm, unsigned *pd)
 	const unsigned doy = doe - (365*yoe + yoe/4 - yoe/100);                // [0, 365]
 	const unsigned mp = (5*doy + 2)/153;                                   // [0, 11]
 	d = doy - (153*mp+2)/5 + 1;                             // [1, 31]
-	m = mp + (mp < 10 ? 3 : -9);                            // [1, 12]
+	if (mp < 10)
+		m = mp + 3;
+	else
+		m = mp - 9;
 	y += (m <= 2);
 	--m;
 	if(py)
@@ -308,17 +311,19 @@ static const char CCPON_STR_FALSE[] = "false";
 static const char CCPON_STR_IMAP_BEGIN[] = "i{";
 static const char CCPON_DATE_TIME_BEGIN[] = "d\"";
 
-#define CCPON_C_KEY_DELIM ':'
-#define CCPON_C_FIELD_DELIM ','
-#define CCPON_C_LIST_BEGIN '['
-#define CCPON_C_LIST_END ']'
-#define CCPON_C_ARRAY_END ']'
-#define CCPON_C_MAP_BEGIN '{'
-#define CCPON_C_MAP_END '}'
-#define CCPON_C_META_BEGIN '<'
-#define CCPON_C_META_END '>'
-//#define CCPON_C_DECIMAL_END 'n'
-#define CCPON_C_UNSIGNED_END 'u'
+enum {
+	CCPON_C_KEY_DELIM = ':',
+	CCPON_C_FIELD_DELIM = ',',
+	CCPON_C_LIST_BEGIN = '[',
+	CCPON_C_LIST_END = ']',
+	CCPON_C_ARRAY_END = ']',
+	CCPON_C_MAP_BEGIN = '{',
+	CCPON_C_MAP_END = '}',
+	CCPON_C_META_BEGIN = '<',
+	CCPON_C_META_END = '>',
+	//#define CCPON_C_DECIMAL_END 'n'
+	CCPON_C_UNSIGNED_END = 'u'
+};
 
 #ifdef FORCE_NO_LIBRARY
 
@@ -761,6 +766,7 @@ const char* ccpon_unpack_skip_insignificant(ccpcp_unpack_context* unpack_context
 			continue;
 		}
 		if(*p < 0) {
+			/*
 			if(*p == '\xEF') {
 				// BOM EF BB BF
 				p = ccpcp_unpack_take_byte(unpack_context);
@@ -774,8 +780,12 @@ const char* ccpon_unpack_skip_insignificant(ccpcp_unpack_context* unpack_context
 			unpack_context->err_no = CCPCP_RC_MALFORMED_INPUT;
 			unpack_context->err_msg = "Invalid character";
 			return NULL;
+			*/
+			// skip all characters with ASCII > 128
+			// because they cannot appear in CPON delimiters
+			continue;
 		}
-		else if(*p == '\n') {
+		if(*p == '\n') {
 			unpack_context->parser_line_no++;
 		}
 		else if(*p > ' ') {
@@ -1187,9 +1197,7 @@ static void ccpon_unpack_string(ccpcp_unpack_context* unpack_context)
 				it->last_chunk = 1;
 				break;
 			}
-			else {
-				(it->chunk_start)[it->chunk_size++] = *p;
-			}
+			(it->chunk_start)[it->chunk_size++] = *p;
 		}
 	}
 	it->chunk_cnt++;
