@@ -290,7 +290,7 @@ void ccpon_gmtime(int64_t epoch_sec, struct tm *tm)
 		hms = seconds_in_day + hms;
 	}
 
-	int32_t y;
+	int y;
 	unsigned m, d;
 	civil_from_days(days_since_epoch, &y, &m, &d);
 	tm->tm_year = y - 1900;
