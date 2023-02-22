@@ -21,7 +21,10 @@ const char *ccpcp_error_string(int err_no)
 void ccpcp_pack_context_init (ccpcp_pack_context* pack_context, void *data, size_t length, ccpcp_pack_overflow_handler poh)
 {
 	pack_context->start = pack_context->current = (char*)data;
-	pack_context->end = pack_context->start + length;
+	pack_context->end = pack_context->start;
+	if (length) {
+		pack_context->end += length;
+	}
 	pack_context->err_no = 0;
 	pack_context->handle_pack_overflow = poh;
 	pack_context->err_no = CCPCP_RC_OK;
