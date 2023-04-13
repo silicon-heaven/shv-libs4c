@@ -1,27 +1,7 @@
 #include "ccpon.h"
 
 #include <string.h>
-//#include <stdio.h>
 #include <math.h>
-
-/*
-static inline int is_octal(uint8_t b)
-{
-	return b >= '0' && b <= '7';
-}
-static inline int is_hex(uint8_t b)
-{
-	return (b >= '0' && b <= '9')
-			|| (b >= 'a' && b <= 'f')
-			|| (b >= 'A' && b <= 'F');
-}
-static inline int is_blank(uint8_t b)
-{
-	return (b >= '0' && b <= '9')
-			|| (b >= 'a' && b <= 'f')
-			|| (b >= 'A' && b <= 'F');
-}
-*/
 
 static inline uint8_t hexify(uint8_t b)
 {
@@ -321,7 +301,6 @@ enum {
 	CCPON_C_MAP_END = '}',
 	CCPON_C_META_BEGIN = '<',
 	CCPON_C_META_END = '>',
-	//#define CCPON_C_DECIMAL_END 'n'
 	CCPON_C_UNSIGNED_END = 'u'
 };
 
@@ -456,7 +435,6 @@ void ccpon_pack_date_time_str(ccpcp_pack_context *pack_context, int64_t epoch_ms
 	ccpon_gmtime(epoch_msecs / 1000 + min_from_utc * 60, &tm);
 	static const unsigned LEN = 32;
 	char str[LEN];
-	//int n = snprintf(str, LEN, "%04d-%02d-%02dT%02d:%02d:%02d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
 	size_t len = uint_to_str_lpad(str, LEN, (unsigned)tm.tm_year + 1900, 2, '0');
 	if(len < LEN)
 		str[len] = '-';
@@ -503,12 +481,10 @@ void ccpon_pack_date_time_str(ccpcp_pack_context *pack_context, int64_t epoch_ms
 				len = 0;
 				len += uint_to_str_lpad(str + len, (len < LEN)? LEN - len: 0, (unsigned)min_from_utc/60, 2, '0');
 				len += uint_to_str_lpad(str + len, (len < LEN)? LEN - len: 0, (unsigned)min_from_utc%60, 2, '0');
-				//n = snprintf(str, LEN, "%02d%02d", min_from_utc/60, min_from_utc%60);
 			}
 			else {
 				len = 0;
 				len += uint_to_str_lpad(str + len, (len < LEN)? LEN - len: 0, (unsigned)min_from_utc/60, 2, '0');
-				//n = snprintf(str, LEN, "%02d", min_from_utc/60);
 			}
 			if(len < LEN)
 				ccpcp_pack_copy_bytes(pack_context, str, len);
@@ -766,21 +742,6 @@ const char* ccpon_unpack_skip_insignificant(ccpcp_unpack_context* unpack_context
 			continue;
 		}
 		if(*p < 0) {
-			/*
-			if(*p == '\xEF') {
-				// BOM EF BB BF
-				p = ccpcp_unpack_take_byte(unpack_context);
-				if(*p == '\xBB') {
-					p = ccpcp_unpack_take_byte(unpack_context);
-					if(*p == '\xBF') {
-						continue;
-					}
-				}
-			}
-			unpack_context->err_no = CCPCP_RC_MALFORMED_INPUT;
-			unpack_context->err_msg = "Invalid character";
-			return NULL;
-			*/
 			// skip all characters with ASCII > 128
 			// because they cannot appear in CPON delimiters
 			continue;
@@ -945,17 +906,6 @@ void ccpon_unpack_date_time(ccpcp_unpack_context *unpack_context, struct tm *tm,
 		unpack_context->err_msg = "Malformed year in DateTime";
 		return;
 	}
-	/*
-	if(n == 0 && *(unpack_context->current) == '"') {
-		// d"" epoch date time
-		unpack_context->err_no = CCPCP_RC_OK;
-		unpack_context->item.type = CCPCP_ITEM_DATE_TIME;
-		ccpcp_date_time *it = &unpack_context->item.as.DateTime;
-		it->msecs_since_epoch = 0;
-		it->minutes_from_utc = 0;
-		return;
-	}
-	*/
 	tm->tm_year = (int)val - 1900;
 
 	UNPACK_TAKE_BYTE(p);
@@ -1089,15 +1039,12 @@ static void ccpon_unpack_blob_hex(ccpcp_unpack_context* unpack_context)
 			it->last_chunk = 1;
 			break;
 		}
-		//if(it->chunk_size == 29)
-		//	printf("chunk size: %lu, ch1: %c\n", it->chunk_size, *p);
 		int b1 = unhex((uint8_t)(*p));
 		if(b1 < 0)
 			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Invalid HEX char, first digit.");
 		UNPACK_TAKE_BYTE(p);
 		if(!p)
 			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Invalid HEX char, second digit missing.");
-		//printf("ch2: %c\n", *p);
 		int b2 = unhex((uint8_t)(*p));
 		if(b2 < 0)
 			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "Invalid HEX char, second digit.");
@@ -1282,12 +1229,6 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 			UNPACK_ERROR(CCPCP_RC_MALFORMED_INPUT, "DateTime should start with 'd\"'.")
 		break;
 	}
-	/*
-	case '@': {
-		unpack_context->item.type = CCPCP_ITEM_NULL;
-		break;
-	}
-	*/
 	case 'n': {
 		UNPACK_TAKE_BYTE(p);
 		if(*p == 'u') {
@@ -1363,7 +1304,6 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 		unpack_context->item.type = CCPCP_ITEM_STRING;
 		ccpcp_string *str_it = &unpack_context->item.as.String;
 		ccpcp_string_init(str_it, unpack_context);
-		//str_it->format = CCPON_STRING_FORMAT_UTF8_ESCAPED;
 		unpack_context->current--;
 		ccpon_unpack_string(unpack_context);
 		break;
@@ -1458,7 +1398,6 @@ void ccpon_unpack_next (ccpcp_unpack_context* unpack_context)
 	bool is_container_end = false;
 	switch(current_item_type) {
 	case CCPCP_ITEM_LIST:
-	//case CCPCP_ITEM_ARRAY:
 	case CCPCP_ITEM_MAP:
 	case CCPCP_ITEM_IMAP:
 	case CCPCP_ITEM_META:

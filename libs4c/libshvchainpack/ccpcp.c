@@ -150,7 +150,6 @@ void ccpcp_container_state_init(ccpcp_container_state *self, ccpcp_item_types co
 	self->container_type = cont_type;
 	self->current_item_type = CCPCP_ITEM_INVALID;
 	self->item_count = 0;
-	//self->custom_context = NULL;
 }
 
 void ccpcp_container_stack_init(ccpcp_container_stack *self, ccpcp_container_state *states, size_t capacity, ccpcp_container_stack_overflow_handler hnd)
@@ -180,7 +179,6 @@ ccpcp_container_state *ccpcp_unpack_context_push_container_state(ccpcp_unpack_co
 {
 	if(!self->container_stack) {
 		// C++ implementation does not require container states stack
-		//self->err_no = CCPCP_RC_CONTAINER_STACK_OVERFLOW;
 		return NULL;
 	}
 	if(self->container_stack->length == self->container_stack->capacity) {
@@ -348,7 +346,6 @@ size_t ccpcp_decimal_to_string(char *buff, size_t buff_len, int64_t mantisa, int
 		str++;
 		buff_len--;
 	}
-	//const char *fmt = sizeof(long long) == sizeof (int64_t)? "%lld": "%ld";
 	size_t mantisa_str_len = int_to_str(str, buff_len, mantisa);
 	if(mantisa_str_len == 0) {
 		return mantisa_str_len;
@@ -363,7 +360,6 @@ size_t ccpcp_decimal_to_string(char *buff, size_t buff_len, int64_t mantisa, int
 		mantisa_str_len++;
 	}
 	else if(dec_places > 0 && dec_places <= 3) {
-		//ret = "0." + std::string(dec_places - ret.length(), '0') + ret;
 		size_t extra_0_cnt = dec_places - mantisa_str_len;
 		for (size_t i = 0; i < mantisa_str_len; ++i)
 			str[mantisa_str_len - i - 1 + extra_0_cnt + 2] = str[mantisa_str_len - i - 1];

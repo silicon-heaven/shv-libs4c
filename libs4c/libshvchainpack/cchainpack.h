@@ -46,8 +46,6 @@ void cchainpack_pack_int (ccpcp_pack_context* pack_context, int64_t i);
 void cchainpack_pack_uint (ccpcp_pack_context* pack_context, uint64_t i);
 void cchainpack_pack_double (ccpcp_pack_context* pack_context, double d);
 void cchainpack_pack_decimal (ccpcp_pack_context* pack_context, int64_t i, int exponent);
-//void cchainpack_pack_exponential_inf (ccpcp_pack_context* pack_context, bool is_neg);
-//void cchainpack_pack_exponential_nan (ccpcp_pack_context* pack_context, bool is_quiet);
 void cchainpack_pack_date_time (ccpcp_pack_context* pack_context, int64_t epoch_msecs, int min_from_utc);
 
 void cchainpack_pack_blob (ccpcp_pack_context* pack_context, const uint8_t *buff, size_t buff_len);

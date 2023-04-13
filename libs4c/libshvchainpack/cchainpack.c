@@ -28,7 +28,6 @@ const char* cchainpack_packing_schema_name(int sch)
 	case CP_DateTimeEpoch_depr: return "DateTimeEpoch_depr";
 	case CP_DateTime: return "DateTime";
 	case CP_MetaMap: return "MetaMap";
-	//case MetaSMap: return "MetaSMap";
 	case CP_Decimal: return "Decimal";
 
 	case CP_TERM: return "TERM";
@@ -54,18 +53,7 @@ static void copy_bytes_cstring(ccpcp_pack_context *pack_context, const void *str
 		}
 	}
 }
-/*
-static int significant_bits_part_length(uint64_t n)
-{
-	const unsigned bitlen = sizeof(uint64_t) * 8;
-	const uint64_t mask = (uint64_t)1 << (bitlen - 1);
-	int len = bitlen;
-	for (; n && !(n & mask); --len) {
-		n <<= 1;
-	}
-	return n? len: 0;
-}
-*/
+
 #if defined(__GNUC__) && __GNUC__ >= 4
 
 static int significant_bits_part_length(uint64_t n)
@@ -179,12 +167,7 @@ void cchainpack_pack_uint_data(ccpcp_pack_context* pack_context, uint64_t num)
 	int bitlen = significant_bits_part_length(num);
 	pack_uint_data_helper(pack_context, num, bitlen);
 }
-/*
-void cchainpack_pack_uint_key(ccpcp_pack_context *pack_context, uint64_t key)
-{
-	cchainpack_pack_uint_data(pack_context, key);
-}
-*/
+
 /*
  0 ...  7 bits  1  byte  |0|s|x|x|x|x|x|x|<-- LSB
  8 ... 14 bits  2  bytes |1|0|s|x|x|x|x|x| |x|x|x|x|x|x|x|x|<-- LSB
@@ -260,25 +243,7 @@ void cchainpack_pack_decimal(ccpcp_pack_context *pack_context, int64_t i, int ex
 	cchainpack_pack_int_data(pack_context, i);
 	cchainpack_pack_int_data(pack_context, exponent);
 }
-/*
-void cchainpack_pack_exponential_inf(ccpcp_pack_context *pack_context, bool is_neg)
-{
-	if (pack_context->err_no)
-		return;
-	ccpcp_pack_copy_byte(pack_context, CP_Decimal);
-	cchainpack_pack_int_data(pack_context, is_neg? -1: 1);
-	ccpcp_pack_copy_byte(pack_context, CP_TERM);
-}
 
-void cchainpack_pack_exponential_nan(ccpcp_pack_context *pack_context, bool is_quiet)
-{
-	if (pack_context->err_no)
-		return;
-	ccpcp_pack_copy_byte(pack_context, CP_Decimal);
-	cchainpack_pack_int_data(pack_context, is_quiet? 0: 2);
-	ccpcp_pack_copy_byte(pack_context, CP_TERM);
-}
-*/
 void cchainpack_pack_double(ccpcp_pack_context* pack_context, double d)
 {
 	if (pack_context->err_no)
@@ -516,9 +481,6 @@ static void unpack_int(ccpcp_unpack_context* unpack_context, int64_t *pval)
 
 void unpack_string(ccpcp_unpack_context* unpack_context)
 {
-	//if(unpack_context->item.type != CCPCP_ITEM_STRING)
-	//	UNPACK_ERROR(CCPCP_RC_LOGICAL_ERROR, "Unpack chainpack string internal error.");
-
 	const char *p;
 	ccpcp_string *it = &unpack_context->item.as.String;
 
