@@ -18,7 +18,6 @@ static void binary_dump(const char *buff, ssize_t len)
 {
 	for (int i = 0; i < len; ++i) {
 		char u = buff[i];
-		//ret += std::to_string(u);
 		if(i > 0)
 			printf("|");
 		for (size_t j = 0; j < 8*sizeof(u); ++j) {
@@ -27,24 +26,6 @@ static void binary_dump(const char *buff, ssize_t len)
 	}
 }
 
-/*
-static inline char hex_nibble(char i)
-{
-	if(i < 10)
-		return '0' + i;
-	return 'A' + (i - 10);
-}
-
-static void hex_dump(const uint8_t *buff, int len)
-{
-	for (int i = 0; i < len; ++i) {
-		char h = buff[i] / 16;
-		char l = buff[i] % 16;
-		printf("%c", hex_nibble(h));
-		printf("%c", hex_nibble(l));
-	}
-}
-*/
 int test_pack_double(double d, const char *res)
 {
 	static const unsigned long BUFFLEN = 1024;
@@ -186,8 +167,7 @@ int test_unpack_datetime(const char *str, int add_msecs, int expected_utc_offset
 		}
 	}
 	const char *dt_format = has_T? "%Y-%m-%dT%H:%M:%S": "%Y-%m-%d %H:%M:%S";
-	/*char *rest = */strptime(str+2, dt_format, &tm);
-	//printf("\tstr: '%s' year: %d month: %d day: %d rest: '%s'\n", str , tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday , rest);
+	strptime(str+2, dt_format, &tm);
 	int64_t expected_epoch_msec = timegm(&tm);
 	expected_epoch_msec *= 1000;
 	expected_epoch_msec += add_msecs;
@@ -257,13 +237,10 @@ static void test_cpon_helper(const char *cpon, const char *ref_cpon, bool compar
 	ccpcp_unpack_context_init(&in_ctx, in_buff, strlen(in_buff), NULL, &stack);
 	ccpcp_pack_context_init(&out_ctx, out_buff1, sizeof (out_buff1), NULL);
 
-	//if(!strcmp(cpon, "123n"))
-	//	printf("BREAK\n");
 	ccpcp_convert(&in_ctx, CCPCP_Cpon, &out_ctx, CCPCP_Cpon);
 	*out_ctx.current = 0;
 	if(o_verbose)
 		printf("1. Cpon->Cpon: %s\n", out_ctx.start);
-	//printf("DDD in err: %d out err: %d\n", in_ctx.err_no, out_ctx.err_no);
 	if(in_ctx.err_no != CCPCP_RC_OK) {
 		printf("Input error: %i %s - %s\n", out_ctx.err_no, ccpcp_error_string(out_ctx.err_no), in_ctx.err_msg);
 		assert(false);
@@ -272,7 +249,6 @@ static void test_cpon_helper(const char *cpon, const char *ref_cpon, bool compar
 		printf("Output error: %i %s\n", out_ctx.err_no, ccpcp_error_string(out_ctx.err_no));
 		assert(false);
 	}
-	//assert(!strcmp(in_buff, (const char *)out_ctx.start));
 
 	ccpcp_container_stack_init(&stack, states, STATE_CNT, NULL);
 	ccpcp_unpack_context_init(&in_ctx, out_buff1, sizeof(out_buff1), NULL, &stack);
@@ -303,7 +279,6 @@ static void test_cpon_helper(const char *cpon, const char *ref_cpon, bool compar
 		binary_dump(out_ctx.start, out_ctx.current - out_ctx.start);
 		printf("\n");
 	}
-	//printf("DDD %d %d\n", in_ctx.current - in_ctx.start, out_ctx.current - out_ctx.start);
 	if(in_ctx.err_no != CCPCP_RC_OK) {
 		printf("Input error: %i %s - %s\n", out_ctx.err_no, ccpcp_error_string(out_ctx.err_no), in_ctx.err_msg);
 		assert(false);
@@ -393,7 +368,6 @@ static void test_dry_run_cpon(const char *cpon)
 		ccpcp_convert(&in_ctx, CCPCP_Cpon, &out_ctx, CCPCP_ChainPack);
 		packed_size = (size_t)(out_ctx.current - out_ctx.start);
 		*out_ctx.current = 0;
-		//printf("%s\n", out_ctx.start);
 	}
 	if(o_verbose)
 		printf("%s - dry: %zu, real: %zu\n", cpon, dry_run_size, packed_size);
@@ -559,7 +533,6 @@ void test_vals(void)
 			double n_max = DBL_MAX;
 			double n_min = DBL_MIN;
 			double step = -1.23456789e10;
-			//qDebug() << n_min << " - " << n_max << ": " << step << " === " << (n_max / step / 10);
 			for (double n = n_min; n < n_max / -step / 10; n *= step) {
 				INIT_OUT_CONTEXT();
 				if(o_verbose)
@@ -568,8 +541,6 @@ void test_vals(void)
 				ccpcp_unpack_context in_ctx;
 				ccpcp_unpack_context_init(&in_ctx, out_buff1, sizeof(out_buff1), NULL, NULL);
 				cchainpack_unpack_next(&in_ctx);
-				//if(n > -100 && n < 100)
-				//	qDebug() << n << " - " << cp1.toCpon() << " " << cp2.toCpon() << " len: " << len << " dump: " << binary_dump(out.str()).c_str();
 				assert(in_ctx.current - in_ctx.start == sizeof(double) + 1);
 				assert(n == in_ctx.item.as.Double);
 			}
@@ -578,7 +549,6 @@ void test_vals(void)
 	printf("------------- datetime \n");
 	{
 		const char *cpons[] = {
-			//"d\"\"", NULL,
 			"d\"1970-01-01T0:00:00\"", "d\"1970-01-01T00:00:00Z\"",
 			"d\"2018-02-02T0:00:00.001\"", "d\"2018-02-02T00:00:00.001Z\"",
 			"d\"2018-02-02 01:00:00.001+01\"", "d\"2018-02-02T01:00:00.001+01\"",
@@ -621,7 +591,6 @@ void test_cpons(void)
 	const char* cpons[] = {
 		"[]", NULL,
 		"null", NULL,
-		//"@", "null",
 		"0.", NULL,
 		"0.0", NULL,
 		"223.", NULL,
@@ -661,7 +630,6 @@ void test_cpons(void)
 		"a[1,2,3]", "[1,2,3]", // unsupported array type
 		"<1:2>[3,<4:5>6]", NULL,
 		"<4:\"svete\">i{2:<4:\"svete\">[0,1]}", NULL,
-		//"d\"\"", "d\"1970-01-01T00:00:00Z\"",
 		"d\"2018-02-02T00:00:00Z\"", NULL,
 		"d\"2017-05-03T11:30:00-0700\"", "d\"2017-05-03T11:30:00-07\"",
 		"d\"2017-05-03T11:30:12.345+01\"", NULL,

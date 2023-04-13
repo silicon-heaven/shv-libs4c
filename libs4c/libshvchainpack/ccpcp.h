@@ -55,14 +55,8 @@ typedef struct ccpcp_pack_context {
 void ccpcp_pack_context_init(ccpcp_pack_context* pack_context, void *data, size_t length, ccpcp_pack_overflow_handler poh);
 void ccpcp_pack_context_dry_run_init(ccpcp_pack_context* pack_context);
 
-// try to make size_hint bytes space in pack_context
-// returns number of bytes available in pack_context buffer, can be < size_hint, but always > 0
-// returns 0 if fails
-//size_t ccpcp_pack_make_space(ccpcp_pack_context* pack_context, size_t size_hint);
-//char *ccpcp_pack_reserve_space(ccpcp_pack_context* pack_context, size_t more);
 size_t ccpcp_pack_copy_byte(ccpcp_pack_context* pack_context, uint8_t b);
 size_t ccpcp_pack_copy_bytes(ccpcp_pack_context* pack_context, const void *str, size_t len);
-//void ccpcp_pack_copy_bytes_cpon_string_escaped (ccpcp_pack_context* pack_context, const void *str, size_t len);
 
 //=========================== UNPACK ============================
 
@@ -106,7 +100,6 @@ typedef struct {
 
 void ccpcp_string_init(ccpcp_string *str_it, struct ccpcp_unpack_context *unpack_context);
 
-//#define CCPCP_INVALID_DATETIME_MIN_FROM_UTC (-64 * 15)
 typedef struct {
 	int64_t msecs_since_epoch;
 	int minutes_from_utc;
@@ -186,12 +179,6 @@ void ccpcp_unpack_context_pop_container_state(ccpcp_unpack_context* self);
 
 const char *ccpcp_unpack_take_byte(ccpcp_unpack_context* unpack_context);
 const char *ccpcp_unpack_peek_byte(ccpcp_unpack_context* unpack_context);
-/*
-bool ccpcp_item_is_string_unfinished(ccpcp_unpack_context* unpack_context);
-bool ccpcp_item_is_list_item(ccpcp_unpack_context* unpack_context);
-bool ccpcp_item_is_map_key(ccpcp_unpack_context* unpack_context);
-bool ccpcp_item_is_map_val(ccpcp_unpack_context* unpack_context);
-*/
 #define UNPACK_ERROR(error_code, error_msg)                        \
 {                                                       \
     unpack_context->item.type = CCPCP_ITEM_INVALID;        \

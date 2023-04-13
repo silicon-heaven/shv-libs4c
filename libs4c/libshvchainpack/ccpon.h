@@ -20,9 +20,6 @@ void ccpon_pack_int (ccpcp_pack_context* pack_context, int64_t i);
 void ccpon_pack_uint (ccpcp_pack_context* pack_context, uint64_t i);
 void ccpon_pack_double (ccpcp_pack_context* pack_context, double d);
 void ccpon_pack_decimal (ccpcp_pack_context* pack_context, int64_t mantisa, int exponent);
-//void ccpon_pack_string (ccpcp_pack_context* pack_context, const char* s, unsigned l);
-//void ccpon_pack_cstring (ccpcp_pack_context* pack_context, const char* s);
-//void ccpon_pack_blob (ccpcp_pack_context* pack_context, const void *v, unsigned l);
 void ccpon_pack_date_time (ccpcp_pack_context* pack_context, int64_t epoch_msecs, int min_from_utc);
 
 typedef enum {CCPON_Auto = 0, CCPON_Always, CCPON_Never} ccpon_msec_policy;
@@ -38,9 +35,6 @@ void ccpon_pack_string_terminated (ccpcp_pack_context* pack_context, const char*
 void ccpon_pack_string_start (ccpcp_pack_context* pack_context, const char*buff, size_t buff_len);
 void ccpon_pack_string_cont (ccpcp_pack_context* pack_context, const char*buff, unsigned buff_len);
 void ccpon_pack_string_finish (ccpcp_pack_context* pack_context);
-
-//void ccpon_pack_array_begin (ccpcp_pack_context* pack_context, int size);
-//void ccpon_pack_array_end (ccpcp_pack_context* pack_context);
 
 void ccpon_pack_list_begin (ccpcp_pack_context* pack_context);
 void ccpon_pack_list_end (ccpcp_pack_context* pack_context, bool is_oneliner);
@@ -62,7 +56,6 @@ void ccpon_pack_key_val_delim (ccpcp_pack_context* pack_context);
 /***************************** U N P A C K ********************************/
 const char* ccpon_unpack_skip_insignificant(ccpcp_unpack_context* unpack_context);
 void ccpon_unpack_next (ccpcp_unpack_context* unpack_context);
-//void ccpon_skip_items (ccpcp_unpack_context* unpack_context, long item_count);
 void ccpon_unpack_date_time(ccpcp_unpack_context *unpack_context, struct tm *tm, int *msec, int *utc_offset);
 
 
