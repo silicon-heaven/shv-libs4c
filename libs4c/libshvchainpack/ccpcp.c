@@ -217,8 +217,8 @@ ccpcp_container_state *ccpcp_unpack_context_parent_container_state(ccpcp_unpack_
 		if(top_st && top_st->item_count == 0) {
 			if(self->container_stack->length > 1)
 				return self->container_stack->container_states + self->container_stack->length - 2;
-			else
-				return NULL;
+
+			return NULL;
 		}
 		return top_st;
 	}
