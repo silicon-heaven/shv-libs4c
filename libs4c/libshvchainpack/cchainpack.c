@@ -499,16 +499,13 @@ void unpack_string(ccpcp_unpack_context* unpack_context)
 				}
 				break;
 			}
-			else {
-				if (*p == '\0') {
-					// end of string
-					it->last_chunk = 1;
-					break;
-				}
-				else {
-					(it->chunk_start)[it->chunk_size++] = *p;
-				}
+			if (*p == '\0') {
+				// end of string
+				it->last_chunk = 1;
+				break;
 			}
+
+			(it->chunk_start)[it->chunk_size++] = *p;
 		}
 	}
 	else {

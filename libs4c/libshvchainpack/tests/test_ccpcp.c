@@ -12,6 +12,7 @@
 #include <math.h>
 #include <sys/types.h>
 
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static bool o_verbose = false;
 
 static void binary_dump(const char *buff, ssize_t len)

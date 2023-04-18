@@ -750,7 +750,8 @@ const char* ccpon_unpack_skip_insignificant(ccpcp_unpack_context* unpack_context
 			unpack_context->parser_line_no++;
 		}
 		else if(*p > ' ') {
-			if(*p == '/') {
+			switch (*p) {
+			case '/': {
 				p = ccpcp_unpack_take_byte(unpack_context);
 				if(!p) {
 					unpack_context->err_no = CCPCP_RC_MALFORMED_INPUT;
@@ -786,14 +787,12 @@ const char* ccpon_unpack_skip_insignificant(ccpcp_unpack_context* unpack_context
 				else {
 					return NULL;
 				}
+				break;
 			}
-			else if(*p == CCPON_C_KEY_DELIM) {
+			case CCPON_C_KEY_DELIM:
+			case CCPON_C_FIELD_DELIM:
 				continue;
-			}
-			else if(*p == CCPON_C_FIELD_DELIM) {
-				continue;
-			}
-			else {
+			default:
 				return p;
 			}
 		}
