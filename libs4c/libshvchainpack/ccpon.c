@@ -8,7 +8,7 @@ static inline uint8_t hexify(uint8_t b)
 	if (b <= 9)
 		return b + '0';
 	if (b >= 10 && b <= 15)
-		return b - 10 + 'a';
+		return (uint8_t)(b - 10 + 'a');
 	return '?';
 }
 

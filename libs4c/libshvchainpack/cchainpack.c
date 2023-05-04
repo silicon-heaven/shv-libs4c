@@ -143,7 +143,7 @@ static void pack_uint_data_helper(ccpcp_pack_context* pack_context, uint64_t num
 	if(bit_len <= 28) {
 		uint8_t mask = (uint8_t)(0xf0 << (4 - byte_cnt));
 		*head = (uint8_t)(*head & ~mask);
-		mask <<= 1;
+		mask = (uint8_t)(mask << 1);
 		*head = *head | mask;
 	}
 	else {
@@ -634,7 +634,7 @@ void cchainpack_unpack_next (ccpcp_unpack_context* unpack_context)
 			d >>= 2;
 			if(has_tz_offset) {
 				offset = d & 0x7F;
-				offset <<= 1;
+				offset = (int8_t)(offset << 1);
 				offset >>= 1; // sign extension
 				d >>= 7;
 			}
