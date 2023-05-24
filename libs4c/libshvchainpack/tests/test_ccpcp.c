@@ -11,6 +11,7 @@
 #include <float.h>
 #include <math.h>
 #include <sys/types.h>
+#include <inttypes.h>
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static bool o_verbose = false;
@@ -131,7 +132,7 @@ int test_unpack_number(const char *str, int expected_type, double expected_val)
 		int64_t d = ctx.item.as.Int;
 		if(d == (int64_t)expected_val)
 			return 0;
-		printf("FAIL! unpack int number str: '%s' have: %ld expected: %ld\n", str, d, (int64_t)expected_val);
+		printf("FAIL! unpack int number str: '%s' have: %" PRId64 " expected: %" PRId64 "\n", str, d, (int64_t)expected_val);
 		assert(false);
 		break;
 	}
@@ -139,7 +140,7 @@ int test_unpack_number(const char *str, int expected_type, double expected_val)
 		uint64_t d = ctx.item.as.UInt;
 		if(d == (uint64_t)expected_val)
 			return 0;
-		printf("FAIL! unpack int number str: '%s' have: %lu expected: %lu\n", str, d, (uint64_t)expected_val);
+		printf("FAIL! unpack int number str: '%s' have: %" PRIu64 " expected: %" PRIu64 "\n", str, d, (uint64_t)expected_val);
 		assert(false);
 		break;
 	}
@@ -215,7 +216,7 @@ int64_t datetime_str_to_msec_utc(const char *str)
 	}
 	ccpcp_date_time *dt = &ctx.item.as.DateTime;
 	if(o_verbose)
-		printf("datetime str: '%s' have: %ld msec + %d utc min offset\n" , str , dt->msecs_since_epoch, dt->minutes_from_utc);
+		printf("datetime str: '%s' have: %" PRId64 " msec + %d utc min offset\n" , str, dt->msecs_since_epoch, dt->minutes_from_utc);
 	return dt->msecs_since_epoch;
 }
 
@@ -261,7 +262,7 @@ static void test_cpon_helper(const char *cpon, const char *ref_cpon, bool compar
 
 	ccpcp_convert(&in_ctx, CCPCP_Cpon, &out_ctx, CCPCP_ChainPack);
 	if(o_verbose) {
-		printf("2. CPon->CPack: %s len: %ld data: ", cpon, out_ctx.current - out_ctx.start);
+		printf("2. CPon->CPack: %s len: %" PRId64 " data: ", cpon, out_ctx.current - out_ctx.start);
 		binary_dump(out_ctx.start, out_ctx.current - out_ctx.start);
 		printf("\n");
 	}
@@ -280,7 +281,7 @@ static void test_cpon_helper(const char *cpon, const char *ref_cpon, bool compar
 
 	ccpcp_convert(&in_ctx, CCPCP_ChainPack, &out_ctx, CCPCP_ChainPack);
 	if(o_verbose) {
-		printf("3. CPack->CPack len: %ld data: ", out_ctx.current - out_ctx.start);
+		printf("3. CPack->CPack len: %" PRId64 " data: ", out_ctx.current - out_ctx.start);
 		binary_dump(out_ctx.start, out_ctx.current - out_ctx.start);
 		printf("\n");
 	}
