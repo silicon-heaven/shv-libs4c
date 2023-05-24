@@ -95,7 +95,7 @@ int test_unpack_number(const char *str, int expected_type, double expected_val)
 	ccpcp_container_state states[STATE_CNT];
 	ccpcp_container_stack stack;
 	ccpcp_container_stack_init(&stack, states, STATE_CNT, NULL);
-	unsigned long n = strlen(str);
+	unsigned long long n = strlen(str);
 	ccpcp_unpack_context ctx;
 	ccpcp_unpack_context_init(&ctx, (const uint8_t*)str, n, NULL, &stack);
 
@@ -201,7 +201,7 @@ int test_unpack_datetime(const char *str, int add_msecs, int expected_utc_offset
 int64_t datetime_str_to_msec_utc(const char *str)
 {
 	ccpcp_unpack_context ctx;
-	unsigned long n = strlen(str);
+	unsigned long long n = strlen(str);
 	ccpcp_unpack_context_init(&ctx, (uint8_t*)str, n, NULL, NULL);
 
 	ccpon_unpack_next(&ctx);
