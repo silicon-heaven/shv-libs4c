@@ -42,6 +42,17 @@ int wire_to_double(double *pval, uint_least64_t onwire)
 	return 0;
 }
 
+#if __MINGW32__
+// MinGW is acting silly and is not able to select the correct function in the signbit/isnan/fpclassify macro. Since
+// we're only dealing with doubles, we'll just redefine everything to the __ versions (which are the double versions).
+// https://sourceforge.net/p/mingw-w64/bugs/481/
+#undef signbit
+#undef isnan
+#undef fpclassify
+#define signbit __signbit
+#define isnan __isnan
+#define fpclassify __fpclassify
+#endif
 
 int wire_from_double(uint_least64_t *ponwire, double val)
 {
