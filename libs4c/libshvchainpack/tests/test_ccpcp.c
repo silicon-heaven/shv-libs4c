@@ -153,6 +153,10 @@ int test_unpack_number(const char *str, int expected_type, double expected_val)
 int test_unpack_datetime(const char *str, int add_msecs, int expected_utc_offset_min)
 {
 #ifdef _WIN32
+	// Can't test here, because we don't have strptime.
+	(void)str;
+	(void)add_msecs;
+	(void)expected_utc_offset_min;
 	return 0;
 #else
 	ccpcp_unpack_context ctx;
