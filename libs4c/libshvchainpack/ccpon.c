@@ -230,13 +230,13 @@ int64_t ccpon_timegm(struct tm *tm)
 // Returns year/month/day triple in civil calendar
 // Preconditions:  z is number of days since 1970-01-01 and is in the range:
 //                   [numeric_limits<Int>::min(), numeric_limits<Int>::max()-719468].
-static void civil_from_days(long z, int *py, unsigned *pm, unsigned *pd)
+static void civil_from_days(long long z, int *py, unsigned *pm, unsigned *pd)
 {
 	int y;
 	unsigned m;
 	unsigned d;
 	z += 719468;
-	const long era = (z >= 0 ? z : z - 146096) / 146097;
+	const long long era = (z >= 0 ? z : z - 146096) / 146097;
 	const unsigned doe = (const unsigned)(z - era * 146097);          // [0, 146096]
 	const unsigned yoe = (doe - doe/1460 + doe/36524 - doe/146096) / 365;  // [0, 399]
 	y = (int)(((long)yoe) + era * 400);
@@ -263,8 +263,8 @@ void ccpon_gmtime(int64_t epoch_sec, struct tm *tm)
 		return;
 
 	const long seconds_in_day = 3600 * 24;
-	long days_since_epoch = (epoch_sec / seconds_in_day);
-	long hms = epoch_sec - seconds_in_day * days_since_epoch;
+	long long days_since_epoch = (epoch_sec / seconds_in_day);
+	long long hms = epoch_sec - seconds_in_day * days_since_epoch;
 	if (hms < 0) {
 		days_since_epoch -= 1;
 		hms = seconds_in_day + hms;

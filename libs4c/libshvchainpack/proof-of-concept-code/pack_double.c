@@ -1,11 +1,9 @@
 #include <math.h>
 #include <stdint.h>
 
-#ifdef WD_TEST
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#endif
 
 int wire_to_double(double *pval, uint_least64_t onwire)
 {
@@ -42,6 +40,17 @@ int wire_to_double(double *pval, uint_least64_t onwire)
 	return 0;
 }
 
+#if __MINGW32__
+// MinGW is acting silly and is not able to select the correct function in the signbit/isnan/fpclassify macro. Since
+// we're only dealing with doubles, we'll just redefine everything to the __ versions (which are the double versions).
+// https://sourceforge.net/p/mingw-w64/bugs/481/
+#undef signbit
+#undef isnan
+#undef fpclassify
+#define signbit __signbit
+#define isnan __isnan
+#define fpclassify __fpclassify
+#endif
 
 int wire_from_double(uint_least64_t *ponwire, double val)
 {
@@ -80,8 +89,6 @@ int wire_from_double(uint_least64_t *ponwire, double val)
 	return 0;
 }
 
-#ifdef WD_TEST
-
 double test_array[] = {0.0, -0.0, 1.0, -1.0, 1234.56789, -1234.56789, 1.23e-308, -1.23e-308, +INFINITY, -INFINITY, NAN, -NAN};
 int test_array_size = sizeof(test_array) / sizeof(*test_array);
 
@@ -118,7 +125,7 @@ int main(void)
 	}
 
 	printf("\nAny print below this point is an error\n");
-	
+
 	for (i = 0 ; i < test_base_factor_size; i++) {
 		for (ref = test_base_factor[i].base; (ref != 0.0) && (!isinf(ref));
 			 ref *= test_base_factor[i].factor) {
@@ -132,4 +139,3 @@ int main(void)
 	}
 	return 0;
 }
-#endif
