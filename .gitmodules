@@ -1,0 +1,3 @@
+[submodule "submodule/ulut"]
+	path = submodule/ulut
+	url = https://git.code.sf.net/p/ulan/ulut.git
