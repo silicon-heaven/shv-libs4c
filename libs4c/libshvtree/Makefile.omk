@@ -1,0 +1,20 @@
+default_CONFIG += CONFIG_OC_SHV_TREE=y
+default_CONFIG += CONFIG_OC_ULUT_INCDIR=y
+
+ifeq ($(CONFIG_OC_SHV_TREE),y)
+
+#LOCAL_CONFIG_H = shv_tree_config.h
+
+INCLUDES += -I .
+
+lib_LIBRARIES = shvtree
+
+#shared_LIBRARIES = shvtree
+
+include_HEADERS = include/shv_com.h include/shv_methods.h include/shv_tree.h
+
+shvtree_SOURCES = shv_com.c shv_methods.c shv_tree.c
+
+lib_LOADLIBES += ulut
+
+endif # CONFIG_OC_UL_EVPOLL
