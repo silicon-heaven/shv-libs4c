@@ -14,6 +14,15 @@
 #define TAG_METHOD      10
 #define TAG_CALLER_IDS  11
 
+enum shv_tlayer_type
+{
+    SERIAL = 0,
+    TCP_IP,
+    LOCAL_DOMAIN,
+    CANBUS
+};
+
+/* Forward declaration */
 struct shv_node;
 
 typedef struct shv_con_ctx {
