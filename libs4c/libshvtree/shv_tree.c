@@ -291,6 +291,17 @@ shv_node_t *shv_tree_node_new(const char *child_name,
   return item;
 }
 
+shv_file_node_t *shv_tree_file_node_new(const char *child_name, const shv_dmap_t *dir, int mode)
+{
+    shv_file_node_t *item = calloc(1, sizeof(shv_file_node_t));
+    if (item == NULL) {
+        printf("ERROR: calloc() failed\n");
+        return NULL;
+    }
+    shv_tree_node_init((shv_node_t*) item, child_name, dir, mode);
+    return item;
+}
+
 /****************************************************************************
  * Name: shv_tree_destroy
  *
