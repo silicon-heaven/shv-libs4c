@@ -162,15 +162,14 @@ int shv_process_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
         }
         case OFFSET: {
             if (ctx->item.type == CCPCP_ITEM_INT) {
-                // save the loaded offset into the struct
+                /* save the loaded offset into the struct */
                 item->file_offset = ctx->item.as.Int;
                 item->state = BLOB;
-
-                if (lseek(item->fd, item->file_offset, SEEK_SET) == (off_t)-1) {
+                ret = shv_file_node_seeker(item, item->file_offset);
+                if (ret < 0) {
                     // how to handle errors?
                     ctx->err_no = CCPCP_RC_LOGICAL_ERROR;
                     item->state = IMAP_START;
-                } else {
                 }
             } else { 
                 shv_unpack_discard(shv_ctx);
@@ -180,56 +179,60 @@ int shv_process_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
             break;
         }
         case BLOB: {
-        if (ctx->item.type == CCPCP_ITEM_BLOB) {
-        // check overflow
-        item->received_bytes += ctx->item.as.String.chunk_size;
-        if (item->received_bytes <= item->file_size) {
-        // write to the fd
-        if (write(item->fd, ctx->item.as.String.chunk_start, ctx->item.as.String.chunk_size) < 0) {
-        perror("write");
-        }
-        }
-        if (ctx->item.as.String.last_chunk) {
-        // it is the last loaded chunk, we can now proceed
-        item->state = LIST_STOP;
-        }
-        } else {
-        shv_unpack_discard(shv_ctx);
-        ctx->err_no = CCPCP_RC_MALFORMED_INPUT;
-        item->state = IMAP_START;
-        }
-        break;
+            if (ctx->item.type == CCPCP_ITEM_BLOB) {
+                item->received_bytes += ctx->item.as.String.chunk_size;
+                /* Check overflow */
+                if (item->received_bytes <= item->file_size) {
+                    ret = shv_file_node_writer(item, ctx->item.as.String.chunk_start,
+                                               ctx->item.as.String.chunk_size);
+                    if (ret < 0) {
+                        shv_unpack_discard(shv_ctx);
+                        ctx->err_no = CCPCP_RC_LOGICAL_ERROR;
+                        item->state = IMAP_START;
+                    }
+                }
+                if (ctx->item.as.String.last_chunk) {
+                    /* We received the last chunk of the string, we can proceed further */
+                    item->state = LIST_STOP;
+                }
+            } else {
+                shv_unpack_discard(shv_ctx);
+                ctx->err_no = CCPCP_RC_MALFORMED_INPUT;
+                item->state = IMAP_START;
+            }
+            break;
         }
         case LIST_STOP: {
-        if (ctx->item.type == CCPCP_ITEM_CONTAINER_END) {
-        item->state = IMAP_STOP;
-        } else {
-        shv_unpack_discard(shv_ctx);
-        ctx->err_no = CCPCP_RC_MALFORMED_INPUT;
-        item->state = IMAP_START;
-        }
-        break;
+            if (ctx->item.type == CCPCP_ITEM_CONTAINER_END) {
+                item->state = IMAP_STOP;
+            } else {
+                shv_unpack_discard(shv_ctx);
+                ctx->err_no = CCPCP_RC_MALFORMED_INPUT;
+                item->state = IMAP_START;
+            }
+            break;
         }
         case IMAP_STOP: {
-        if (ctx->item.type != CCPCP_ITEM_CONTAINER_END) {
-        // something horrible happened
-        ctx->err_no = CCPCP_RC_MALFORMED_INPUT;
-        item->state = IMAP_START;
-        } else {
-        // restore state and return
-        item->state = IMAP_START;
-        return 0;
-        }
-        break;
+            if (ctx->item.type != CCPCP_ITEM_CONTAINER_END) {
+                // something horrible happened
+                ctx->err_no = CCPCP_RC_MALFORMED_INPUT;
+                item->state = IMAP_START;
+            } else {
+                // restore state and return
+                item->state = IMAP_START;
+                return 0;
+            }
+            break;
         }
         default:
-        break;
+            break;
         }
     } while (ctx->err_no == CCPCP_RC_OK);
 
-    ret = -ctx->err_no;
-    ctx->err_no = CCPCP_RC_OK;
-    return ret; 
+    if (ctx->err_no != CCPCP_RC_OK) {
+        return -1;
+    }
+    return 0;
 }
 
 void shv_confirm_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
@@ -262,9 +265,17 @@ void shv_confirm_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
 int shv_process_crc(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
 {
     int ret;
+    int parse_result = -1;
+    size_t size;
+    int start;
     ccpcp_unpack_context *ctx = &shv_ctx->unpack_ctx;
 
     do {
+        /* The parsed result is ready */
+        if (parse_result >= 0) {
+            break;
+        }
+
         cchainpack_unpack_next(ctx);
         if (ctx->err_no != CCPCP_RC_OK) {
             return -1;
@@ -285,14 +296,14 @@ int shv_process_crc(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
                 /* decide on what was parsed */
                 if (item->crc_offset == -1) {
                     /* Not even offset was passed, calculate over the whole file */
-                    return 0;
+                    parse_result = 0;
                 } else {
                     if (item->crc_size == -1) {
                         /* Only the offset was passed */
-                        return 1;
+                        parse_result = 1;
                     } else {
                         /* Both number were passed */
-                        return 2;
+                        parse_result = 2;
                     }
                 }
                 break;
@@ -355,7 +366,20 @@ int shv_process_crc(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
             break;
         }
     } while (ctx->err_no == CCPCP_RC_OK);
-
+    
+    if (parse_result == 0) {
+        start = 0;
+        size = file->file_size;
+    } else if (parse_result == 1) {
+        start = file->crc_offset;
+        size = file->file_size - file->crc_offset; 
+    } else if (parse_result == 2) {
+        start = file->crc_offset;
+        size = file->crc_size;
+    }
+    if (parse_result >= 0) {
+        return shv_file_node_crc32(item->fctx, start, size, &file->crc);
+    }
     return 0;
 }
 
