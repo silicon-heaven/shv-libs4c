@@ -11,10 +11,11 @@ lib_LIBRARIES = shvtree
 
 #shared_LIBRARIES = shvtree
 
-include_HEADERS = include/shv_com.h include/shv_methods.h include/shv_tree.h
+include_HEADERS = include/shv_com.h include/shv_methods.h include/shv_tree.h include/shv_clayer_posix.h
 
 shvtree_SOURCES = shv_com.c shv_methods.c shv_tree.c
+shvtree_SOURCES += shv_clayer_posix.c shv_clayer_linux.c
 
 lib_LOADLIBES += ulut
 
-endif # CONFIG_OC_UL_EVPOLL
+endif # CONFIG_OC_SHV_TREE

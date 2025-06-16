@@ -9,6 +9,8 @@
 
 #include "shv_com.h"
 
+#include "shv_clayer_posix.h"
+
 #define SHV_NLIST_MODE_GSA 1
 #define SHV_NLIST_MODE_STATIC 2
 
@@ -24,39 +26,18 @@ enum shv_unpack_write_state
   IMAP_STOP       /* Wait for the IMAP end */
 };
 
-/**
- * @typedef shv_file_node_writer
- * @brief A platform dependant function pointer used to write count bytes from buf to a file whose
- *        attributes are stored in the arg context.
- * @param arg   Pointer to the platform dependant file context
- * @param buf   The source buffer
- * @param count The number of bytes to be written
- * @return 0 in case of success, -1 otherwise
- */
-typedef int (*shv_file_node_writer)(void *arg, void *buf, size_t count);
+/* The Crc method unpack state */
+enum shv_unpack_crc_state
+{
+  C_IMAP_START,
+  C_IMAP_END,
+  C_REQUEST_1,
+  C_LIST_START,
+  C_OFFSET,
+  C_LIST_END,
+  C_SIZE
+};
 
-/**
- * @typedef shv_file_node_seeker
- * @brief A platform dependant function pointer used to reposition the file offset.
- * @param arg    Pointer to the platform dependant file context
- * @param offset The absolute file offset
- * @return 0 in case of success, -1 otherwise
- */
-typedef int (*shv_file_node_seeker)(void *arg, int offset);
-
-/**
- * @typedef shv_file_node_crc32
- * @brief A function pointer used to calculate CRC32 from start to start+size-1 specified by
- *        the arg argument. The provided function must conform to the algorithm used
- *        in IEEE 802.3. The reason this function is exposed is that the user can make use
- *        of platform dependant CRC libraries (such as zlib) or HW accelerated CRC calculators.
- * @param arg    Pointer to the platform dependant file context
- * @param start  The starting offset in the file
- * @param size   The count of bytes to calculate CRC32 over
- * @param result Pointer to the CRC32 result
- * @return 0 in case of success, -1 otherwise
- */
-typedef int (*shv_file_node_crc32)(void *arg, int start, size_t size, uint32_t *result);
 
 typedef struct shv_node_list {
   int mode;                         /* Mode selection (GAVL vs GSA, static vs dynamic) */
@@ -88,22 +69,28 @@ typedef struct shv_node_typed_val {
   char *type_name;              /* Type of the value (int, double...) */
 } shv_node_typed_val_t;
 
+/**
+ * @brief A platform dependant struct containing the file handling info
+ * 
+ */
+struct shv_file_node_fctx;
+
 typedef struct shv_file_node {
   shv_node_t shv_node;               /* Base shv_node */
 
-  shv_file_node_writer writer;       /* The writer function */
-  shv_file_node_seeker seeker;       /* The seeker function */
-  shv_file_node_crc32  crcalculator; /* The CRC32 calc function */
-  
   /* Stat method attributes */
   int file_type;
   int file_size;
   int file_pagesize;
   
-  enum shv_unpack_write_state state; /* Internal unpack write state */
-  int crc;                           /* Internal CRC accumulator */
-  int file_offset;                   /* Internal current file offset */
+  enum shv_unpack_write_state state;  /* Internal unpack write state */
+  int file_offset;                    /* Internal current file offset */
+  struct shv_file_node_fctx fctx;     /* Platform dependant file context */
   
+  enum shv_unpack_crc_state crcstate; /* Internal unpack crc state */
+  int crc;                            /* Internal CRC accumulator */
+  int crc_offset;
+  int crc_size;
 } shv_file_node_t;
 
 typedef int (* shv_method_t) (shv_con_ctx_t *ctx, shv_node_t * node, int rid);
@@ -186,5 +173,6 @@ shv_node_t *shv_tree_node_new(const char *child_name, const shv_dmap_t *dir, int
 shv_node_typed_val_t *shv_tree_node_typed_val_new(const char *child_name, const shv_dmap_t *dir, int mode);
 void shv_tree_node_init(shv_node_t *item, const char *child_name, const shv_dmap_t *dir, int mode);
 void shv_tree_destroy(shv_node_t *parent);
+
 
 #endif  /* SHV_TREE_H */
