@@ -24,12 +24,13 @@
 #include <stdatomic.h>
 #include <unistd.h>
 
-#include "ccpcp.h"
-#include "include/shv_file_com.h"
-#include "shv_com.h"
-#include "shv_tree.h"
-#include "shv_file_com.h"
-#include "cchainpack.h"
+#include <shv/chainpack/ccpcp.h>
+#include <shv/chainpack/cchainpack.h>
+#include <shv/tree/shv_file_com.h>
+#include <shv/tree/shv_com.h>
+#include <shv/tree/shv_com_common.h>
+#include <shv/tree/shv_tree.h>
+#include <shv/tree/shv_file_com.h>
 
 void shv_send_stat(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
 {
@@ -180,16 +181,12 @@ int shv_process_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
         }
         case BLOB: {
             if (ctx->item.type == CCPCP_ITEM_BLOB) {
-                item->received_bytes += ctx->item.as.String.chunk_size;
-                /* Check overflow */
-                if (item->received_bytes <= item->file_size) {
-                    ret = shv_file_node_writer(item, ctx->item.as.String.chunk_start,
-                                               ctx->item.as.String.chunk_size);
-                    if (ret < 0) {
-                        shv_unpack_discard(shv_ctx);
-                        ctx->err_no = CCPCP_RC_LOGICAL_ERROR;
-                        item->state = IMAP_START;
-                    }
+                ret = shv_file_node_writer(item, ctx->item.as.String.chunk_start,
+                                           ctx->item.as.String.chunk_size);
+                if (ret < 0) {
+                    shv_unpack_discard(shv_ctx);
+                    ctx->err_no = CCPCP_RC_LOGICAL_ERROR;
+                    item->state = IMAP_START;
                 }
                 if (ctx->item.as.String.last_chunk) {
                     /* We received the last chunk of the string, we can proceed further */
@@ -369,16 +366,16 @@ int shv_process_crc(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
     
     if (parse_result == 0) {
         start = 0;
-        size = file->file_size;
+        size = item->file_size;
     } else if (parse_result == 1) {
-        start = file->crc_offset;
-        size = file->file_size - file->crc_offset; 
+        start = item->crc_offset;
+        size = item->file_size - item->crc_offset;
     } else if (parse_result == 2) {
-        start = file->crc_offset;
-        size = file->crc_size;
+        start = item->crc_offset;
+        size = item->crc_size;
     }
     if (parse_result >= 0) {
-        return shv_file_node_crc32(item->fctx, start, size, &file->crc);
+        return shv_file_node_crc32(item, start, size, &item->crc);
     }
     return 0;
 }

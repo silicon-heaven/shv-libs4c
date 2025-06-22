@@ -1,22 +1,26 @@
 #include <stddef.h>
 #include <stdint.h>
+#include <unistd.h>
 #include <zlib.h>
 
-#include "shv_tree.h"
-#include "shv_clayer_posix.h"
+#include <shv/tree/shv_tree.h>
+#include <shv/tree/shv_clayer_posix.h>
 
 #define CHUNK_SIZE ((size_t)64)
 
 int shv_file_node_crc32(shv_file_node_t *item, int start, size_t size, uint32_t *result)
 {
-    int ret;
     unsigned char buffer[CHUNK_SIZE];
     
     if (item == NULL || start < 0 || result == NULL || (start + size) >= item->file_size) {
         return -1;
     }
-    ret = lseek(item->fctx.fd, start, SEEK_SET);
-    if (ret < 0) {
+
+    if (check_opened_file(&item->fctx, item->name) < 0) {
+        return -1;
+    }
+
+    if (lseek(item->fctx.fd, start, SEEK_SET) < 0) {
         return -1;
     }
     
@@ -28,8 +32,7 @@ int shv_file_node_crc32(shv_file_node_t *item, int start, size_t size, uint32_t 
         } else {
             toread = size;
         }
-        ret = read(item->fctx.fd, buffer, toread);
-        if (ret < 0) {
+        if (read(item->fctx.fd, buffer, toread) < 0) {
             return -1;
         }
         *result = crc32(*result, buffer, toread);

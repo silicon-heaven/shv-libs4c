@@ -2,8 +2,6 @@ default_CONFIG += CONFIG_OC_SHV_CHAINPACK=y
 
 ifeq ($(CONFIG_OC_SHV_CHAINPACK),y)
 
-#LOCAL_CONFIG_H = shvchainpack_config.h
-
 INCLUDES += -I .
 
 lib_LIBRARIES = shvchainpack
@@ -11,12 +9,12 @@ lib_LIBRARIES = shvchainpack
 #shared_LIBRARIES = shvtree
 
 renamed_include_HEADERS = include/shv/chainpack/cchainpack.h->shv/chainpack/cchainpack.h  \
-                   include/shv/chainpack/ccpcp.h->shv/chainpack/ccpcp.h \
-                   include/shv/chainpack/ccpcp_convert.h->shv/chainpack/ccpcp_convert.h \
-                   include/shv/chainpack/ccpon.h->shv/chainpack/ccpon.h \
-                   include/shv/chainpack/compat.h->shv/chainpack/compat.h \
-                   include/shv/chainpack/pack_double.h->shv/chainpack/pack_double.h
+                          include/shv/chainpack/ccpcp.h->shv/chainpack/ccpcp.h \
+                          include/shv/chainpack/ccpcp_convert.h->shv/chainpack/ccpcp_convert.h \
+                          include/shv/chainpack/ccpon.h->shv/chainpack/ccpon.h \
+                          include/shv/chainpack/compat.h->shv/chainpack/compat.h \
+                          include/shv/chainpack/pack_double.h->shv/chainpack/pack_double.h
 
-shvchainpack_SOURCES = cchainpack.c ccpcp.c ccpon.c
+shvchainpack_SOURCES = cchainpack.c ccpcp.c ccpon.c ccpcp_convert.c
 
 endif # CONFIG_OC_SHV_CHAINPACK
