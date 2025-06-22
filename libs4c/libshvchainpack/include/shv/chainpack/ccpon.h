@@ -1,6 +1,6 @@
 #pragma once
 
-#include <shv/chainpack/ccpcp.h>
+#include "ccpcp.h"
 
 #include <time.h>
 

@@ -3,18 +3,34 @@ default_CONFIG += CONFIG_OC_ULUT_INCDIR=y
 
 ifeq ($(CONFIG_OC_SHV_TREE),y)
 
-#LOCAL_CONFIG_H = shv_tree_config.h
-
 INCLUDES += -I .
 
 lib_LIBRARIES = shvtree
 
-#shared_LIBRARIES = shvtree
+renamed_include_HEADERS = include/shv/tree/shv_com.h->shv/tree/shv_com.h \
+                          include/shv/tree/shv_methods.h->shv/tree/shv_methods.h \
+                          include/shv/tree/shv_tree.h->shv/tree/shv_tree.h \
+                          include/shv/tree/shv_file_com.h->shv/tree/shv_tree_com.h \
+                          include/shv/tree/shv_com_common.h->shv/tree/shv_com_common.h
 
-include_HEADERS = include/shv_com.h include/shv_methods.h include/shv_tree.h include/shv_clayer_posix.h
+shvtree_SOURCES = shv_com.c shv_methods.c shv_tree.c shv_com_common.c
 
-shvtree_SOURCES = shv_com.c shv_methods.c shv_tree.c
-shvtree_SOURCES += shv_clayer_posix.c shv_clayer_linux.c
+ifeq ($(CONFIG_SHV_LIBS4C_PLATFORM), linux)
+    # Check the zlib dependancy
+    ZLIB_FOUND := $(shell find /usr/include -maxdepth 1 -name zlib.h)
+    ifeq ($(ZLIB_FOUND),)
+        $(error zlib library not found, you need to install it fisrt)
+    endif
+    shvtree_SOURCES += shv_clayer_posix.c shv_clayer_linux.c
+    renamed_include_HEADERS += include/shv/tree/shv_clayer_posix.h->shv/tree/shv_clayer_posix.h
+else
+    ifeq ($(CONFIG_SHV_LIBS4C_PLATFORM), nuttx)
+        shvtree_SOURCES += shv_clayer_posix.c shv_clayer_nuttx.c
+        renamed_include_HEADERS += include/shv/tree/shv_clayer_posix.h->shv/tree/shv_clayer_posix.h
+    else
+        $(error Define CONFIG_SHV_LIBS4C_PLATFORM: either "linux" or "nuttx")
+    endif
+endif
 
 lib_LOADLIBES += ulut
 

@@ -8,8 +8,8 @@
 #include <stdint.h>
 
 #include "shv_com.h"
-
 #include "shv_clayer_posix.h"
+
 
 #define SHV_NLIST_MODE_GSA 1
 #define SHV_NLIST_MODE_STATIC 2
@@ -76,7 +76,8 @@ typedef struct shv_node_typed_val {
 struct shv_file_node_fctx;
 
 typedef struct shv_file_node {
-  shv_node_t shv_node;               /* Base shv_node */
+  shv_node_t shv_node;                /* Base shv_node */
+  const char *name;                   /* File name, system-wise */
 
   /* Stat method attributes */
   int file_type;
@@ -89,8 +90,8 @@ typedef struct shv_file_node {
   
   enum shv_unpack_crc_state crcstate; /* Internal unpack crc state */
   int crc;                            /* Internal CRC accumulator */
-  int crc_offset;
-  int crc_size;
+  int crc_offset;                     /* Internal file CRC compute region */
+  int crc_size;                       /* Internal file CRC compute region */
 } shv_file_node_t;
 
 typedef int (* shv_method_t) (shv_con_ctx_t *ctx, shv_node_t * node, int rid);

@@ -20,9 +20,9 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-#include "shv_tree.h"
-#include "shv_com.h"
-#include "ulut/ul_utdefs.h"
+#include <shv/tree/shv_tree.h>
+#include <shv/tree/shv_com.h>
+#include <ulut/ul_utdefs.h>
 
 /* Custom tree implementation */
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <shv/chainpack/compat.h>
+#include "compat.h"
 
 #include <stddef.h>
 #include <stdint.h>

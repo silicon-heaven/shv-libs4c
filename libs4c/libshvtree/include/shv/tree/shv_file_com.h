@@ -9,8 +9,8 @@
  * @brief The implementation of file nodes methods.
  */
 
-#ifndef _SHV_FILE_COM_H
-#define _SHV_FILE_COM_H
+#ifndef SHV_FILE_COM_H
+#define SHV_FILE_COM_H
 
 #include "shv_com.h"
 #include "shv_tree.h"
@@ -122,4 +122,4 @@ int shv_file_node_seeker(shv_file_node_t *item, int offset);
  */
 int shv_file_node_crc32(shv_file_node_t *item, int start, size_t size, uint32_t *result);
 
-#endif /* _SHV_FILE_COM_H */
+#endif /* SHV_FILE_COM_H */

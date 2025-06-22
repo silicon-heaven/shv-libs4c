@@ -1,5 +1,5 @@
-#ifndef SHV_FUNCTIONS_H
-#define SHV_FUNCTIONS_H
+#ifndef SHV_COM_H
+#define SHV_COM_H
 
 #include <shv/chainpack/cchainpack.h>
 
@@ -68,4 +68,4 @@ void shv_send_ping(shv_con_ctx_t *shv_ctx);
 
 int shv_unpack_data(ccpcp_unpack_context * ctx, int * v, double * d);
 
-#endif /* SHV_FUNCTIONS_H */
+#endif /* SHV_COM_H */

@@ -20,8 +20,8 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-#include "shv_methods.h"
-#include "ulut/ul_utdefs.h"
+#include <shv/tree/shv_methods.h>
+#include <ulut/ul_utdefs.h>
 
 /* Method descriptors - general methods "ls" and "dir" */
 
