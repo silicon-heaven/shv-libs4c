@@ -32,7 +32,7 @@
 #include <shv/tree/shv_tree.h>
 #include <shv/tree/shv_file_com.h>
 
-void shv_send_stat(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
+void shv_file_send_stat(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
 {
     /* SHV only supports regular files, as of July 2025 */ 
     if (item->file_type != REGULAR) {
@@ -79,7 +79,7 @@ void shv_send_stat(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
     }
 }
 
-void shv_send_size(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
+void shv_file_send_size(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
 {
     ccpcp_pack_context_init(&shv_ctx->pack_ctx,shv_ctx->shv_data, SHV_BUF_LEN,
                             shv_overflow_handler);
@@ -104,7 +104,7 @@ void shv_send_size(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
 }
 
 
-int shv_process_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
+int shv_file_process_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
 {
     int ret;
     ccpcp_unpack_context *ctx = &shv_ctx->unpack_ctx;
@@ -169,6 +169,7 @@ int shv_process_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
                 ret = shv_file_node_seeker(item, item->file_offset);
                 if (ret < 0) {
                     // how to handle errors?
+                    shv_unpack_discard(shv_ctx);
                     ctx->err_no = CCPCP_RC_LOGICAL_ERROR;
                     item->state = IMAP_START;
                 }
@@ -232,7 +233,7 @@ int shv_process_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
     return 0;
 }
 
-void shv_confirm_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
+void shv_file_confirm_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
 {
     for (shv_ctx->shv_send = 0; shv_ctx->shv_send < 2; shv_ctx->shv_send++) {
         if (shv_ctx->shv_send) {
@@ -259,7 +260,7 @@ void shv_confirm_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
  * If only the first number is passed (offset), CRC is calculated until the end of the file.
  * If both numbers are passed (offset and size), CRC is calcaulted over size bytes.
  */
-int shv_process_crc(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
+int shv_file_process_crc(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
 {
     int ret;
     int parse_result = -1;
@@ -380,7 +381,7 @@ int shv_process_crc(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
     return 0;
 }
 
-void shv_confirm_crc(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
+void shv_file_confirm_crc(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
 {
     ccpcp_pack_context_init(&shv_ctx->pack_ctx,shv_ctx->shv_data, SHV_BUF_LEN,
                             shv_overflow_handler);

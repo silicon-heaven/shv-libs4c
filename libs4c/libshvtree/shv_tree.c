@@ -277,18 +277,14 @@ void shv_tree_node_init(shv_node_t *item, const char *child_name,
 shv_node_t *shv_tree_node_new(const char *child_name,
                               const shv_dmap_t *dir, int mode)
 {
-  shv_node_t *item = malloc(sizeof(shv_node_t));
-  if (item == NULL)
-    {
-      printf("ERROR: malloc() failed\n");
-      return NULL;
+    shv_node_t *item = calloc(1, sizeof(shv_node_t));
+    if (item == NULL) {
+        printf("ERROR: malloc() failed\n");
+        return NULL;
     }
+    shv_tree_node_init(item, child_name, dir, mode);
 
-  memset(item, 0, sizeof(shv_node_t));
-
-  shv_tree_node_init(item, child_name, dir, mode);
-
-  return item;
+    return item;
 }
 
 shv_file_node_t *shv_tree_file_node_new(const char *child_name, const shv_dmap_t *dir, int mode)
@@ -298,7 +294,7 @@ shv_file_node_t *shv_tree_file_node_new(const char *child_name, const shv_dmap_t
         printf("ERROR: calloc() failed\n");
         return NULL;
     }
-    shv_tree_node_init((shv_node_t*) item, child_name, dir, mode);
+    shv_tree_node_init(&item->shv_node, child_name, dir, mode);
     return item;
 }
 

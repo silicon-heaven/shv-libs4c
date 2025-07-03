@@ -16,7 +16,13 @@ int shv_file_node_crc32(shv_file_node_t *item, int start, size_t size, uint32_t 
         return -1;
     }
 
-    if (check_opened_file(&item->fctx, item->name) < 0) {
+    /* In this case, it is better to sync the data. Also, close the file. */
+
+    fsync(item->fctx.fd);
+    close(item->fctx.fd);
+    item->fctx.flags &= ~BITFLAG_OPENED;
+
+    if (shv_posix_check_opened_file(&item->fctx, item->name) < 0) {
         return -1;
     }
 
@@ -24,7 +30,6 @@ int shv_file_node_crc32(shv_file_node_t *item, int start, size_t size, uint32_t 
         return -1;
     }
     
-    *result = 0;
     while (size) {
         size_t toread;
         if (size > CHUNK_SIZE) {
@@ -38,5 +43,8 @@ int shv_file_node_crc32(shv_file_node_t *item, int start, size_t size, uint32_t 
         *result = crc32(*result, buffer, toread);
         size -= toread;
     }
+    /* Close the file, we expect this is the last operation with the written data. */
+    close(item->fctx.fd);
+    item->fctx.flags &= ~BITFLAG_OPENED;
     return 0;
 }
