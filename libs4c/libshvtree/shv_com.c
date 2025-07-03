@@ -18,12 +18,7 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
 #include <sys/types.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
 #include <poll.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -39,6 +34,8 @@
 #include <shv/tree/shv_com.h>
 #include <shv/tree/shv_com_common.h>
 #include <shv/tree/shv_tree.h>
+
+#define CHECK_STR(str) (str == NULL || strnlen(str, 100) == 0)
 
 static atomic_flag shv_init_done = ATOMIC_FLAG_INIT;
 
@@ -77,98 +74,6 @@ int cid_alloc(shv_con_ctx_t * shv_ctx)
     }
 
   return 1;
-}
-
-/****************************************************************************
- * Name: tcp_init
- *
- * Description:
- *   Initialize TCP client.
- *
- ****************************************************************************/
-
-int tcp_init(void)
-{
-  int sockfd;
-  struct sockaddr_in servaddr;
-  uint16_t port;
-  char *shv_broker_ip;
-  char *shv_broker_port;
-
-  /* Socket creation */
-
-  sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  if (sockfd == -1)
-    {
-      printf("ERROR: Socket creation failed.\n");
-      return -2;
-    }
-
-  memset(&servaddr, 0, sizeof(servaddr));
-
-  /* Get IP address and PORT from environment variables */
-
-  shv_broker_ip = getenv("SHV_BROKER_IP");
-  if (!shv_broker_ip)
-    {
-      printf("Unable to get SHV_BROKER_IP env variable.");
-      close(sockfd);
-      return -2;
-    }
-
-  shv_broker_port = getenv("SHV_BROKER_PORT");
-  if (!shv_broker_port)
-    {
-      printf("Unable to get SHV_BROKER_PORT env variable.");
-      close(sockfd);
-      return -2;
-    }
-  else
-    {
-      port = atoi(shv_broker_port);
-    }
-
-  /* Assign server IP and PORT */
-
-  servaddr.sin_family = AF_INET;
-  servaddr.sin_addr.s_addr = inet_addr(shv_broker_ip);
-  servaddr.sin_port = htons(port);
-
-  /* Connect the client socket to server socket */
-
-  if (connect(sockfd, (struct sockaddr*)&servaddr, sizeof(servaddr)) != 0)
-    {
-      close(sockfd);
-      return -1;
-    }
-
-  printf("Connected to the server %s:%d.\n", shv_broker_ip, port);
-
-  return sockfd;
-}
-
-/****************************************************************************
- * Name: tcp_terminate
- *
- * Description:
- *   Terminates TCP client.
- *
- ****************************************************************************/
-
-void tcp_terminate(int fd)
-{
-  int ret;
-
-  ret = close(fd);
-  if (ret < 0)
-    {
-      printf("ERROR: tcp_terminate() cannot close connection to the server, \
-              errno = %d\n", errno);
-    }
-  if (ret == 0)
-    {
-      printf("Client successfully disconnected.\n");
-    }
 }
 
 /****************************************************************************
@@ -480,8 +385,8 @@ int shv_process_input(shv_con_ctx_t * shv_ctx)
 
   struct ccpcp_unpack_context *ctx = &shv_ctx->unpack_ctx;
 
-  i = read(shv_ctx->stream_fd, shv_ctx->shv_rd_data,
-          sizeof(shv_ctx->shv_rd_data));
+  i = shv_tlayer_read(shv_ctx->connection, shv_ctx->shv_rd_data, sizeof(shv_ctx->shv_rd_data));
+
   if (i > 0)
     {
       ccpcp_unpack_context_init(ctx, shv_ctx->shv_rd_data, i,
@@ -521,29 +426,24 @@ int shv_process_input(shv_con_ctx_t * shv_ctx)
 
 static void *shv_process(void * p)
 {
-  int num_events;
   int ret;
   shv_con_ctx_t *shv_ctx = (shv_con_ctx_t *)p;
-
-  struct pollfd pfds[1];
-  pfds[0].fd = shv_ctx->stream_fd;
-  pfds[0].events = POLLIN;
 
   while (1)
     {
       /* Set timemout to one half of shv_ctx->timeout (in ms) */
 
-      num_events = poll(pfds, 1, (shv_ctx->timeout * 1000) / 2);
+      ret = shv_tlayer_dataready(shv_ctx->connection, (shv_ctx->timeout * 1000) / 2);
 
-      if (num_events == 0)
+      if (ret == 0)
         {
-          /* Poll timeout, send ping */
+          /* Timeout, send ping */
 
           shv_send_ping(shv_ctx);
         }
-      else if (pfds[0].revents & POLLIN)
+      else if (ret == 1)
         {
-          /* Event happened on our socket, process TCP input */
+          /* Data is ready, read it from the transport layer */
 
           ret = shv_process_input(shv_ctx);
         }
@@ -681,6 +581,33 @@ void shv_send_str(shv_con_ctx_t *shv_ctx, int rid, const char *str)
       cchainpack_pack_string(&shv_ctx->pack_ctx, str, strlen(str));
       cchainpack_pack_container_end(&shv_ctx->pack_ctx);
       shv_overflow_handler(&shv_ctx->pack_ctx, 0);
+    }
+}
+
+void shv_send_response_error(shv_con_ctx_t *shv_ctx, int rid, int error_code)
+{
+    ccpcp_pack_context_init(&shv_ctx->pack_ctx,shv_ctx->shv_data, SHV_BUF_LEN,
+                            shv_overflow_handler);
+
+    for (shv_ctx->shv_send = 0; shv_ctx->shv_send < 2; shv_ctx->shv_send++) {
+        if (shv_ctx->shv_send) {
+            cchainpack_pack_uint_data(&shv_ctx->pack_ctx, shv_ctx->shv_len);
+        }
+
+        shv_ctx->shv_len = 0;
+        cchainpack_pack_uint_data(&shv_ctx->pack_ctx, 1);
+        shv_pack_head_reply(shv_ctx, rid);
+
+        cchainpack_pack_imap_begin(&shv_ctx->pack_ctx);
+        cchainpack_pack_int(&shv_ctx->pack_ctx, 3);
+
+        cchainpack_pack_imap_begin(&shv_ctx->pack_ctx);
+        cchainpack_pack_int(&shv_ctx->pack_ctx, 1);
+        cchainpack_pack_int(&shv_ctx->pack_ctx, error_code);
+
+        cchainpack_pack_container_end(&shv_ctx->pack_ctx);
+        cchainpack_pack_container_end(&shv_ctx->pack_ctx);
+        shv_overflow_handler(&shv_ctx->pack_ctx, 0);
     }
 }
 
@@ -908,22 +835,23 @@ int shv_login(shv_con_ctx_t *shv_ctx)
 {
   int i;
   int id = 0;
-  char* shv_broker_user;
-  char* shv_broker_passw;
+  const char* shv_broker_user;
+  const char* shv_broker_passw;
   char* shv_broker_devid;
-  char* shv_broker_mount;
+  const char* shv_broker_mount;
+  struct shv_connection *connection = shv_ctx->connection;
 
   shv_write_err = 0;
 
-  shv_broker_user = getenv("SHV_BROKER_USER");
-  if (!shv_broker_user)
+  shv_broker_user = connection->broker_user;
+  if (CHECK_STR(shv_broker_user))
     {
       printf("Unable to get SHV_BROKER_USER env variable.");
       return -1;
     }
 
-  shv_broker_passw = getenv("SHV_BROKER_PASSWORD");
-  if (!shv_broker_passw)
+  shv_broker_passw = connection->broker_password;
+  if (CHECK_STR(shv_broker_passw))
     {
       printf("Unable to get SHV_BROKER_PASSWORD env variable.");
       return -1;
@@ -935,8 +863,8 @@ int shv_login(shv_con_ctx_t *shv_ctx)
       shv_broker_devid = "pysim";
     }
 
-  shv_broker_mount = getenv("SHV_BROKER_MOUNT");
-  if (!shv_broker_mount)
+  shv_broker_mount = connection->broker_mount;
+  if (CHECK_STR(shv_broker_mount))
     {
       shv_broker_mount = "test/pysim";
     }
@@ -989,8 +917,7 @@ int shv_login(shv_con_ctx_t *shv_ctx)
    * wait for reply from server
    */
 
-  i = read(shv_ctx->stream_fd, shv_ctx->shv_data,
-           sizeof(shv_ctx->shv_data));
+  i = shv_tlayer_read(shv_ctx->connection, shv_ctx->shv_data, sizeof(shv_ctx->shv_data));
   if (i <= 0)
     {
       return i;
@@ -1084,7 +1011,7 @@ int shv_login(shv_con_ctx_t *shv_ctx)
       shv_overflow_handler(&shv_ctx->pack_ctx, 0);
   }
 
-  i = read(shv_ctx->stream_fd, shv_ctx->shv_data, sizeof(shv_ctx->shv_data));
+  i = shv_tlayer_read(shv_ctx->connection, shv_ctx->shv_data, sizeof(shv_ctx->shv_data));
   if (i <= 0)
     {
       return i;
@@ -1103,11 +1030,7 @@ int shv_login(shv_con_ctx_t *shv_ctx)
 
 void shv_com_end(shv_con_ctx_t *ctx)
 {
-  int fd = ctx->stream_fd;
-  if (fd > 0)
-    {
-      tcp_terminate(fd);
-    }
+    shv_tlayer_close(ctx->connection);
 }
 
 /****************************************************************************
@@ -1118,13 +1041,15 @@ void shv_com_end(shv_con_ctx_t *ctx)
  *
  ****************************************************************************/
 
-void shv_con_ctx_init(shv_con_ctx_t *shv_ctx, struct shv_node *root)
+void shv_con_ctx_init(shv_con_ctx_t *shv_ctx, struct shv_node *root,
+                      struct shv_connection *connection)
 {
   memset(shv_ctx, 0, sizeof(shv_con_ctx_t));
 
   shv_ctx->root = root;
   shv_ctx->timeout = 360;
   shv_ctx->rid = 3;
+  shv_ctx->connection = connection;
 }
 
 /****************************************************************************
@@ -1147,16 +1072,16 @@ void *shv_con_handler(void * p)
 
   const struct timespec ts = {30, 0};
 
-  shv_ctx->stream_fd = tcp_init();
-  if (shv_ctx->stream_fd == -2)
+  ret = shv_tlayer_init(shv_ctx->connection);
+  if (ret == -2)
     {
       return NULL;
     }
-  else if (shv_ctx->stream_fd == -1)
+  else if (ret == -1)
     {
       printf("ERROR: could not connect to the server! Will try reconnect \
              every 30 seconds.\n");
-      while ((shv_ctx->stream_fd = tcp_init()) <= 0)
+      while (shv_tlayer_init(shv_ctx->connection) <= 0)
         {
           clock_nanosleep(CLOCK_MONOTONIC, 0, &ts, NULL);
         }
@@ -1208,7 +1133,7 @@ void *shv_con_handler(void * p)
  *
  ****************************************************************************/
 
-shv_con_ctx_t *shv_com_init(struct shv_node *root)
+shv_con_ctx_t *shv_com_init(struct shv_node *root, struct shv_connection *connection)
 {
   pthread_t thrd;
   pthread_attr_t attr;
@@ -1228,18 +1153,20 @@ shv_con_ctx_t *shv_com_init(struct shv_node *root)
       return NULL;
     }
 
-  shv_con_ctx_init(shv_ctx, root);
+  shv_con_ctx_init(shv_ctx, root, connection);
 
   /* Handle the connection in separate thread. This allows future
    * connection is server is not available during at the moment.
    */
 
-  pthread_attr_init(&attr);
+  /* UNNECESSARY CODE
+  pthread_atrr_init(&attr);
   pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
   pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
   pthread_getschedparam(pthread_self(), &policy, &schparam);
   schparam.sched_priority += 1;
   pthread_attr_setschedparam(&attr, &schparam);
+  */
   pthread_create(&thrd, NULL, shv_con_handler, shv_ctx);
 
   return shv_ctx;

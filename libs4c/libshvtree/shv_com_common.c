@@ -2,7 +2,9 @@
 #include <stdio.h>
 #include <errno.h>
 
+#include <shv/tree/shv_com.h>
 #include <shv/tree/shv_com_common.h>
+#include <shv/tree/shv_connection.h>
 #include <ulut/ul_utdefs.h>
 
 int shv_write_err = 0;
@@ -27,8 +29,7 @@ void shv_overflow_handler(struct ccpcp_pack_context *ctx, size_t size_hint)
     {
       while ((shv_write_err == 0) && (to_send > 0))
         {
-          ret = write(shv_ctx->stream_fd, ptr_data,
-                      to_send);
+          ret = shv_tlayer_write(shv_ctx->connection, ptr_data, to_send);
           if (ret <= 0)
             {
               printf("ERROR: Write error, ret = %d\n", ret);
@@ -64,9 +65,8 @@ size_t shv_underrflow_handler(struct ccpcp_unpack_context * ctx)
 
   shv_con_ctx_t *shv_ctx = UL_CONTAINEROF(ctx, shv_con_ctx_t, unpack_ctx);
 
-  i = read(shv_ctx->stream_fd, shv_ctx->shv_rd_data,
-           sizeof(shv_ctx->shv_rd_data));
-  if(i > 0)
+  i = shv_tlayer_read(shv_ctx->connection, shv_ctx->shv_rd_data, sizeof(shv_ctx->shv_rd_data));
+  if (i > 0)
     {
       ctx->start = shv_ctx->shv_rd_data;
       ctx->current = ctx->start;

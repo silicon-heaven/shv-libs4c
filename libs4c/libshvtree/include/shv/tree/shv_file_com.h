@@ -41,7 +41,7 @@ enum shv_file_node_keys
  * @param rid 
  * @param item 
  */
-void shv_send_stat(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
+void shv_file_send_stat(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
 
 /**
  * @brief File size method - contrary to stat, only the size param is sent
@@ -50,7 +50,7 @@ void shv_send_stat(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
  * @param rid 
  * @param item 
  */
-void shv_send_size(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
+void shv_file_send_size(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
 
 /**
  * @brief Crc method - compute crc over the specified range
@@ -59,7 +59,7 @@ void shv_send_size(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
  * @param rid 
  * @param item 
  */
-void shv_send_crc(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
+void shv_file_send_crc(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
 
 /**
  * @brief Unpacks the incoming data and writes them to a file
@@ -69,7 +69,7 @@ void shv_send_crc(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
  * @param item 
  * @return int 
  */
-int shv_process_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
+int shv_file_process_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
 
 /**
  * @brief Sends write confirmation to the broker
@@ -78,7 +78,7 @@ int shv_process_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
  * @param rid 
  * @param item 
  */
-void shv_confirm_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
+void shv_file_confirm_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
 
 /**
  * @brief Unpacks the desired CRC computation method and computes the CRC
@@ -88,7 +88,9 @@ void shv_confirm_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
  * @param item 
  * @return int 
  */
-int shv_process_crc(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
+int shv_file_process_crc(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
+
+void shv_file_confirm_crc(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
 
 /**
  * @brief A platform dependant function used to write count bytes from buf to a file whose

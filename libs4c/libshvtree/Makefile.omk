@@ -10,10 +10,11 @@ lib_LIBRARIES = shvtree
 renamed_include_HEADERS = include/shv/tree/shv_com.h->shv/tree/shv_com.h \
                           include/shv/tree/shv_methods.h->shv/tree/shv_methods.h \
                           include/shv/tree/shv_tree.h->shv/tree/shv_tree.h \
-                          include/shv/tree/shv_file_com.h->shv/tree/shv_tree_com.h \
-                          include/shv/tree/shv_com_common.h->shv/tree/shv_com_common.h
+                          include/shv/tree/shv_file_com.h->shv/tree/shv_file_com.h \
+                          include/shv/tree/shv_com_common.h->shv/tree/shv_com_common.h \
+                          include/shv/tree/shv_connection.h->shv/tree/shv_connection.h
 
-shvtree_SOURCES = shv_com.c shv_methods.c shv_tree.c shv_com_common.c
+shvtree_SOURCES = shv_com.c shv_file_com.c shv_methods.c shv_tree.c shv_com_common.c shv_connection.c
 
 ifeq ($(CONFIG_SHV_LIBS4C_PLATFORM), linux)
     # Check the zlib dependancy
@@ -32,6 +33,6 @@ else
     endif
 endif
 
-lib_LOADLIBES += ulut
+lib_LOADLIBES += ulut m
 
 endif # CONFIG_OC_SHV_TREE

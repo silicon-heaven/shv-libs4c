@@ -1,12 +1,13 @@
 #ifndef SHV_COM_H
 #define SHV_COM_H
 
+#include <stdint.h>
 #include <shv/chainpack/cchainpack.h>
+#include <shv/tree/shv_connection.h>
 
 #define SHV_BUF_LEN  1024
 #define SHV_MET_LEN  16
 #define SHV_PATH_LEN 64
-
 
 #define TAG_ERROR       8
 #define TAG_REQUEST_ID  8
@@ -14,12 +15,29 @@
 #define TAG_METHOD      10
 #define TAG_CALLER_IDS  11
 
-enum shv_tlayer_type
+enum shv_response_error_code
 {
-    SERIAL = 0,
-    TCP_IP,
-    LOCAL_DOMAIN,
-    CANBUS
+    SHV_RE_METHOD_NOT_FOUND = 2,
+    SHV_RE_INVALID_PARAMS = 3,
+    SHV_RE_PLATFORM_ERROR = 6,        /* An error occured when performing platform specific op */
+    SHV_RE_METHOD_CALL_EXCEPTION = 8,
+    SHV_RE_LOGIN_REQUIRED = 10,
+    SHV_RE_USER_ID_REQUIRED = 11,
+    SHV_RE_NOT_IMPLEMENTED = 12,
+    SHV_RE_TRY_AGAIN_LATER = 13,
+    SHV_RE_REQUEST_INVALID = 14
+};
+
+/**
+ * @brief SHV Connection error reporting enum.
+ *
+ */
+enum shv_con_errno
+{
+    SHV_CON_INIT,     /* Failed to init the connection */
+    SHV_PROC_THRD,    /* Unable to create the process thread */
+    SHV_CCPCP_PACK,   /* Error in the CCPCP pack context */
+    SHV_CCPCP_UNPACK, /* Error in the CCPCP unpack context */
 };
 
 /* Forward declaration */
@@ -32,6 +50,7 @@ typedef struct shv_con_ctx {
   int cid_cnt;
   int cid_capacity;
   int *cid_ptr;
+  enum shv_con_errno err_no;
   struct ccpcp_pack_context pack_ctx;
   struct ccpcp_unpack_context unpack_ctx;
   char shv_data[SHV_BUF_LEN];
@@ -39,6 +58,7 @@ typedef struct shv_con_ctx {
   int shv_len;
   int shv_send;
   struct shv_node *root;
+  struct shv_connection *connection;            /* Transport layer information */
 } shv_con_ctx_t;
 
 struct shv_dir_res {
@@ -55,7 +75,8 @@ struct shv_str_list_it_t {
    const char * (*get_next_entry)(shv_str_list_it_t *it, int reset_to_first);
 };
 
-shv_con_ctx_t *shv_com_init(struct shv_node *root);
+shv_con_ctx_t *shv_com_init(struct shv_node *root, struct shv_connection *con_info);
+
 void shv_com_end(shv_con_ctx_t *ctx);
 void shv_send_int(shv_con_ctx_t *shv_ctx, int rid, int num);
 void shv_send_double(shv_con_ctx_t *shv_ctx, int rid, double num);
@@ -65,6 +86,7 @@ void shv_send_str_list_it(shv_con_ctx_t *shv_ctx, int rid, int num_str, shv_str_
 void shv_send_dir(shv_con_ctx_t *shv_ctx, const struct shv_dir_res *results, int cnt, int rid);
 void shv_send_error(shv_con_ctx_t *shv_ctx, int rid, const char *msg);
 void shv_send_ping(shv_con_ctx_t *shv_ctx);
+void shv_send_response_error(shv_con_ctx_t *shv_ctx, int rid, int error_code);
 
 int shv_unpack_data(ccpcp_unpack_context * ctx, int * v, double * d);
 
