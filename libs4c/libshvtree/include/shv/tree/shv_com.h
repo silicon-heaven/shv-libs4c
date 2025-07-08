@@ -1,9 +1,13 @@
-#ifndef SHV_COM_H
-#define SHV_COM_H
+#pragma once
 
 #include <stdint.h>
+#include <stdatomic.h>
 #include <shv/chainpack/cchainpack.h>
-#include <shv/tree/shv_connection.h>
+
+#if defined(CONFIG_SHV_LIBS4C_PLATFORM_LINUX) || defined(CONFIG_SHV_LIBS4C_PLATFORM_NUTTX)
+  #include "shv_clayer_posix.h"
+#endif
+#include "shv_connection.h"
 
 #define SHV_BUF_LEN  1024
 #define SHV_MET_LEN  16
@@ -20,6 +24,7 @@ enum shv_response_error_code
     SHV_RE_METHOD_NOT_FOUND = 2,
     SHV_RE_INVALID_PARAMS = 3,
     SHV_RE_PLATFORM_ERROR = 6,        /* An error occured when performing platform specific op */
+    SHV_RE_FILE_MAXSIZE = 7,          /* A file operation went beyond the maximum size */
     SHV_RE_METHOD_CALL_EXCEPTION = 8,
     SHV_RE_LOGIN_REQUIRED = 10,
     SHV_RE_USER_ID_REQUIRED = 11,
@@ -36,6 +41,8 @@ enum shv_con_errno
 {
     SHV_CON_INIT,     /* Failed to init the connection */
     SHV_PROC_THRD,    /* Unable to create the process thread */
+    SHV_TLAYER_INIT,  /* Unable to init the transport layer */
+    SHV_LOGIN,        /* Unable to login to the broker */
     SHV_CCPCP_PACK,   /* Error in the CCPCP pack context */
     SHV_CCPCP_UNPACK, /* Error in the CCPCP unpack context */
 };
@@ -57,6 +64,8 @@ typedef struct shv_con_ctx {
   char shv_rd_data[SHV_BUF_LEN];
   int shv_len;
   int shv_send;
+  atomic_bool running;
+  struct shv_thrd_ctx thrd_ctx;
   struct shv_node *root;
   struct shv_connection *connection;            /* Transport layer information */
 } shv_con_ctx_t;
@@ -90,4 +99,21 @@ void shv_send_response_error(shv_con_ctx_t *shv_ctx, int rid, int error_code);
 
 int shv_unpack_data(ccpcp_unpack_context * ctx, int * v, double * d);
 
-#endif /* SHV_COM_H */
+/**
+ * @brief Platform dependant function. Creates the communication processing thread.
+ *
+ * @param priority
+ * @return int 0 on success, -1 on failure
+ */
+int shv_create_process_thread(int thrd_prio, shv_con_ctx_t *ctx);
+
+void shv_stop_process_thread(shv_con_ctx_t *shv_ctx);
+
+/**
+ * @brief Platform dependant function. Close the communication thread and deinit everything.
+ *
+ * @param shv_ctx
+ */
+void shv_com_close(shv_con_ctx_t *shv_ctx);
+
+int shv_process(shv_con_ctx_t *shv_ctx);

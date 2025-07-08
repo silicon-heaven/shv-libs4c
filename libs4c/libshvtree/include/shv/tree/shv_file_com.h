@@ -9,8 +9,7 @@
  * @brief The implementation of file nodes methods.
  */
 
-#ifndef SHV_FILE_COM_H
-#define SHV_FILE_COM_H
+#pragma once
 
 #include "shv_com.h"
 #include "shv_tree.h"
@@ -53,15 +52,6 @@ void shv_file_send_stat(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
 void shv_file_send_size(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
 
 /**
- * @brief Crc method - compute crc over the specified range
- * 
- * @param shv_ctx 
- * @param rid 
- * @param item 
- */
-void shv_file_send_crc(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
-
-/**
  * @brief Unpacks the incoming data and writes them to a file
  * 
  * @param shv_ctx 
@@ -90,15 +80,22 @@ void shv_file_confirm_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *it
  */
 int shv_file_process_crc(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
 
+/**
+ * @brief In case of success, reply with the computed CRC
+ *
+ * @param shv_ctx
+ * @param rid
+ * @param item
+ */
 void shv_file_confirm_crc(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
 
 /**
- * @brief A platform dependant function used to write count bytes from buf to a file whose
- *        attributes are stored in the arg context.
+ * @brief A platform dependant function used to write count bytes from buf to a file
  * @param item
  * @param buf   The source buffer
  * @param count The number of bytes to be written
- * @return 0 in case of success, -1 otherwise
+ * @warning The function must assure it does not write beyond the bounds of file_maxsize.
+ * @return written bytes in case of success, -1 otherwise
  */
 int shv_file_node_writer(shv_file_node_t *item, void *buf, size_t count);
 
@@ -107,7 +104,8 @@ int shv_file_node_writer(shv_file_node_t *item, void *buf, size_t count);
  * @brief A platform dependant function used to reposition the file offset.
  * @param item
  * @param offset The absolute file offset
- * @return 0 in case of success, -1 otherwise
+ * @warning The function must assure it does not seek beyond the bounds of file_maxsize.
+ * @return the new offset in case of success, -1 otherwise
  */
 int shv_file_node_seeker(shv_file_node_t *item, int offset);
 
@@ -123,5 +121,3 @@ int shv_file_node_seeker(shv_file_node_t *item, int offset);
  * @return 0 in case of success, -1 otherwise
  */
 int shv_file_node_crc32(shv_file_node_t *item, int start, size_t size, uint32_t *result);
-
-#endif /* SHV_FILE_COM_H */

@@ -1,5 +1,4 @@
-#ifndef SHV_METHODS_H
-#define SHV_METHODS_H
+#pragma once
 
 #include <ulut/ul_gavlcust.h>
 #include <ulut/ul_gsacust.h>
@@ -29,5 +28,3 @@ int shv_dir(shv_con_ctx_t * shv_ctx, shv_node_t* item, int rid);
 int shv_type(shv_con_ctx_t * shv_ctx, shv_node_t* item, int rid);
 int shv_double_get(shv_con_ctx_t * shv_ctx, shv_node_t* item, int rid);
 int shv_double_set(shv_con_ctx_t * shv_ctx, shv_node_t* item, int rid);
-
-#endif /* SHV_METHODS_H */
