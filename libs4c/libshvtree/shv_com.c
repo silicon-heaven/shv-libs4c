@@ -25,7 +25,7 @@
 #include <stdatomic.h>
 #include <pthread.h>
 #include <math.h>
-#include <errno.h>
+#include <stdatomic.h>
 
 #include <shv/chainpack/cchainpack.h>
 #include <shv/chainpack/ccpon.h>
@@ -36,8 +36,6 @@
 #include <shv/tree/shv_tree.h>
 
 #define CHECK_STR(str) (str == NULL || strnlen(str, 100) == 0)
-
-static atomic_flag shv_init_done = ATOMIC_FLAG_INIT;
 
 int get_priority_for_com(void);
 
@@ -416,41 +414,6 @@ int shv_process_input(shv_con_ctx_t * shv_ctx)
   return i;
 }
 
-/****************************************************************************
- * Name: shv_process
- *
- * Description:
- *   A separate thread that processes the received messages.
- *
- ****************************************************************************/
-
-static void *shv_process(void * p)
-{
-  int ret;
-  shv_con_ctx_t *shv_ctx = (shv_con_ctx_t *)p;
-
-  while (1)
-    {
-      /* Set timemout to one half of shv_ctx->timeout (in ms) */
-
-      ret = shv_tlayer_dataready(shv_ctx->connection, (shv_ctx->timeout * 1000) / 2);
-
-      if (ret == 0)
-        {
-          /* Timeout, send ping */
-
-          shv_send_ping(shv_ctx);
-        }
-      else if (ret == 1)
-        {
-          /* Data is ready, read it from the transport layer */
-
-          ret = shv_process_input(shv_ctx);
-        }
-    }
-
-  return NULL;
-}
 
 /****************************************************************************
  * Name: shv_send_ping
@@ -1053,98 +1016,113 @@ void shv_con_ctx_init(shv_con_ctx_t *shv_ctx, struct shv_node *root,
 }
 
 /****************************************************************************
- * Name: shv_con_handler
+ * Name: shv_process
  *
  * Description:
  *   Handle SHV connection. This is a separate thread that tries to connect
- *   to the broker every 30 seconds.
+ *   to the broker every 30 seconds. If it connects to the broker,
+ *   it communicates with it.
  *
  ****************************************************************************/
 
-void *shv_con_handler(void * p)
+int shv_process(shv_con_ctx_t *shv_ctx)
 {
-  shv_con_ctx_t *shv_ctx = (shv_con_ctx_t *)p;
-  pthread_t thrd;
-  pthread_attr_t attr;
-  struct sched_param schparam;
-  int priority_com;
   int ret;
-
   const struct timespec ts = {30, 0};
 
+  atomic_store(&shv_ctx->running, true);
   ret = shv_tlayer_init(shv_ctx->connection);
   if (ret == -2)
     {
-      return NULL;
+      shv_ctx->err_no = SHV_TLAYER_INIT;
+      return -1;
     }
   else if (ret == -1)
     {
-      printf("ERROR: could not connect to the server! Will try reconnect \
-             every 30 seconds.\n");
+      printf("ERROR: could not connect to the server! Will try reconnect every 30 seconds.\n");
       while (shv_tlayer_init(shv_ctx->connection) <= 0)
         {
           clock_nanosleep(CLOCK_MONOTONIC, 0, &ts, NULL);
         }
     }
 
+  /* We have passed the connection phase. Now perform login. */
+
   ret = shv_login(shv_ctx);
   if (ret < 0)
     {
       printf("ERROR: shv_login() failed, ret = %d\n", ret);
-      return NULL;
+      shv_ctx->err_no = SHV_LOGIN;
+      return -1;
     }
+
 
   /* Create pthread that receives messages from the server and performs
    * SHV operations.
    */
 
-  priority_com = get_priority_for_com();
-
-  if (priority_com > 0)
+  while (atomic_load(&shv_ctx->running))
     {
-      /* Set communication task priority */
+      /* Set timemout to one half of shv_ctx->timeout (in ms) */
 
-      pthread_attr_init(&attr);
-      pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
-      pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
+      ret = shv_tlayer_dataready(shv_ctx->connection, (shv_ctx->timeout * 1000) / 2);
 
-      /* Set low priority */
+      if (ret == 0)
+        {
+          /* Timeout, send ping or if there's request to end, break */
 
-      schparam.sched_priority = priority_com;
-      pthread_attr_setschedparam(&attr, &schparam);
-      pthread_create(&thrd, &attr, shv_process, shv_ctx);
+          if (atomic_load(&shv_ctx->running)) {
+            break;
+          }
 
-      pthread_attr_destroy(&attr);
+          shv_send_ping(shv_ctx);
+        }
+      else if (ret == 1)
+        {
+          /* Data is ready, read it from the transport layer */
+
+          ret = shv_process_input(shv_ctx);
+        }
     }
-  else
-    {
-      /* Run thread with main application priority */
 
-      pthread_create(&thrd, NULL, shv_process, shv_ctx);
-    }
+  return 0;
+
+  //if (priority_com > 0)
+  //  {
+  //    /* Set communication task priority */
+
+  //    pthread_attr_init(&attr);
+  //    pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
+  //    pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
+
+  //    /* Set low priority */
+
+  //    schparam.sched_priority = priority_com;
+  //    pthread_attr_setschedparam(&attr, &schparam);
+  //    pthread_create(&thrd, &attr, shv_process, shv_ctx);
+
+  //    pthread_attr_destroy(&attr);
+  //  }
+  //else
+  //  {
+  //    /* Run thread with main application priority */
+
+  //    pthread_create(&thrd, NULL, shv_process, shv_ctx);
+  //  }
 }
 
 /****************************************************************************
  * Name: shv_com_init
  *
  * Description:
- *   The functions connects TCP to the server and calls shv_login() that
- *   performs login to the broker.
+ *   Initalizes the communication context and connects tries to connect
+ *   to the broker. If the connection fails, NULL is returned.
  *
  ****************************************************************************/
 
 shv_con_ctx_t *shv_com_init(struct shv_node *root, struct shv_connection *connection)
 {
-  pthread_t thrd;
-  pthread_attr_t attr;
-  struct sched_param schparam;
-  int policy;
   int ret;
-
-  if (atomic_flag_test_and_set(&shv_init_done))
-    {
-      return NULL;
-    }
 
   shv_con_ctx_t *shv_ctx = (shv_con_ctx_t *)malloc(sizeof(shv_con_ctx_t));
   if (shv_ctx == NULL)
@@ -1155,19 +1133,21 @@ shv_con_ctx_t *shv_com_init(struct shv_node *root, struct shv_connection *connec
 
   shv_con_ctx_init(shv_ctx, root, connection);
 
-  /* Handle the connection in separate thread. This allows future
-   * connection is server is not available during at the moment.
-   */
+  /* Handle the connection in a separate thread. */
 
-  /* UNNECESSARY CODE
-  pthread_atrr_init(&attr);
-  pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
-  pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
-  pthread_getschedparam(pthread_self(), &policy, &schparam);
-  schparam.sched_priority += 1;
-  pthread_attr_setschedparam(&attr, &schparam);
-  */
-  pthread_create(&thrd, NULL, shv_con_handler, shv_ctx);
-
+  ret = shv_create_process_thread(get_priority_for_com(), shv_ctx);
+  if (ret < 0) {
+    free(shv_ctx);
+    return NULL;
+  }
   return shv_ctx;
+}
+
+void shv_com_close(shv_con_ctx_t *shv_ctx)
+{
+  int ret;
+  atomic_store(&shv_ctx->running, false);
+  shv_stop_process_thread(shv_ctx);
+  shv_tlayer_close(shv_ctx->connection);
+  free(shv_ctx);
 }

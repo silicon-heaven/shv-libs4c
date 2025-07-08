@@ -1,5 +1,4 @@
-#ifndef SHV_TREE_H
-#define SHV_TREE_H
+#pragma once
 
 #include <ulut/ul_gavlcust.h>
 #include <ulut/ul_gsacust.h>
@@ -7,8 +6,10 @@
 #include <string.h>
 #include <stdint.h>
 
+#if defined(CONFIG_SHV_LIBS4C_PLATFORM_LINUX) || defined(CONFIG_SHV_LIBS4C_PLATFORM_NUTTX)
+    #include "shv_clayer_posix.h"
+#endif
 #include "shv_com.h"
-#include "shv_clayer_posix.h"
 
 
 #define SHV_NLIST_MODE_GSA 1
@@ -81,15 +82,17 @@ typedef struct shv_file_node {
   struct shv_file_node_fctx fctx;     /* Platform dependant file context */
 
   /* Stat method attributes */
-  int file_type;
-  int file_size;
-  int file_pagesize;
+  int file_type;                      /* Defined in shv_file_type */
+  int file_maxsize;                   /* The implementation allows the file to grow,
+                                         but not beyond the absolute maximum size */
+  int file_pagesize;                  /* Page size on a given filesystem/physical memory
+                                         for efficient write accesses */
   
   enum shv_unpack_write_state state;  /* Internal unpack write state */
   int file_offset;                    /* Internal current file offset */
   
   enum shv_unpack_crc_state crcstate; /* Internal unpack crc state */
-  int crc;                            /* Internal CRC accumulator */
+  uint32_t crc;                       /* Internal CRC accumulator */
   int crc_offset;                     /* Internal file CRC compute region */
   int crc_size;                       /* Internal file CRC compute region */
 } shv_file_node_t;
@@ -176,5 +179,3 @@ void shv_tree_destroy(shv_node_t *parent);
 
 shv_node_t *shv_tree_node_new(const char *child_name, const shv_dmap_t *dir, int mode);
 shv_file_node_t *shv_tree_file_node_new(const char *child_name, const shv_dmap_t *dir, int mode);
-
-#endif  /* SHV_TREE_H */

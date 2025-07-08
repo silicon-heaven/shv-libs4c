@@ -12,7 +12,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <shv/tree/shv_connection.h>
-#include <shv/tree/shv_clayer_posix.h>
 
 void shv_connection_init(struct shv_connection *connection, enum shv_tlayer_type tlayer)
 {

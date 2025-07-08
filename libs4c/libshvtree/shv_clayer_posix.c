@@ -5,6 +5,8 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <poll.h>
+#include <sys/stat.h>
+#include <pthread.h>
 
 #include <netdb.h>
 #include <netinet/in.h>
@@ -15,8 +17,21 @@
 #include <shv/tree/shv_tree.h>
 #include <shv/tree/shv_connection.h>
 #include <shv/tree/shv_clayer_posix.h>
+#include <shv/tree/shv_com.h>
+
+#ifdef CONFIG_SHV_LIBS4C_PLATFORM_LINUX
+    #include <zlib.h>
+#else
+    #ifdef CONFIG_SHV_LIBS4C_PLATFORM_NUTTX
+        #include <nuttx/crc32.h>
+    #endif
+#endif
+
+/* The whole file is common for Linux and NuttX but NuttX does not use zlib's CRC */
 
 #define CHECK_STR(str) (str == NULL || strnlen(str, 100) == 0)
+#define RETLZ_ERROR(__err_label) if (ret < 0) goto __err_label
+#define CHUNK_SIZE ((size_t)64)
 
 int shv_posix_check_opened_file(struct shv_file_node_fctx *fctx, const char *name)
 {
@@ -32,7 +47,20 @@ int shv_posix_check_opened_file(struct shv_file_node_fctx *fctx, const char *nam
 
 int shv_file_node_writer(shv_file_node_t *item, void *buf, size_t count)
 {
+    struct stat st;
+
     if (shv_posix_check_opened_file(&item->fctx, item->name) >= 0) {
+        /* First, check the current file size */
+        if (stat(item->name, &st) < 0)  {
+            return -1;
+        }
+        /* Update count if needed. Be an ostrich and suppose st_size > 0 */
+        if (st.st_size >= item->file_maxsize) {
+            return 0;
+        } else if (st.st_size + count > item->file_maxsize) {
+            count = item->file_maxsize - st.st_size;
+        }
+
         return write(item->fctx.fd, buf, count);
     }
     return -1;
@@ -40,10 +68,78 @@ int shv_file_node_writer(shv_file_node_t *item, void *buf, size_t count)
 
 int shv_file_node_seeker(shv_file_node_t *item, int offset)
 {
+    struct stat st;
+
     if (shv_posix_check_opened_file(&item->fctx, item->name) >= 0) {
+        /* First, check boundaries */
+        if (stat(item->name, &st) < 0) {
+            return -1;
+        }
+
+        /* Cap it at the maximum file boundary. */
+        if (st.st_size + offset >= item->file_maxsize) {
+            offset = item->file_maxsize;
+        }
         return lseek(item->fctx.fd, (off_t)offset, SEEK_SET);
     }
     return -1;
+}
+
+int shv_file_node_crc32(shv_file_node_t *item, int start, size_t size, uint32_t *result)
+{
+    unsigned char buffer[CHUNK_SIZE];
+
+    /* Sanity check. Don't allow computation beyond the file's maximum size. */
+    if (item == NULL || start < 0 || result == NULL || (start + size) >= item->file_maxsize) {
+        return -1;
+    }
+
+    /* In this case, it is better to sync the data to assure all data was
+       stored into the physical medium. Also, close the file.
+       Do this only if the file is opened. */
+    if (item->fctx.flags & BITFLAG_OPENED) {
+        fsync(item->fctx.fd);
+        close(item->fctx.fd);
+        item->fctx.flags &= ~BITFLAG_OPENED;
+    }
+
+    if (shv_posix_check_opened_file(&item->fctx, item->name) < 0) {
+        return -1;
+    }
+
+    /* This is a valid seek, as it inside the file's range */
+    if (lseek(item->fctx.fd, start, SEEK_SET) < 0) {
+        return -1;
+    }
+
+    /* This algorithm handles two scenarios:
+     * 1) The CRC is computed over all specified bytes which are in the file's range.
+     * 2) If the range goes beyond the file's actual size (but not the maxsize),
+     *    the CRC is computed only over the "correct" bytes (as read starts returning 0).
+     */
+    *result = 0;
+    ssize_t bytes_read;
+    while (size) {
+        size_t toread;
+        if (size > CHUNK_SIZE) {
+            toread = CHUNK_SIZE;
+        } else {
+            toread = size;
+        }
+        bytes_read = read(item->fctx.fd, buffer, toread);
+        if (bytes_read < 0) {
+            return -1;
+        } else if (bytes_read == 0) {
+            /* The boundary was reached and thus this is the final read */
+            return 0;
+        }
+        *result = crc32(*result, buffer, toread);
+        size -= toread;
+    }
+    /* Close the file, the expected use it to obtain the CRC after writing or reading */
+    close(item->fctx.fd);
+    item->fctx.flags &= ~BITFLAG_OPENED;
+    return 0;
 }
 
 static int serial_init(struct shv_tlayer_serial_ctx *sctx)
@@ -74,7 +170,6 @@ static int serial_init(struct shv_tlayer_serial_ctx *sctx)
         goto error;
     }
 
-    sctx->flags |= BITFLAG_OPENED;
     sctx->pfds[0].fd = sctx->fd;
     sctx->pfds[0].events = POLLIN;
 
@@ -86,8 +181,7 @@ error:
 
 static int serial_read(struct shv_tlayer_serial_ctx *sctx, void *buf, size_t len)
 {
-    if (sctx == NULL || buf == NULL ||
-        !(sctx->flags & BITFLAG_OPENED)) {
+    if (sctx == NULL || buf == NULL) {
         return -1;
     }
 
@@ -96,7 +190,7 @@ static int serial_read(struct shv_tlayer_serial_ctx *sctx, void *buf, size_t len
 
 static int serial_write(struct shv_tlayer_serial_ctx *sctx, void *buf, size_t len)
 {
-    if (sctx == NULL || buf == NULL || !(sctx->flags & BITFLAG_OPENED)) {
+    if (sctx == NULL || buf == NULL) {
         return -1;
     }
 
@@ -109,7 +203,6 @@ static int serial_close(struct shv_tlayer_serial_ctx *sctx)
         return -1;
     }
 
-    sctx->flags &= ~BITFLAG_OPENED;
     tcsetattr(sctx->fd, TCSANOW, &sctx->term_backup);
     return close(sctx->fd);
 }
@@ -197,9 +290,14 @@ static int serial_dataready(struct shv_tlayer_serial_ctx *sctx, int timeout)
 
 static int tcpip_dataready(struct shv_tlayer_tcpip_ctx *tctx, int timeout)
 {
-    int ret = poll(tctx->pfds, 1, (timeout * 1000) / 2);
+    int ret = poll(tctx->pfds, 2, (timeout * 1000) / 2);
     if (ret <= 0) {
         return ret;
+    }
+
+    /* The pipe signalling termination has data ready - simulate this as a timeout */
+    if (tctx->pfds[1].revents & POLLIN) {
+        return 0;
     }
 
     if (tctx->pfds[0].revents & POLLIN) {
@@ -266,4 +364,71 @@ int shv_tlayer_dataready(struct shv_connection *connection, int timeout)
     default:
         return -1;
     }
+}
+
+static void *__shv_process(void *arg)
+{
+    shv_con_ctx_t *shv_ctx = (shv_con_ctx_t *)arg;
+    shv_ctx->thrd_ctx.thrd_ret = shv_process(shv_ctx);
+    return NULL;
+}
+
+int shv_create_process_thread(int thrd_prio, shv_con_ctx_t *ctx)
+{
+    int ret;
+    int policy;
+    pthread_attr_t attr;
+    struct sched_param schparam;
+
+    /* Create the pipe to the dataready function. The poll function is used but we expect
+     * very large timeouts to be used in the SHV application.
+     */
+    if (pipe(ctx->thrd_ctx.fildes) < 0) {
+        return -1;
+    }
+
+    /* Do a bit of hacking - in this case, the connection is specified,
+     * so we should have no problem assigning to pfds[1].
+     */
+    switch (ctx->connection->tlayer_type) {
+    case SHV_TLAYER_TCPIP:
+        printf("register pollfd\n");
+        ctx->connection->tlayer.tcpip.ctx.pfds[1].fd = ctx->thrd_ctx.fildes[0];
+        ctx->connection->tlayer.tcpip.ctx.pfds[1].events = POLLIN;
+        break;
+    case SHV_TLAYER_SERIAL:
+        ctx->connection->tlayer.serial.ctx.pfds[1].fd = ctx->thrd_ctx.fildes[0];
+        ctx->connection->tlayer.serial.ctx.pfds[1].events = POLLIN;
+        break;
+    default:
+        return -2;
+    }
+
+    ret = pthread_attr_init(&attr);
+    RETLZ_ERROR(error);
+    ret = pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
+    RETLZ_ERROR(error);
+    ret = pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
+    RETLZ_ERROR(error);
+    ret = pthread_getschedparam(pthread_self(), &policy, &schparam);
+    RETLZ_ERROR(error);
+    schparam.sched_priority = thrd_prio;
+    ret = pthread_attr_setschedparam(&attr, &schparam);
+    RETLZ_ERROR(error);
+    ret = pthread_create(&ctx->thrd_ctx.id, NULL, __shv_process, (void *)ctx);
+    RETLZ_ERROR(error);
+    return ret;
+
+error:
+    ctx->err_no = SHV_PROC_THRD;
+    return -1;
+}
+
+void shv_stop_process_thread(shv_con_ctx_t *shv_ctx)
+{
+    /* Write to the pipe to simulate the instant timeout */
+    write(shv_ctx->thrd_ctx.fildes[1], "x", 1);
+
+    /* Wait for it to join */
+    pthread_join(shv_ctx->thrd_ctx.id, NULL);
 }

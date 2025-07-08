@@ -62,7 +62,7 @@ void shv_file_send_stat(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
 
         /* The second key (file size) */
         cchainpack_pack_int(&shv_ctx->pack_ctx, FN_SIZE);
-        cchainpack_pack_int(&shv_ctx->pack_ctx, item->file_size);
+        cchainpack_pack_int(&shv_ctx->pack_ctx, item->file_maxsize);
 
         /* The third key (page size) */
         cchainpack_pack_int(&shv_ctx->pack_ctx, FN_PAGESIZE);
@@ -96,7 +96,7 @@ void shv_file_send_size(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
         cchainpack_pack_imap_begin(&shv_ctx->pack_ctx);
         /* Reply */
         cchainpack_pack_int(&shv_ctx->pack_ctx, 2);
-        cchainpack_pack_int(&shv_ctx->pack_ctx, item->file_size);
+        cchainpack_pack_int(&shv_ctx->pack_ctx, item->file_maxsize);
 
         cchainpack_pack_container_end(&shv_ctx->pack_ctx);
         shv_overflow_handler(&shv_ctx->pack_ctx, 0); 
@@ -168,7 +168,6 @@ int shv_file_process_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *ite
                 item->state = BLOB;
                 ret = shv_file_node_seeker(item, item->file_offset);
                 if (ret < 0) {
-                    // how to handle errors?
                     shv_unpack_discard(shv_ctx);
                     ctx->err_no = CCPCP_RC_LOGICAL_ERROR;
                     item->state = IMAP_START;
@@ -182,14 +181,19 @@ int shv_file_process_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *ite
         }
         case BLOB: {
             if (ctx->item.type == CCPCP_ITEM_BLOB) {
+                /* If the writer returns zero, it can mean the offset was set beyond
+                 * the maximum size (or equal to it). Thus writer will return zero,
+                 * it won't write anything but every other writes should be parsed correctly.
+                 * Yes, triggering an error is a solution too but the expected usage
+                 * is to get the file's attributes beforehand and work with that.
+                 */
                 ret = shv_file_node_writer(item, ctx->item.as.String.chunk_start,
                                            ctx->item.as.String.chunk_size);
                 if (ret < 0) {
                     shv_unpack_discard(shv_ctx);
                     ctx->err_no = CCPCP_RC_LOGICAL_ERROR;
                     item->state = IMAP_START;
-                }
-                if (ctx->item.as.String.last_chunk) {
+                } else if (ctx->item.as.String.last_chunk) {
                     /* We received the last chunk of the string, we can proceed further */
                     item->state = LIST_STOP;
                 }
@@ -365,12 +369,15 @@ int shv_file_process_crc(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
         }
     } while (ctx->err_no == CCPCP_RC_OK);
     
+    /* In case of 0 and 1, the file can be much smaller than file_maxsize.
+     * But suppose the crc32 calculator does not go beyond the actual file size.
+     */
     if (parse_result == 0) {
         start = 0;
-        size = item->file_size;
+        size = item->file_maxsize;
     } else if (parse_result == 1) {
         start = item->crc_offset;
-        size = item->file_size - item->crc_offset;
+        size = item->file_maxsize - item->crc_offset;
     } else if (parse_result == 2) {
         start = item->crc_offset;
         size = item->crc_size;

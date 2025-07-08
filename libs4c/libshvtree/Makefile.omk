@@ -22,11 +22,13 @@ ifeq ($(CONFIG_SHV_LIBS4C_PLATFORM), linux)
     ifeq ($(ZLIB_FOUND),)
         $(error zlib library not found, you need to install it fisrt)
     endif
-    shvtree_SOURCES += shv_clayer_posix.c shv_clayer_linux.c
+    DEFS += -DCONFIG_SHV_LIBS4C_PLATFORM_LINUX
+    shvtree_SOURCES += shv_clayer_posix.c
     renamed_include_HEADERS += include/shv/tree/shv_clayer_posix.h->shv/tree/shv_clayer_posix.h
 else
     ifeq ($(CONFIG_SHV_LIBS4C_PLATFORM), nuttx)
-        shvtree_SOURCES += shv_clayer_posix.c shv_clayer_nuttx.c
+        DEFS += -DCONFIG_SHV_LIBS4C_PLATFORM_NUTTX
+        shvtree_SOURCES += shv_clayer_posix.c
         renamed_include_HEADERS += include/shv/tree/shv_clayer_posix.h->shv/tree/shv_clayer_posix.h
     else
         $(error Define CONFIG_SHV_LIBS4C_PLATFORM: either "linux" or "nuttx")

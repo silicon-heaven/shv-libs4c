@@ -1,10 +1,9 @@
-#ifndef SHV_CONNECTION_H
-#define SHV_CONNECTION_H
+#pragma once
 
 #include <stdint.h>
 #include <stddef.h>
 
-#include <shv/tree/shv_clayer_posix.h>
+#include "shv_clayer_posix.h"
 
 enum shv_tlayer_type
 {
@@ -122,4 +121,3 @@ void shv_connection_init(struct shv_connection *connection, enum shv_tlayer_type
 int shv_connection_tcpip_init(struct shv_connection *connection,
                               const char *ip_addr, uint16_t port);
 
-#endif /* SHV_CONNECTION_H */
