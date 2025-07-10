@@ -117,7 +117,13 @@ int shv_file_node_crc32(shv_file_node_t *item, int start, size_t size, uint32_t 
      * 2) If the range goes beyond the file's actual size (but not the maxsize),
      *    the CRC is computed only over the "correct" bytes (as read starts returning 0).
      */
+#ifdef CONFIG_SHV_LIBS4C_PLATFORM_LINUX
     *result = 0;
+#else
+#ifdef CONFIG_SHV_LIBS4C_PLATFORM_NUTTX
+    *result = 0xFFFFFFFF;
+#endif
+#endif
     ssize_t bytes_read;
     while (size) {
         size_t toread;
@@ -133,7 +139,13 @@ int shv_file_node_crc32(shv_file_node_t *item, int start, size_t size, uint32_t 
             /* The boundary was reached and thus this is the final read */
             return 0;
         }
+#ifdef CONFIG_SHV_LIBS4C_PLATFORM_LINUX
         *result = crc32(*result, buffer, toread);
+#else
+#ifdef CONFIG_SHV_LIBS4C_PLATFORM_NUTTX
+        *result = crc32part((uint8_t *)buffer, toread, *result);
+#endif
+#endif
         size -= toread;
     }
     /* Close the file, the expected use it to obtain the CRC after writing or reading */
