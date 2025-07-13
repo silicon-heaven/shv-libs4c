@@ -30,12 +30,12 @@
 #include <shv/tree/shv_com.h>
 #include <shv/tree/shv_com_common.h>
 #include <shv/tree/shv_tree.h>
-#include <shv/tree/shv_file_com.h>
 
 void shv_file_send_stat(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
 {
     /* SHV only supports regular files, as of July 2025 */ 
     if (item->file_type != REGULAR) {
+        shv_send_response_error(shv_ctx, rid, SHV_RE_INVALID_PARAMS);
         return; 
     }
 
@@ -70,8 +70,8 @@ void shv_file_send_stat(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
 
         /* The sixth key (max send size), limit this by the pagesize multiples */
         cchainpack_pack_int(&shv_ctx->pack_ctx, FN_MAXWRITE);
-        /* 8 * PG_SIZE is reasonable */
-        cchainpack_pack_int(&shv_ctx->pack_ctx, 8*item->file_pagesize);
+        /* 4 * PG_SIZE is reasonable */
+        cchainpack_pack_int(&shv_ctx->pack_ctx, 4 * item->file_pagesize);
 
         cchainpack_pack_container_end(&shv_ctx->pack_ctx);
         cchainpack_pack_container_end(&shv_ctx->pack_ctx);

@@ -17,8 +17,8 @@
 /* File type identification enum */
 enum shv_file_type
 {
-  REGULAR = 0,         /* As of July 2025, the only supported file type */
-  SHV_FILE_TYPE_COUNT
+  REGULAR = 0,           /* As of July 2025, the only supported file type */
+  SHV_FILE_TYPE_COUNT,
 };
 
 /* Stat method keys identification enum */
