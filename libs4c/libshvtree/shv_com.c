@@ -1010,7 +1010,7 @@ void shv_con_ctx_init(shv_con_ctx_t *shv_ctx, struct shv_node *root,
   memset(shv_ctx, 0, sizeof(shv_con_ctx_t));
 
   shv_ctx->root = root;
-  shv_ctx->timeout = 360;
+  shv_ctx->timeout = 60;
   shv_ctx->rid = 3;
   shv_ctx->connection = connection;
 }
@@ -1071,10 +1071,9 @@ int shv_process(shv_con_ctx_t *shv_ctx)
         {
           /* Timeout, send ping or if there's request to end, break */
 
-          if (atomic_load(&shv_ctx->running)) {
-            break;
+          if (!atomic_load(&shv_ctx->running)) {
+              break;
           }
-
           shv_send_ping(shv_ctx);
         }
       else if (ret == 1)

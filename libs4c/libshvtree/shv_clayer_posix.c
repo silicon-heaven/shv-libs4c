@@ -7,6 +7,7 @@
 #include <poll.h>
 #include <sys/stat.h>
 #include <pthread.h>
+#include <string.h>
 
 #include <netdb.h>
 #include <netinet/in.h>
@@ -18,13 +19,15 @@
 #include <shv/tree/shv_connection.h>
 #include <shv/tree/shv_clayer_posix.h>
 #include <shv/tree/shv_com.h>
+#include <shv/tree/shv_file_com.h>
 
-#ifdef CONFIG_SHV_LIBS4C_PLATFORM_LINUX
+#if defined(CONFIG_SHV_LIBS4C_PLATFORM_LINUX)
     #include <zlib.h>
-#else
-    #ifdef CONFIG_SHV_LIBS4C_PLATFORM_NUTTX
-        #include <nuttx/crc32.h>
-    #endif
+#elif defined(CONFIG_SHV_LIBS4C_PLATFORM_NUTTX)
+    #include <nuttx/crc32.h>
+    #include <nxboot.h>
+    #include <sys/ioctl.h>
+    #include <nuttx/mtd/mtd.h>
 #endif
 
 /* The whole file is common for Linux and NuttX but NuttX does not use zlib's CRC */
@@ -33,32 +36,63 @@
 #define RETLZ_ERROR(__err_label) if (ret < 0) goto __err_label
 #define CHUNK_SIZE ((size_t)64)
 
-int shv_posix_check_opened_file(struct shv_file_node_fctx *fctx, const char *name)
+static int shv_posix_check_opened_file(shv_file_node_t *item)
 {
-    if (!(fctx->flags & BITFLAG_OPENED)) {
-        fctx->fd = open(name, O_RDWR | O_CREAT, 0644);
-        if (fctx->fd < 0) {
+    if (!(item->fctx.flags & BITFLAG_OPENED)) {
+#if defined(CONFIG_SHV_LIBS4C_PLATFORM_LINUX)
+        item->fctx.fd = open(item->name, O_RDWR | O_CREAT, 0644);
+
+        if (item->fctx.fd < 0) {
             return -1;
         }
-        fctx->flags |= BITFLAG_OPENED;
+#elif defined(CONFIG_SHV_LIBS4C_PLATFORM_NUTTX)
+        if (strncmp(item->name, "*NXBOOT_MTD*", 12) == 0) {
+            item->fctx.fd = nxboot_open_update_partition();
+        } else {
+            item->fctx.fd = open(item->name, O_RDWR | O_CREAT, 0644);
+        }
+
+        if (item->fctx.fd < 0) {
+            return -1;
+        }
+#endif
+        item->fctx.flags |= BITFLAG_OPENED;
     }
     return 0;
 }
 
+static int shv_posix_get_size(shv_file_node_t *item)
+{
+#ifdef CONFIG_SHV_LIBS4C_PLATFORM_NUTTX
+    /* Since NXBoot has a different API, suppose the file is zero bytes big.
+     * This overcomes following conditions.
+     */
+    if (strncmp(item->name, "*NXBOOT_MTD*", 12) == 0) {
+        return 0;
+    }
+#endif
+    struct stat st;
+    if (stat(item->name, &st) < 0) {
+        return -1;
+    }
+    return st.st_size;
+}
+
 int shv_file_node_writer(shv_file_node_t *item, void *buf, size_t count)
 {
-    struct stat st;
+    int fsize;
 
-    if (shv_posix_check_opened_file(&item->fctx, item->name) >= 0) {
+    if (shv_posix_check_opened_file(item) >= 0) {
         /* First, check the current file size */
-        if (stat(item->name, &st) < 0)  {
+        fsize = shv_posix_get_size(item);
+        if (fsize < 0)  {
             return -1;
         }
         /* Update count if needed. Be an ostrich and suppose st_size > 0 */
-        if (st.st_size >= item->file_maxsize) {
+        if (fsize >= item->file_maxsize) {
             return 0;
-        } else if (st.st_size + count > item->file_maxsize) {
-            count = item->file_maxsize - st.st_size;
+        } else if (fsize + count > item->file_maxsize) {
+            count = item->file_maxsize - fsize;
         }
 
         return write(item->fctx.fd, buf, count);
@@ -68,16 +102,17 @@ int shv_file_node_writer(shv_file_node_t *item, void *buf, size_t count)
 
 int shv_file_node_seeker(shv_file_node_t *item, int offset)
 {
-    struct stat st;
+    int fsize;
 
-    if (shv_posix_check_opened_file(&item->fctx, item->name) >= 0) {
+    if (shv_posix_check_opened_file(item) >= 0) {
         /* First, check boundaries */
-        if (stat(item->name, &st) < 0) {
+        fsize = shv_posix_get_size(item);
+        if (fsize < 0) {
             return -1;
         }
 
         /* Cap it at the maximum file boundary. */
-        if (st.st_size + offset >= item->file_maxsize) {
+        if (fsize + offset >= item->file_maxsize) {
             offset = item->file_maxsize;
         }
         return lseek(item->fctx.fd, (off_t)offset, SEEK_SET);
@@ -87,6 +122,12 @@ int shv_file_node_seeker(shv_file_node_t *item, int offset)
 
 int shv_file_node_crc32(shv_file_node_t *item, int start, size_t size, uint32_t *result)
 {
+    /* The calculation between Linux and NuttX differs a bit. While both implementations
+     * use the IEEE 802.3, the process is a bit different.
+     * Linux: init=0, use zlib
+     * NuttX: init=0xFFFFFFFF, the result must be negated, use internal CRC table.
+     */
+
     unsigned char buffer[CHUNK_SIZE];
 
     /* Sanity check. Don't allow computation beyond the file's maximum size. */
@@ -103,7 +144,7 @@ int shv_file_node_crc32(shv_file_node_t *item, int start, size_t size, uint32_t 
         item->fctx.flags &= ~BITFLAG_OPENED;
     }
 
-    if (shv_posix_check_opened_file(&item->fctx, item->name) < 0) {
+    if (shv_posix_check_opened_file(item) < 0) {
         return -1;
     }
 
@@ -117,12 +158,10 @@ int shv_file_node_crc32(shv_file_node_t *item, int start, size_t size, uint32_t 
      * 2) If the range goes beyond the file's actual size (but not the maxsize),
      *    the CRC is computed only over the "correct" bytes (as read starts returning 0).
      */
-#ifdef CONFIG_SHV_LIBS4C_PLATFORM_LINUX
+#if defined(CONFIG_SHV_LIBS4C_PLATFORM_LINUX)
     *result = 0;
-#else
-#ifdef CONFIG_SHV_LIBS4C_PLATFORM_NUTTX
+#elif defined(CONFIG_SHV_LIBS4C_PLATFORM_NUTTX)
     *result = 0xFFFFFFFF;
-#endif
 #endif
     ssize_t bytes_read;
     while (size) {
@@ -137,20 +176,25 @@ int shv_file_node_crc32(shv_file_node_t *item, int start, size_t size, uint32_t 
             return -1;
         } else if (bytes_read == 0) {
             /* The boundary was reached and thus this is the final read */
+            close(item->fctx.fd);
+            item->fctx.flags &= ~BITFLAG_OPENED;
             return 0;
         }
-#ifdef CONFIG_SHV_LIBS4C_PLATFORM_LINUX
+#if defined(CONFIG_SHV_LIBS4C_PLATFORM_LINUX)
         *result = crc32(*result, buffer, toread);
-#else
-#ifdef CONFIG_SHV_LIBS4C_PLATFORM_NUTTX
+#elif defined(CONFIG_SHV_LIBS4C_PLATFORM_NUTTX)
         *result = crc32part((uint8_t *)buffer, toread, *result);
-#endif
 #endif
         size -= toread;
     }
+#ifdef CONFIG_SHV_LIBS4C_PLATFORM_NUTTX
+    /* Negate the whole thing. */
+    *result = ~*result;
+#endif
     /* Close the file, the expected use it to obtain the CRC after writing or reading */
     close(item->fctx.fd);
     item->fctx.flags &= ~BITFLAG_OPENED;
+    printf("CRC calc OK!\n");
     return 0;
 }
 
@@ -302,7 +346,7 @@ static int serial_dataready(struct shv_tlayer_serial_ctx *sctx, int timeout)
 
 static int tcpip_dataready(struct shv_tlayer_tcpip_ctx *tctx, int timeout)
 {
-    int ret = poll(tctx->pfds, 2, (timeout * 1000) / 2);
+    int ret = poll(tctx->pfds, 2, timeout);
     if (ret <= 0) {
         return ret;
     }

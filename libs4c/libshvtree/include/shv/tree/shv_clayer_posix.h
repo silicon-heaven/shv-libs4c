@@ -41,13 +41,3 @@ struct shv_thrd_ctx
     int thrd_ret;
     int fildes[2]; /* Create a virtual pipe whose end will be polled by poll in dataready */
 };
-
-/**
- * @brief Internal function to check whether the file is opened.
- *        If not, the function opens the file given by "name".
- *
- * @param fctx
- * @param name
- * @return 0 in case of success, -1 otherwise
- */
-int shv_posix_check_opened_file(struct shv_file_node_fctx *fctx, const char *name);

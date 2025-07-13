@@ -15,6 +15,17 @@
 #define SHV_NLIST_MODE_GSA 1
 #define SHV_NLIST_MODE_STATIC 2
 
+/* A helper macro that defines the node's methods */
+#define SHV_CREATE_NODE_DMAP(node, list_of_addrs)\
+    {\
+        .methods =\
+        {\
+            .items = (void **)list_of_addrs,\
+            .count = sizeof(list_of_addrs) / sizeof(list_of_addrs[0]),\
+            .alloc_count = 0\
+        }\
+    }
+
 /* The Write method unpack state */
 enum shv_unpack_write_state
 {
@@ -38,7 +49,6 @@ enum shv_unpack_crc_state
   C_LIST_END,
   C_SIZE
 };
-
 
 typedef struct shv_node_list {
   int mode;                         /* Mode selection (GAVL vs GSA, static vs dynamic) */
