@@ -266,8 +266,6 @@ static int serial_close(struct shv_tlayer_serial_ctx *sctx)
 static int tcpip_init(struct shv_connection *connection)
 {
     struct sockaddr_in servaddr;
-    uint16_t port;
-    const char *shv_broker_ip;
 
     /* Socket creation */
 
@@ -277,39 +275,42 @@ static int tcpip_init(struct shv_connection *connection)
         return -2;
     }
 
-    memset(&servaddr, 0, sizeof(servaddr));
-
     /* Get IP address and PORT from environment variables */
 
-    shv_broker_ip = connection->tlayer.tcpip.ip_addr;
-    if (CHECK_STR(shv_broker_ip))
-    {
-      printf("Unable to get the IP addr.");
-      close(connection->tlayer.tcpip.ctx.sockfd);
-      return -2;
+    if (CHECK_STR(connection->tlayer.tcpip.ip_addr)) {
+        printf("Unable to get the IP addr.");
+        close(connection->tlayer.tcpip.ctx.sockfd);
+        return -2;
     }
-
-    port = connection->tlayer.tcpip.port;
 
     /* Assign server IP and PORT */
 
+    memset(&servaddr, 0, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = inet_addr(shv_broker_ip);
-    servaddr.sin_port = htons(port);
+    servaddr.sin_addr.s_addr = inet_addr(connection->tlayer.tcpip.ip_addr);
+    servaddr.sin_port = htons(connection->tlayer.tcpip.port);
 
     /* Connect the client socket to server socket */
 
     if (connect(connection->tlayer.tcpip.ctx.sockfd,
-                (struct sockaddr*)&servaddr, sizeof(servaddr)) != 0)
-    {
-      close(connection->tlayer.tcpip.ctx.sockfd);
-      return -1;
+                (struct sockaddr*)&servaddr, sizeof(servaddr)) != 0) {
+        close(connection->tlayer.tcpip.ctx.sockfd);
+        if (errno == ECONNREFUSED ||
+            errno == ENETUNREACH ||
+            errno == ETIMEDOUT ||
+            errno == ECONNRESET ||
+            errno == EHOSTUNREACH ||
+            errno == ENETDOWN) {
+            return -1;
+        }
+        return -2;
     }
 
     connection->tlayer.tcpip.ctx.pfds[0].fd = connection->tlayer.tcpip.ctx.sockfd;
     connection->tlayer.tcpip.ctx.pfds[0].events = POLLIN;
 
-    printf("Connected to the server %s:%d.\n", shv_broker_ip, port);
+    printf("Connected to the server %s:%d.\n", connection->tlayer.tcpip.ip_addr,
+                                               connection->tlayer.tcpip.port);
 
     return 0;
 }
@@ -358,6 +359,12 @@ static int tcpip_dataready(struct shv_tlayer_tcpip_ctx *tctx, int timeout)
 
     if (tctx->pfds[0].revents & POLLIN) {
         return 1;
+    }
+    if (tctx->pfds[0].revents & POLLHUP || tctx->pfds[0].revents & POLLERR) {
+        int dest;
+        socklen_t len = sizeof(dest);
+        getsockopt(tctx->sockfd, SOL_SOCKET, SO_ERROR, &dest, &len);
+        printf("ERROR: error on sock's fd, errno=%d, getsockopterr=%d\n", errno, dest);
     }
     return -1;
 }
@@ -448,7 +455,6 @@ int shv_create_process_thread(int thrd_prio, shv_con_ctx_t *ctx)
      */
     switch (ctx->connection->tlayer_type) {
     case SHV_TLAYER_TCPIP:
-        printf("register pollfd\n");
         ctx->connection->tlayer.tcpip.ctx.pfds[1].fd = ctx->thrd_ctx.fildes[0];
         ctx->connection->tlayer.tcpip.ctx.pfds[1].events = POLLIN;
         break;
@@ -487,4 +493,7 @@ void shv_stop_process_thread(shv_con_ctx_t *shv_ctx)
 
     /* Wait for it to join */
     pthread_join(shv_ctx->thrd_ctx.id, NULL);
+
+    close(shv_ctx->thrd_ctx.fildes[0]);
+    close(shv_ctx->thrd_ctx.fildes[1]);
 }

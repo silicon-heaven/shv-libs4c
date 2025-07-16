@@ -1034,16 +1034,16 @@ int shv_process(shv_con_ctx_t *shv_ctx)
   ret = shv_tlayer_init(shv_ctx->connection);
   if (ret == -2)
     {
+      printf("ERROR: failed to initialize the lowlevel transport layer!\n");
       shv_ctx->err_no = SHV_TLAYER_INIT;
       return -1;
     }
   else if (ret == -1)
     {
-      printf("ERROR: could not connect to the server! Will try reconnect every 30 seconds.\n");
-      while (shv_tlayer_init(shv_ctx->connection) <= 0)
-        {
+      do {
+          printf("ERROR: could not connect to the server! Will try reconnect every 30 seconds.\n");
           clock_nanosleep(CLOCK_MONOTONIC, 0, &ts, NULL);
-        }
+      } while (atomic_load(&shv_ctx->running) && shv_tlayer_init(shv_ctx->connection) < 0);
     }
 
   /* We have passed the connection phase. Now perform login. */
@@ -1055,7 +1055,6 @@ int shv_process(shv_con_ctx_t *shv_ctx)
       shv_ctx->err_no = SHV_LOGIN;
       return -1;
     }
-
 
   /* Create pthread that receives messages from the server and performs
    * SHV operations.
@@ -1081,6 +1080,10 @@ int shv_process(shv_con_ctx_t *shv_ctx)
           /* Data is ready, read it from the transport layer */
 
           ret = shv_process_input(shv_ctx);
+        }
+      else
+        {
+          return -1;
         }
     }
 
