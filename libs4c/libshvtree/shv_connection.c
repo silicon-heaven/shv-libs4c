@@ -17,6 +17,9 @@ void shv_connection_init(struct shv_connection *connection, enum shv_tlayer_type
 {
     memset(connection, 0, sizeof(struct shv_connection));
     connection->tlayer_type = tlayer;
+    connection->reconnect_period = SHV_DEFAULT_RECONNECT_PERIOD;
+    /* Infinite */
+    connection->reconnect_retries = 0;
 }
 
 int shv_connection_tcpip_init(struct shv_connection *connection,
