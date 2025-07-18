@@ -42,6 +42,7 @@ enum shv_con_errno
     SHV_CON_INIT,     /* Failed to init the connection */
     SHV_PROC_THRD,    /* Unable to create the process thread */
     SHV_TLAYER_INIT,  /* Unable to init the transport layer */
+    SHV_RECONNECTS,   /* The maximum number of reconnects to a broker reached */
     SHV_LOGIN,        /* Unable to login to the broker */
     SHV_CCPCP_PACK,   /* Error in the CCPCP pack context */
     SHV_CCPCP_UNPACK, /* Error in the CCPCP unpack context */
@@ -64,6 +65,7 @@ typedef struct shv_con_ctx {
   char shv_rd_data[SHV_BUF_LEN];
   int shv_len;
   int shv_send;
+  int reconnects;
   atomic_bool running;
   struct shv_thrd_ctx thrd_ctx;
   struct shv_node *root;
@@ -118,4 +120,13 @@ void shv_stop_process_thread(shv_con_ctx_t *shv_ctx);
  */
 void shv_com_close(shv_con_ctx_t *shv_ctx);
 
+/**
+ * @brief Launched in a separate thread, this function handles the connection to the broker.
+ *   Firstly, it tries to the broker every shv_connection.reconnect_period seconds.
+ *   If it connects to the broker, it communicates with it.
+ *   The maximum number of reconnect retries is specified in shv_connection.reconnect_retries.
+ *
+ * @param shv_ctx
+ * @return 0 on success, -1 on failure
+ */
 int shv_process(shv_con_ctx_t *shv_ctx);
