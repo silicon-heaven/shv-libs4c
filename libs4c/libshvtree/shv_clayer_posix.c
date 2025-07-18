@@ -194,7 +194,6 @@ int shv_file_node_crc32(shv_file_node_t *item, int start, size_t size, uint32_t 
     /* Close the file, the expected use it to obtain the CRC after writing or reading */
     close(item->fctx.fd);
     item->fctx.flags &= ~BITFLAG_OPENED;
-    printf("CRC calc OK!\n");
     return 0;
 }
 
@@ -271,14 +270,14 @@ static int tcpip_init(struct shv_connection *connection)
 
     connection->tlayer.tcpip.ctx.sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (connection->tlayer.tcpip.ctx.sockfd == -1) {
-        printf("ERROR: Socket creation failed.\n");
+        fprintf(stderr, "ERROR: Socket creation failed.\n");
         return -2;
     }
 
     /* Get IP address and PORT from environment variables */
 
     if (CHECK_STR(connection->tlayer.tcpip.ip_addr)) {
-        printf("Unable to get the IP addr.");
+        fprintf(stderr, "Unable to get the IP addr.");
         close(connection->tlayer.tcpip.ctx.sockfd);
         return -2;
     }
@@ -331,10 +330,10 @@ static int tcpip_close(struct shv_tlayer_tcpip_ctx *tctx)
 
     ret = close(tctx->sockfd);
     if (ret < 0) {
-      printf("ERROR: tcp_terminate() cannot close connection to the server, \
+        fprintf(stderr, "ERROR: tcp_terminate() cannot close connection to the server, \
               errno = %d\n", errno);
     } else if (ret == 0) {
-      printf("Client successfully disconnected.\n");
+        fprintf(stderr, "Client successfully disconnected.\n");
     }
 
     return ret;
@@ -364,7 +363,7 @@ static int tcpip_dataready(struct shv_tlayer_tcpip_ctx *tctx, int timeout)
         int dest;
         socklen_t len = sizeof(dest);
         getsockopt(tctx->sockfd, SOL_SOCKET, SO_ERROR, &dest, &len);
-        printf("ERROR: error on sock's fd, errno=%d, getsockopterr=%d\n", errno, dest);
+        fprintf(stderr, "ERROR: error on sock's fd, errno=%d, getsockopterr=%d\n", errno, dest);
     }
     return -1;
 }
