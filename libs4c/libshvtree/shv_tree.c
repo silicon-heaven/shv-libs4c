@@ -351,7 +351,7 @@ int shv_node_process(shv_con_ctx_t * shv_ctx, int rid, const char * met,
     {
       char error_msg[80];
       sprintf(error_msg, "Node '%s' does not exist.", path);
-      shv_send_error(shv_ctx, rid, error_msg);
+      shv_send_error(shv_ctx, rid, SHV_RE_METHOD_CALL_EXCEPTION, error_msg);
       return 0;
     }
 
@@ -362,7 +362,7 @@ int shv_node_process(shv_con_ctx_t * shv_ctx, int rid, const char * met,
     {
       char error_msg[80];
       sprintf(error_msg, "Method '%s' does not exist.", met);
-      shv_send_error(shv_ctx, rid, error_msg);
+      shv_send_error(shv_ctx, rid, SHV_RE_METHOD_CALL_EXCEPTION, error_msg);
       return 0;
     }
 

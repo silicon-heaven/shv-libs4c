@@ -263,7 +263,7 @@ int shv_unpack_head(shv_con_ctx_t * shv_ctx, int * rid, char * method,
                 {
                   char error_msg[80];
                   sprintf(error_msg, "Requested PATH is too long.");
-                  shv_send_error(shv_ctx, *rid, error_msg);
+                  shv_send_error(shv_ctx, *rid, SHV_RE_METHOD_CALL_EXCEPTION, error_msg);
                 }
             }
 
@@ -283,7 +283,7 @@ int shv_unpack_head(shv_con_ctx_t * shv_ctx, int * rid, char * method,
                 {
                   char error_msg[80];
                   sprintf(error_msg, "Requested METHOD is too long.");
-                  shv_send_error(shv_ctx, *rid, error_msg);
+                  shv_send_error(shv_ctx, *rid, SHV_RE_METHOD_CALL_EXCEPTION, error_msg);
                 }
             }
         }
@@ -547,7 +547,7 @@ void shv_send_str(shv_con_ctx_t *shv_ctx, int rid, const char *str)
     }
 }
 
-void shv_send_response_error(shv_con_ctx_t *shv_ctx, int rid, int error_code)
+void shv_send_empty_response(shv_con_ctx_t *shv_ctx, int rid)
 {
     ccpcp_pack_context_init(&shv_ctx->pack_ctx,shv_ctx->shv_data, SHV_BUF_LEN,
                             shv_overflow_handler);
@@ -559,17 +559,13 @@ void shv_send_response_error(shv_con_ctx_t *shv_ctx, int rid, int error_code)
 
         shv_ctx->shv_len = 0;
         cchainpack_pack_uint_data(&shv_ctx->pack_ctx, 1);
+
         shv_pack_head_reply(shv_ctx, rid);
 
+        /* Empty IMap */
         cchainpack_pack_imap_begin(&shv_ctx->pack_ctx);
-        cchainpack_pack_int(&shv_ctx->pack_ctx, 3);
-
-        cchainpack_pack_imap_begin(&shv_ctx->pack_ctx);
-        cchainpack_pack_int(&shv_ctx->pack_ctx, 1);
-        cchainpack_pack_int(&shv_ctx->pack_ctx, error_code);
-
         cchainpack_pack_container_end(&shv_ctx->pack_ctx);
-        cchainpack_pack_container_end(&shv_ctx->pack_ctx);
+
         shv_overflow_handler(&shv_ctx->pack_ctx, 0);
     }
 }
@@ -756,7 +752,8 @@ void shv_send_dir(shv_con_ctx_t *shv_ctx, const struct shv_dir_res *results,
  *
  ****************************************************************************/
 
-void shv_send_error(shv_con_ctx_t *shv_ctx, int rid, const char *msg)
+void shv_send_error(shv_con_ctx_t *shv_ctx, int rid, enum shv_response_error_code code,
+                    const char *msg)
 {
   ccpcp_pack_context_init(&shv_ctx->pack_ctx,shv_ctx->shv_data,
                           SHV_BUF_LEN, shv_overflow_handler);
@@ -770,18 +767,25 @@ void shv_send_error(shv_con_ctx_t *shv_ctx, int rid, const char *msg)
 
       shv_ctx->shv_len = 0;
       cchainpack_pack_uint_data(&shv_ctx->pack_ctx, 1);
-
       shv_pack_head_reply(shv_ctx, rid);
 
+      /* Pack the error code */
       cchainpack_pack_imap_begin(&shv_ctx->pack_ctx);
       cchainpack_pack_int(&shv_ctx->pack_ctx, 3);
+
+      /* Pack the error number */
       cchainpack_pack_imap_begin(&shv_ctx->pack_ctx);
       cchainpack_pack_int(&shv_ctx->pack_ctx, 1);
       cchainpack_pack_int(&shv_ctx->pack_ctx, TAG_ERROR);
-      cchainpack_pack_int(&shv_ctx->pack_ctx, 2);
-      cchainpack_pack_string(&shv_ctx->pack_ctx, msg, strlen(msg));
+
+      /* Pack the error message (voluntary) */
+      if (msg != NULL) {
+          cchainpack_pack_int(&shv_ctx->pack_ctx, 2);
+          cchainpack_pack_string(&shv_ctx->pack_ctx, msg, strlen(msg));
+      }
       cchainpack_pack_container_end(&shv_ctx->pack_ctx);
       cchainpack_pack_container_end(&shv_ctx->pack_ctx);
+
       shv_overflow_handler(&shv_ctx->pack_ctx, 0);
     }
 }

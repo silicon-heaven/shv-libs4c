@@ -93,9 +93,10 @@ void shv_send_str(shv_con_ctx_t *shv_ctx, int rid, const char *str);
 void shv_send_str_list(shv_con_ctx_t *shv_ctx, int rid, int num_str, const char **str);
 void shv_send_str_list_it(shv_con_ctx_t *shv_ctx, int rid, int num_str, shv_str_list_it_t *str_it);
 void shv_send_dir(shv_con_ctx_t *shv_ctx, const struct shv_dir_res *results, int cnt, int rid);
-void shv_send_error(shv_con_ctx_t *shv_ctx, int rid, const char *msg);
+void shv_send_error(shv_con_ctx_t *shv_ctx, int rid, enum shv_response_error_code code,
+                    const char *msg);
 void shv_send_ping(shv_con_ctx_t *shv_ctx);
-void shv_send_response_error(shv_con_ctx_t *shv_ctx, int rid, int error_code);
+void shv_send_empty_response(shv_con_ctx_t *shv_ctx, int rid);
 
 int shv_unpack_data(ccpcp_unpack_context * ctx, int * v, double * d);
 
