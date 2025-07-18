@@ -1,22 +1,14 @@
-/*
-  COPYRIGHT (C) 2025 Stepan Pressl 
-    <pressl.stepan@gmail.com>
-    <pressste@fel.cvut.cz>
 
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2 of the License, or (at your option) any later version.
+/* SPDX-License-Identifier: LGPL-2.1-or-later OR BSD-2-Clause OR Apache-2.0
+ *
+ * Copyright (c) Stepan Pressl 2025 <pressl.stepan@gmail.com>
+ *                                   <pressste@fel.cvut.cz>
+ */
 
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.
-*/
+/**
+ * @file shv_file_com.c
+ * @brief The implementation of file nodes methods.
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,7 +27,7 @@ void shv_file_send_stat(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
 {
     /* SHV only supports regular files, as of July 2025 */ 
     if (item->file_type != REGULAR) {
-        shv_send_response_error(shv_ctx, rid, SHV_RE_INVALID_PARAMS);
+        shv_send_error(shv_ctx, rid, SHV_RE_INVALID_PARAMS, NULL);
         return; 
     }
 
@@ -103,11 +95,11 @@ void shv_file_send_size(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
     }
 }
 
-
 int shv_file_process_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
 {
     int ret;
     ccpcp_unpack_context *ctx = &shv_ctx->unpack_ctx;
+    item->platform_error = false;
 
     do {
         cchainpack_unpack_next(ctx);
@@ -166,11 +158,11 @@ int shv_file_process_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *ite
                 /* save the loaded offset into the struct */
                 item->file_offset = ctx->item.as.Int;
                 item->state = BLOB;
-                ret = shv_file_node_seeker(item, item->file_offset);
-                if (ret < 0) {
-                    shv_unpack_discard(shv_ctx);
-                    ctx->err_no = CCPCP_RC_LOGICAL_ERROR;
-                    item->state = IMAP_START;
+                if (!item->platform_error) {
+                    ret = shv_file_node_seeker(item, item->file_offset);
+                    if (ret < 0) {
+                        item->platform_error = true;
+                    }
                 }
             } else { 
                 shv_unpack_discard(shv_ctx);
@@ -187,13 +179,14 @@ int shv_file_process_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *ite
                  * Yes, triggering an error is a solution too but the expected usage
                  * is to get the file's attributes beforehand and work with that.
                  */
-                ret = shv_file_node_writer(item, ctx->item.as.String.chunk_start,
-                                           ctx->item.as.String.chunk_size);
-                if (ret < 0) {
-                    shv_unpack_discard(shv_ctx);
-                    ctx->err_no = CCPCP_RC_LOGICAL_ERROR;
-                    item->state = IMAP_START;
-                } else if (ctx->item.as.String.last_chunk) {
+                if (!item->platform_error) {
+                    ret = shv_file_node_writer(item, ctx->item.as.String.chunk_start,
+                                               ctx->item.as.String.chunk_size);
+                    if (ret < 0) {
+                        item->platform_error = true;
+                    }
+                }
+                if (ctx->item.as.String.last_chunk) {
                     /* We received the last chunk of the string, we can proceed further */
                     item->state = LIST_STOP;
                 }
@@ -234,27 +227,8 @@ int shv_file_process_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *ite
     if (ctx->err_no != CCPCP_RC_OK) {
         return -1;
     }
+
     return 0;
-}
-
-void shv_file_confirm_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
-{
-    for (shv_ctx->shv_send = 0; shv_ctx->shv_send < 2; shv_ctx->shv_send++) {
-        if (shv_ctx->shv_send) {
-            cchainpack_pack_uint_data(&shv_ctx->pack_ctx, shv_ctx->shv_len);
-        }
-
-        shv_ctx->shv_len = 0;
-        cchainpack_pack_uint_data(&shv_ctx->pack_ctx, 1);
-
-        shv_pack_head_reply(shv_ctx, rid);
-
-        /* Empty IMap */
-        cchainpack_pack_imap_begin(&shv_ctx->pack_ctx);
-        cchainpack_pack_container_end(&shv_ctx->pack_ctx);
-
-        shv_overflow_handler(&shv_ctx->pack_ctx, 0); 
-    }
 }
 
 /*
@@ -383,33 +357,84 @@ int shv_file_process_crc(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
         size = item->crc_size;
     }
     if (parse_result >= 0) {
-        return shv_file_node_crc32(item, start, size, &item->crc);
+        if (shv_file_node_crc32(item, start, size, &item->crc) < 0) {
+            item->platform_error = true;
+        } else {
+            item->platform_error = false;
+        }
+        return 0;
+    }
+    return -1;
+}
+
+int shv_file_node_write(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
+{
+    int ret = 0;
+    shv_file_node_t *file_node = (shv_file_node_t*) item;
+    ret = shv_file_process_write(shv_ctx, rid, file_node);
+    if (ret < 0) {
+        shv_send_error(shv_ctx, rid, SHV_RE_INVALID_PARAMS, "Garbled data");
+    } else if (file_node->platform_error) {
+        /* It is an error, but not protocol wise. Just inform the other end. */
+        shv_send_error(shv_ctx, rid, SHV_RE_PLATFORM_ERROR, "I/O Error");
+    } else {
+        shv_send_empty_response(shv_ctx, rid);
     }
     return 0;
 }
 
-void shv_file_confirm_crc(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
+int shv_file_node_crc(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
 {
-    ccpcp_pack_context_init(&shv_ctx->pack_ctx,shv_ctx->shv_data, SHV_BUF_LEN,
-                            shv_overflow_handler);
-
-    for (shv_ctx->shv_send = 0; shv_ctx->shv_send < 2; shv_ctx->shv_send++) {
-        if (shv_ctx->shv_send) {
-            cchainpack_pack_uint_data(&shv_ctx->pack_ctx, shv_ctx->shv_len);
-        }
-
-        shv_ctx->shv_len = 0;
-        cchainpack_pack_uint_data(&shv_ctx->pack_ctx, 1);
-
-        shv_pack_head_reply(shv_ctx, rid);
-
-        cchainpack_pack_imap_begin(&shv_ctx->pack_ctx);
-
-        /* Send reply with the crc as result (imap with the "2" key) */
-        cchainpack_pack_int(&shv_ctx->pack_ctx, 2);
-        cchainpack_pack_uint(&shv_ctx->pack_ctx, item->crc);
-
-        cchainpack_pack_container_end(&shv_ctx->pack_ctx);
-        shv_overflow_handler(&shv_ctx->pack_ctx, 0); 
+    int ret;
+    shv_file_node_t *file_node = (shv_file_node_t*) item;
+    ret = shv_file_process_crc(shv_ctx, rid, file_node);
+    if (ret < 0) {
+        shv_send_error(shv_ctx, rid, SHV_RE_INVALID_PARAMS, "Garbled data");
+    } else if (file_node->platform_error) {
+        /* It is an error, but not protocol wise. Just inform the other end. */
+        shv_send_error(shv_ctx, rid, SHV_RE_PLATFORM_ERROR, "I/O Error");
+    } else {
+        shv_send_uint(shv_ctx, rid, file_node->crc);
     }
+    return ret;
 }
+
+int shv_file_node_size(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
+{
+    shv_file_node_t *file_node = (shv_file_node_t*) item;
+    shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
+    shv_send_uint(shv_ctx, rid, file_node->file_maxsize);
+    return 0;
+}
+
+int shv_file_node_stat(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
+{
+    shv_file_node_t *file_node = (shv_file_node_t*) item;
+    shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
+    shv_file_send_stat(shv_ctx, rid, file_node);
+    return 0;
+}
+
+const shv_method_des_t shv_dmap_item_file_node_crc =
+{
+    .name = "crc",
+    .method = shv_file_node_crc
+};
+
+const shv_method_des_t shv_dmap_item_file_node_write =
+{
+    .name = "write",
+    .method = shv_file_node_write
+};
+
+const shv_method_des_t shv_dmap_item_file_node_stat =
+{
+    .name = "stat",
+    .method = shv_file_node_stat
+};
+
+const shv_method_des_t shv_dmap_item_file_node_size =
+{
+    .name = "size",
+    .method = shv_file_node_size
+};

@@ -105,6 +105,11 @@ typedef struct shv_file_node {
   uint32_t crc;                       /* Internal CRC accumulator */
   int crc_offset;                     /* Internal file CRC compute region */
   int crc_size;                       /* Internal file CRC compute region */
+
+  bool platform_error;                /* A flag to indicate that something bad in the platform
+                                         has happened. It does not indicate faulty data,
+                                         it only indicates that the unpack should
+                                         take this into consideration. */
 } shv_file_node_t;
 
 typedef int (* shv_method_t) (shv_con_ctx_t *ctx, shv_node_t * node, int rid);
