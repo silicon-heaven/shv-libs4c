@@ -439,13 +439,12 @@ void shv_send_ping(shv_con_ctx_t *shv_ctx)
       cchainpack_pack_uint_data(&shv_ctx->pack_ctx, 1);
 
       shv_pack_head_request(shv_ctx, "ping", ".broker/app");
-
-      shv_ctx->rid += 1;
-
       cchainpack_pack_imap_begin(&shv_ctx->pack_ctx);
       cchainpack_pack_container_end(&shv_ctx->pack_ctx);
       shv_overflow_handler(&shv_ctx->pack_ctx, 0);
     }
+
+  shv_ctx->rid += 1;
 }
 
 /****************************************************************************
