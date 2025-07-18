@@ -43,32 +43,14 @@ enum shv_file_node_keys
 void shv_file_send_stat(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
 
 /**
- * @brief File size method - contrary to stat, only the size param is sent
- * 
- * @param shv_ctx 
- * @param rid 
- * @param item 
- */
-void shv_file_send_size(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
-
-/**
  * @brief Unpacks the incoming data and writes them to a file
  * 
  * @param shv_ctx 
  * @param rid 
  * @param item 
- * @return int 
+ * @return 0 in case of success, -1 in case of garbled data
  */
 int shv_file_process_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
-
-/**
- * @brief Sends write confirmation to the broker
-   * 
- * @param shv_ctx 
- * @param rid 
- * @param item 
- */
-void shv_file_confirm_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
 
 /**
  * @brief Unpacks the desired CRC computation method and computes the CRC
@@ -79,15 +61,6 @@ void shv_file_confirm_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *it
  * @return int 
  */
 int shv_file_process_crc(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
-
-/**
- * @brief In case of success, reply with the computed CRC
- *
- * @param shv_ctx
- * @param rid
- * @param item
- */
-void shv_file_confirm_crc(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
 
 /**
  * @brief A platform dependant function used to write count bytes from buf to a file
@@ -121,3 +94,49 @@ int shv_file_node_seeker(shv_file_node_t *item, int offset);
  * @return 0 in case of success, -1 otherwise
  */
 int shv_file_node_crc32(shv_file_node_t *item, int start, size_t size, uint32_t *result);
+
+
+/**
+ * @brief The file write method implementation
+ *
+ * @param shv_ctx
+ * @param item
+ * @param rid
+ * @return int
+ */
+int shv_file_node_write(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid);
+
+/**
+ * @brief The file crc method implementation
+ *
+ * @param shv_ctx
+ * @param item
+ * @param rid
+ * @return int
+ */
+int shv_file_node_crc(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid);
+
+/**
+ * @brief
+ *
+ * @param shv_ctx
+ * @param item
+ * @param rid
+ * @return int
+ */
+int shv_file_node_size(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid);
+
+/**
+ * @brief
+ *
+ * @param shv_ctx
+ * @param item
+ * @param rid
+ * @return int
+ */
+int shv_file_node_stat(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid);
+
+extern const shv_method_des_t shv_dmap_item_file_node_write;
+extern const shv_method_des_t shv_dmap_item_file_node_crc;
+extern const shv_method_des_t shv_dmap_item_file_node_size;
+extern const shv_method_des_t shv_dmap_item_file_node_stat;
