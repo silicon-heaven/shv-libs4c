@@ -481,6 +481,31 @@ void shv_send_int(shv_con_ctx_t *shv_ctx, int rid, int num)
     }
 }
 
+void shv_send_uint(shv_con_ctx_t *shv_ctx, int rid, unsigned int num)
+{
+  ccpcp_pack_context_init(&shv_ctx->pack_ctx, shv_ctx->shv_data, SHV_BUF_LEN,
+                          shv_overflow_handler);
+
+  for (shv_ctx->shv_send = 0; shv_ctx->shv_send < 2; shv_ctx->shv_send++)
+    {
+      if (shv_ctx->shv_send)
+        {
+          cchainpack_pack_uint_data(&shv_ctx->pack_ctx, shv_ctx->shv_len);
+        }
+
+      shv_ctx->shv_len = 0;
+      cchainpack_pack_uint_data(&shv_ctx->pack_ctx, 1);
+
+      shv_pack_head_reply(shv_ctx, rid);
+
+      cchainpack_pack_imap_begin(&shv_ctx->pack_ctx);
+      cchainpack_pack_int(&shv_ctx->pack_ctx, 2);
+      cchainpack_pack_uint(&shv_ctx->pack_ctx, num);
+      cchainpack_pack_container_end(&shv_ctx->pack_ctx);
+      shv_overflow_handler(&shv_ctx->pack_ctx, 0);
+    }
+}
+
 /****************************************************************************
  * Name: shv_send_double
  *
