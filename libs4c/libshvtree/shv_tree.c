@@ -22,6 +22,7 @@
 
 #include <shv/tree/shv_tree.h>
 #include <shv/tree/shv_com.h>
+#include <shv/tree/shv_com_common.h>
 #include <ulut/ul_utdefs.h>
 
 /* Custom tree implementation */
@@ -341,32 +342,31 @@ void shv_tree_destroy(shv_node_t *parent)
  *
  ****************************************************************************/
 
-int shv_node_process(shv_con_ctx_t * shv_ctx, int rid, const char * met,
-                     const char * path)
+int shv_node_process(shv_con_ctx_t *shv_ctx, int rid, const char *met,
+                     const char *path)
 {
-  /* Find the node */
+    char error_msg[80];
 
-  shv_node_t *item = shv_node_find(shv_ctx->root, path);
-  if (item == NULL)
-    {
-      char error_msg[80];
-      sprintf(error_msg, "Node '%s' does not exist.", path);
-      shv_send_error(shv_ctx, rid, SHV_RE_METHOD_CALL_EXCEPTION, error_msg);
-      return 0;
+    /* Find the node */
+    shv_node_t *item = shv_node_find(shv_ctx->root, path);
+    if (item == NULL) {
+        shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
+        snprintf(error_msg, sizeof(error_msg), "Node '%s' does not exist.", path);
+        shv_send_error(shv_ctx, rid, SHV_RE_METHOD_CALL_EXCEPTION, error_msg);
+        return 0;
     }
 
-  /* Call coresponding method */
+    /* Call coresponding method */
 
-  const shv_method_des_t *met_des = shv_dmap_find(item->dir, &met);
-  if (met_des == NULL)
-    {
-      char error_msg[80];
-      sprintf(error_msg, "Method '%s' does not exist.", met);
-      shv_send_error(shv_ctx, rid, SHV_RE_METHOD_CALL_EXCEPTION, error_msg);
-      return 0;
+    const shv_method_des_t *met_des = shv_dmap_find(item->dir, &met);
+    if (met_des == NULL) {
+        shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
+        snprintf(error_msg, sizeof(error_msg), "Method '%s' does not exist.", met);
+        shv_send_error(shv_ctx, rid, SHV_RE_METHOD_CALL_EXCEPTION, error_msg);
+        return 0;
     }
 
-  met_des->method(shv_ctx, item, rid);
+    met_des->method(shv_ctx, item, rid);
 
-  return 1;
+    return 1;
 }
