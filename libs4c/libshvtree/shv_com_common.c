@@ -7,8 +7,6 @@
 #include <shv/tree/shv_connection.h>
 #include <ulut/ul_utdefs.h>
 
-int shv_write_err = 0;
-
 /****************************************************************************
  * Name: shv_overflow_handler
  *
@@ -27,15 +25,15 @@ void shv_overflow_handler(struct ccpcp_pack_context *ctx, size_t size_hint)
 
   if (shv_ctx->shv_send)
     {
-      while ((shv_write_err == 0) && (to_send > 0))
+      while ((shv_ctx->write_err == 0) && (to_send > 0))
         {
           ret = shv_tlayer_write(shv_ctx->connection, ptr_data, to_send);
           if (ret <= 0)
             {
               printf("ERROR: Write error, ret = %d\n", ret);
-              shv_write_err = 1;
               if (ret == -1)
                 {
+                  shv_ctx->write_err = 1;
                   printf("ERROR: Write error, errno = %d\n", errno);
                 }
               break;
