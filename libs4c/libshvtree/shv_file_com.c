@@ -22,6 +22,7 @@
 #include <shv/tree/shv_com.h>
 #include <shv/tree/shv_com_common.h>
 #include <shv/tree/shv_tree.h>
+#include <ulut/ul_utdefs.h>
 
 void shv_file_send_stat(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
 {
@@ -370,7 +371,7 @@ int shv_file_process_crc(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
 int shv_file_node_write(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
 {
     int ret = 0;
-    shv_file_node_t *file_node = (shv_file_node_t*) item;
+    shv_file_node_t *file_node = UL_CONTAINEROF(item, shv_file_node_t, shv_node);
     ret = shv_file_process_write(shv_ctx, rid, file_node);
     if (ret < 0) {
         shv_send_error(shv_ctx, rid, SHV_RE_INVALID_PARAMS, "Garbled data");
@@ -386,7 +387,7 @@ int shv_file_node_write(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
 int shv_file_node_crc(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
 {
     int ret;
-    shv_file_node_t *file_node = (shv_file_node_t*) item;
+    shv_file_node_t *file_node = UL_CONTAINEROF(item, shv_file_node_t, shv_node);
     ret = shv_file_process_crc(shv_ctx, rid, file_node);
     if (ret < 0) {
         shv_send_error(shv_ctx, rid, SHV_RE_INVALID_PARAMS, "Garbled data");
@@ -401,7 +402,7 @@ int shv_file_node_crc(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
 
 int shv_file_node_size(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
 {
-    shv_file_node_t *file_node = (shv_file_node_t*) item;
+    shv_file_node_t *file_node = UL_CONTAINEROF(item, shv_file_node_t, shv_node);
     shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
     shv_send_uint(shv_ctx, rid, file_node->file_maxsize);
     return 0;
@@ -409,7 +410,7 @@ int shv_file_node_size(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
 
 int shv_file_node_stat(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
 {
-    shv_file_node_t *file_node = (shv_file_node_t*) item;
+    shv_file_node_t *file_node = UL_CONTAINEROF(item, shv_file_node_t, shv_node);
     shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
     shv_file_send_stat(shv_ctx, rid, file_node);
     return 0;
