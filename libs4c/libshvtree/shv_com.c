@@ -1018,7 +1018,7 @@ int shv_login(shv_con_ctx_t *shv_ctx)
  ****************************************************************************/
 
 void shv_con_ctx_init(shv_con_ctx_t *shv_ctx, struct shv_node *root,
-                      struct shv_connection *connection)
+                      struct shv_connection *connection, shv_attention_signaller at_signlr)
 {
   memset(shv_ctx, 0, sizeof(shv_con_ctx_t));
 
@@ -1026,6 +1026,7 @@ void shv_con_ctx_init(shv_con_ctx_t *shv_ctx, struct shv_node *root,
   shv_ctx->timeout = 360;
   shv_ctx->rid = 3;
   shv_ctx->connection = connection;
+  shv_ctx->at_signlr = at_signlr;
 }
 
 /**
@@ -1182,7 +1183,8 @@ int shv_process(shv_con_ctx_t *shv_ctx)
  *
  ****************************************************************************/
 
-shv_con_ctx_t *shv_com_init(struct shv_node *root, struct shv_connection *connection)
+shv_con_ctx_t *shv_com_init(struct shv_node *root, struct shv_connection *connection,
+                            shv_attention_signaller at_signlr)
 {
   int ret;
 

@@ -432,6 +432,10 @@ static void *__shv_process(void *arg)
 {
     shv_con_ctx_t *shv_ctx = (shv_con_ctx_t *)arg;
     shv_ctx->thrd_ctx.thrd_ret = shv_process(shv_ctx);
+    /* Report a hard error */
+    if (shv_ctx->thrd_ctx.thrd_ret == -1 && shv_ctx->at_signlr != NULL) {
+        shv_ctx->at_signlr(shv_ctx, SHV_ATTENTION_ERROR);
+    }
     return NULL;
 }
 
