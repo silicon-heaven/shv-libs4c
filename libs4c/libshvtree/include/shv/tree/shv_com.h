@@ -126,8 +126,6 @@ static inline const char *shv_errno_str(shv_con_ctx_t *ctx)
   return shv_con_errno_strs[ctx->err_no];
 }
 
-shv_con_ctx_t *shv_com_init(struct shv_node *root, struct shv_connection *con_info,
-                            shv_attention_signaller at_signlr);
 
 void shv_com_end(shv_con_ctx_t *ctx);
 void shv_send_int(shv_con_ctx_t *shv_ctx, int rid, int num);
@@ -152,20 +150,36 @@ int shv_unpack_data(ccpcp_unpack_context * ctx, int * v, double * d);
  */
 int shv_create_process_thread(int thrd_prio, shv_con_ctx_t *ctx);
 
-void shv_stop_process_thread(shv_con_ctx_t *shv_ctx);
-
 /**
- * @brief Platform dependant function. Close the communication thread and deinit everything.
+ * @brief Platform dependant function. Stops the communication processing thread.
  *
  * @param shv_ctx
  */
-void shv_com_close(shv_con_ctx_t *shv_ctx);
+void shv_stop_process_thread(shv_con_ctx_t *shv_ctx);
+
+/**
+ * @brief Allocate and initialize a shv_com_ctx_t struct.
+ *
+ * @param root
+ * @param con_info
+ * @param at_signlr
+ * @return nonNULL pointer on success, NULL on failure
+ */
+shv_con_ctx_t *shv_com_init(struct shv_node *root, struct shv_connection *con_info,
+                            shv_attention_signaller at_signlr);
+
+/**
+ * @brief Close the communication thread, deinitialize everything and deallocate shv_ctx.
+ *
+ * @param shv_ctx
+ */
+void shv_com_destroy(shv_con_ctx_t *shv_ctx);
 
 /**
  * @brief Launched in a separate thread, this function handles the connection to the broker.
- *   Firstly, it tries to the broker every shv_connection.reconnect_period seconds.
- *   If it connects to the broker, it communicates with it.
- *   The maximum number of reconnect retries is specified in shv_connection.reconnect_retries.
+ *        Firstly, it tries to connect to the broker every shv_connection.reconnect_period seconds.
+ *        If it connects to the broker, it communicates with it.
+ *        The maximum number of reconnect retries is specified in shv_connection.reconnect_retries.
  *
  * @param shv_ctx
  * @return 0 on success, -1 on failure

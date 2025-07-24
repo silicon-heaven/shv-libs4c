@@ -1195,19 +1195,11 @@ shv_con_ctx_t *shv_com_init(struct shv_node *root, struct shv_connection *connec
       return NULL;
     }
 
-  shv_con_ctx_init(shv_ctx, root, connection);
-
-  /* Handle the connection in a separate thread. */
-
-  ret = shv_create_process_thread(get_priority_for_com(), shv_ctx);
-  if (ret < 0) {
-    free(shv_ctx);
-    return NULL;
-  }
+  shv_con_ctx_init(shv_ctx, root, connection, at_signlr);
   return shv_ctx;
 }
 
-void shv_com_close(shv_con_ctx_t *shv_ctx)
+void shv_com_destroy(shv_con_ctx_t *shv_ctx)
 {
     int ret;
     atomic_store(&shv_ctx->running, false);
