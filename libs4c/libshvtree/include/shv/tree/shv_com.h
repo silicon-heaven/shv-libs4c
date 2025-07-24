@@ -10,8 +10,8 @@
 #include "shv_connection.h"
 
 #define SHV_BUF_LEN  1024
-#define SHV_MET_LEN  16
-#define SHV_PATH_LEN 64
+#define SHV_MET_LEN  64
+#define SHV_PATH_LEN 256
 
 #define TAG_ERROR       8
 #define TAG_REQUEST_ID  8
