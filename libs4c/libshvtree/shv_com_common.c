@@ -1,3 +1,15 @@
+/* SPDX-License-Identifier: LGPL-2.1-or-later OR BSD-2-Clause OR Apache-2.0
+ *
+ * Copyright (c) Michal Lenc 2022-2025 <michallenc@seznam.cz>
+ *               Stepan Pressl 2025    <pressl.stepan@gmail.com>
+ *                                     <pressste@fel.cvut.cz>
+ */
+
+/**
+ * @file shv_com_common.c
+ * @brief Some common functions used across the implementations.
+ */
+
 #include <unistd.h>
 #include <stdio.h>
 #include <errno.h>
@@ -6,14 +18,6 @@
 #include <shv/tree/shv_com_common.h>
 #include <shv/tree/shv_connection.h>
 #include <ulut/ul_utdefs.h>
-
-/****************************************************************************
- * Name: shv_overflow_handler
- *
- * Description:
- *  Overflow handler responsible for data send.
- *
- ****************************************************************************/
 
 void shv_overflow_handler(struct ccpcp_pack_context *ctx, size_t size_hint)
 {
@@ -49,14 +53,6 @@ void shv_overflow_handler(struct ccpcp_pack_context *ctx, size_t size_hint)
   ctx->end = ctx->start + SHV_BUF_LEN;
 }
 
-/****************************************************************************
- * Name: shv_underrflow_handler
- *
- * Description:
- *  Underflow handler responsible for data send.
- *
- ****************************************************************************/
-
 size_t shv_underrflow_handler(struct ccpcp_unpack_context * ctx)
 {
   int i;
@@ -73,14 +69,6 @@ size_t shv_underrflow_handler(struct ccpcp_unpack_context * ctx)
 
   return i;
 }
-
-/****************************************************************************
- * Name: shv_pack_head_reply
- *
- * Description:
- *  Packs the head of the message for client reply.
- *
- ****************************************************************************/
 
 void shv_pack_head_reply(shv_con_ctx_t *shv_ctx, int rid)
 {
@@ -111,71 +99,57 @@ void shv_pack_head_reply(shv_con_ctx_t *shv_ctx, int rid)
   cchainpack_pack_container_end(&shv_ctx->pack_ctx);
 }
 
-/****************************************************************************
- * Name: shv_unpack_skip
- *
- * Description:
- *   Skip data inside container
- *
- ****************************************************************************/
 
-int shv_unpack_skip(shv_con_ctx_t * shv_ctx)
+/**
+ * @brief Skip data inside a container
+ *
+ * @param shv_ctx
+ * @return 0 in case of success, -1 on failure
+ */
+static int shv_unpack_contskip(shv_con_ctx_t *shv_ctx)
 {
-  struct ccpcp_unpack_context *ctx = &shv_ctx->unpack_ctx;
-  int level = 1;
+    struct ccpcp_unpack_context *ctx = &shv_ctx->unpack_ctx;
+    int level = 1;
 
-  do
-    {
-      cchainpack_unpack_next(ctx);
-      if (ctx->err_no != CCPCP_RC_OK) return -1;
+    do {
+        cchainpack_unpack_next(ctx);
+        if (ctx->err_no != CCPCP_RC_OK) {
+            return -1;
+        }
 
-      if ((ctx->item.type == CCPCP_ITEM_META) ||
-          (ctx->item.type == CCPCP_ITEM_LIST) ||
-          (ctx->item.type == CCPCP_ITEM_MAP) ||
-          (ctx->item.type == CCPCP_ITEM_IMAP))
-        {
-          level++;
+        if ((ctx->item.type == CCPCP_ITEM_META) ||
+            (ctx->item.type == CCPCP_ITEM_LIST) ||
+            (ctx->item.type == CCPCP_ITEM_MAP) ||
+            (ctx->item.type == CCPCP_ITEM_IMAP)) {
+            level++;
+        } else if (ctx->item.type == CCPCP_ITEM_CONTAINER_END) {
+            level--;
         }
-      else if (ctx->item.type == CCPCP_ITEM_CONTAINER_END)
-        {
-          level--;
-        }
-    }
-  while (level);
+    } while (level);
+
+    return 0;
 }
-
-
-/****************************************************************************
- * Name: shv_unpack_discard
- *
- * Description:
- *   Discard current data of arbitrary type
- *
- ****************************************************************************/
 
 int shv_unpack_discard(shv_con_ctx_t * shv_ctx)
 {
-  struct ccpcp_unpack_context *ctx = &shv_ctx->unpack_ctx;
+    struct ccpcp_unpack_context *ctx = &shv_ctx->unpack_ctx;
 
-  if ((ctx->item.type == CCPCP_ITEM_META) ||
-      (ctx->item.type == CCPCP_ITEM_LIST) ||
-      (ctx->item.type == CCPCP_ITEM_MAP) ||
-      (ctx->item.type == CCPCP_ITEM_IMAP))
-    {
-      shv_unpack_skip(shv_ctx);
-    }
-  else
-    {
-      if (((ctx->item.type == CCPCP_ITEM_BLOB) ||
-          (ctx->item.type == CCPCP_ITEM_STRING)))
-        {
-          while (ctx->item.as.String.last_chunk != 0)
-            {
-              cchainpack_unpack_next(ctx);
-              if (ctx->err_no != CCPCP_RC_OK) return -1;
+    if ((ctx->item.type == CCPCP_ITEM_META) ||
+        (ctx->item.type == CCPCP_ITEM_LIST) ||
+        (ctx->item.type == CCPCP_ITEM_MAP) ||
+        (ctx->item.type == CCPCP_ITEM_IMAP)) {
+        return shv_unpack_contskip(shv_ctx);
+    } else {
+        if ((ctx->item.type == CCPCP_ITEM_BLOB) ||
+            (ctx->item.type == CCPCP_ITEM_STRING)) {
+            while (ctx->item.as.String.last_chunk != 0) {
+                cchainpack_unpack_next(ctx);
+                if (ctx->err_no != CCPCP_RC_OK) {
+                    return -1;
+                }
             }
         }
     }
-  
-  return 0;
+
+    return 0;
 }

@@ -200,7 +200,7 @@ int shv_unpack_head(shv_con_ctx_t * shv_ctx, int * rid, char * method,
       if ((ctx->item.type == CCPCP_ITEM_MAP) ||
           (ctx->item.type == CCPCP_ITEM_IMAP))
         {
-          if (shv_unpack_skip(shv_ctx) < 0)
+          if (shv_unpack_discard(shv_ctx) < 0)
              return -1;
         }
       else if (ctx->item.type == CCPCP_ITEM_LIST)
@@ -241,7 +241,7 @@ int shv_unpack_head(shv_con_ctx_t * shv_ctx, int * rid, char * method,
             }
           else
             {
-              if (shv_unpack_skip(shv_ctx) < 0)
+              if (shv_unpack_discard(shv_ctx) < 0)
                 return -1;
             }
         }
