@@ -302,68 +302,68 @@ int shv_unpack_head(shv_con_ctx_t * shv_ctx, int * rid, char * method,
 
 int shv_unpack_data(ccpcp_unpack_context * ctx, int * v, double * d)
 {
-  int l = 0;
-  int k = 1;
+    int l = 0;
+    int k = 1;
 
-  do
-    {
-      cchainpack_unpack_next(ctx);
-      if (ctx->err_no != CCPCP_RC_OK) return -1;
+    do {
+        cchainpack_unpack_next(ctx);
+        if (ctx->err_no != CCPCP_RC_OK) {
+            return -1;
+        }
 
-      if (ctx->item.type == CCPCP_ITEM_CONTAINER_END)
-        {
-          l--;
-          if (l == 0) return (ctx->current-ctx->start);
-        }
-      else if ((ctx->item.type == CCPCP_ITEM_LIST) ||
-               (ctx->item.type == CCPCP_ITEM_META) ||
-               (ctx->item.type == CCPCP_ITEM_MAP)  ||
-               (ctx->item.type == CCPCP_ITEM_IMAP))
-        {
-          l++;
-        }
-      else
-        {
-          if (l == 1)
-            {
-              if (k == 1)
-                {
-                  if (ctx->item.type == CCPCP_ITEM_INT)
-                    {
-                      if (ctx->item.as.Int == 1) k = 2;
-                      else k = 0;
-                    }
-                  else if (ctx->item.type == CCPCP_ITEM_UINT)
-                    {
-                      if (ctx->item.as.UInt == 1) k = 2;
-                      else k = 0;
-                    }
-                }
-              else if (k == 2)
-                {
-                  if (ctx->item.type == CCPCP_ITEM_INT)
-                    {
-                      if (d) *d = (double) ctx->item.as.Int;
-                      if (v) *v = ctx->item.as.Int;
-                    }
-                  else if (ctx->item.type == CCPCP_ITEM_UINT)
-                    {
-                      if (d) *d = (double) ctx->item.as.UInt;
-                      if (v) *v = (int) ctx->item.as.UInt;
-                    }
-                  else if (ctx->item.type == CCPCP_ITEM_DECIMAL)
-                    {
-                      if (d) *d = (ctx->item.as.Decimal.mantisa * pow(10, ctx->item.as.Decimal.exponent));
-                    }
-                  else if (ctx->item.type == CCPCP_ITEM_DOUBLE)
-                    {
-                      if (d) *d = ctx->item.as.Double;
-                    }
-                }
+        if (ctx->item.type == CCPCP_ITEM_CONTAINER_END) {
+            l--;
+            if (l == 0) {
+                return (ctx->current-ctx->start);
             }
+        } else if ((ctx->item.type == CCPCP_ITEM_LIST) ||
+                   (ctx->item.type == CCPCP_ITEM_META) ||
+                   (ctx->item.type == CCPCP_ITEM_MAP)  ||
+                   (ctx->item.type == CCPCP_ITEM_IMAP)) {
+            l++;
         }
+        else
+          {
+            if (l == 1)
+              {
+                if (k == 1)
+                  {
+                    if (ctx->item.type == CCPCP_ITEM_INT)
+                      {
+                        if (ctx->item.as.Int == 1) k = 2;
+                        else k = 0;
+                      }
+                    else if (ctx->item.type == CCPCP_ITEM_UINT)
+                      {
+                        if (ctx->item.as.UInt == 1) k = 2;
+                        else k = 0;
+                      }
+                  }
+                else if (k == 2)
+                  {
+                    if (ctx->item.type == CCPCP_ITEM_INT)
+                      {
+                        if (d) *d = (double) ctx->item.as.Int;
+                        if (v) *v = ctx->item.as.Int;
+                      }
+                    else if (ctx->item.type == CCPCP_ITEM_UINT)
+                      {
+                        if (d) *d = (double) ctx->item.as.UInt;
+                        if (v) *v = (int) ctx->item.as.UInt;
+                      }
+                    else if (ctx->item.type == CCPCP_ITEM_DECIMAL)
+                      {
+                        if (d) *d = (ctx->item.as.Decimal.mantisa * pow(10, ctx->item.as.Decimal.exponent));
+                      }
+                    else if (ctx->item.type == CCPCP_ITEM_DOUBLE)
+                      {
+                        if (d) *d = ctx->item.as.Double;
+                      }
+                  }
+              }
+          }
     } while (ctx->err_no == CCPCP_RC_OK);
-  return 1;
+    return 1;
 }
 
 /****************************************************************************
@@ -1151,18 +1151,22 @@ int shv_process(shv_con_ctx_t *shv_ctx)
                  * (if we have enough remaining retries).
                  */
 
-                fprintf(stderr, "WARNING: we have been disconnected!\n");
-
-                /* Close the connection mercifully. */
                 shv_tlayer_close(shv_ctx->connection);
-                if ((shv_ctx->connection->reconnect_retries > 0) &&
-                   (shv_ctx->reconnects >= shv_ctx->connection->reconnect_retries)) {
-                    /* We have no remaining reconnects */
-                    shv_ctx->err_no = SHV_RECONNECTS;
-                    fprintf(stderr, "ERROR: maximum number of reconnects reached!\n");
-                    return -1;
+                if (atomic_load(&shv_ctx->running)) {
+                    fprintf(stderr, "WARNING: we have been disconnected!\n");
+                    /* Close the connection mercifully. */
+                    if ((shv_ctx->connection->reconnect_retries > 0) &&
+                       (shv_ctx->reconnects >= shv_ctx->connection->reconnect_retries)) {
+                        /* We have no remaining reconnects */
+                        shv_ctx->err_no = SHV_RECONNECTS;
+                        fprintf(stderr, "ERROR: maximum number of reconnects reached!\n");
+                        return -1;
+                    }
+                    conn_state = NOT_INIT;
+                } else {
+                    /* The disconnect actually comes from the user side, no error occured */
+                    return 0;
                 }
-                conn_state = NOT_INIT;
             }
             break;
         default:
