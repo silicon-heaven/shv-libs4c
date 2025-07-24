@@ -345,28 +345,27 @@ void shv_tree_destroy(shv_node_t *parent)
 int shv_node_process(shv_con_ctx_t *shv_ctx, int rid, const char *met,
                      const char *path)
 {
+    /* If the node or method names are too long, the printed lengths is limited */
     char error_msg[80];
 
     /* Find the node */
     shv_node_t *item = shv_node_find(shv_ctx->root, path);
     if (item == NULL) {
         shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
-        snprintf(error_msg, sizeof(error_msg), "Node '%s' does not exist.", path);
+        snprintf(error_msg, sizeof(error_msg), "Node '%.40s' does not exist.", path);
         shv_send_error(shv_ctx, rid, SHV_RE_METHOD_CALL_EXCEPTION, error_msg);
         return 0;
     }
 
     /* Call coresponding method */
-
     const shv_method_des_t *met_des = shv_dmap_find(item->dir, &met);
     if (met_des == NULL) {
         shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
-        snprintf(error_msg, sizeof(error_msg), "Method '%s' does not exist.", met);
+        snprintf(error_msg, sizeof(error_msg), "Method '%.40s' does not exist.", met);
         shv_send_error(shv_ctx, rid, SHV_RE_METHOD_CALL_EXCEPTION, error_msg);
         return 0;
     }
 
     met_des->method(shv_ctx, item, rid);
-
     return 1;
 }
