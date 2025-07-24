@@ -832,8 +832,6 @@ int shv_login(shv_con_ctx_t *shv_ctx)
   const char* shv_broker_mount;
   struct shv_connection *connection = shv_ctx->connection;
 
-  shv_write_err = 0;
-
   shv_broker_user = connection->broker_user;
   if (CHECK_STR(shv_broker_user))
     {

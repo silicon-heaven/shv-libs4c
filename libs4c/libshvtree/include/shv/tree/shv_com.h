@@ -63,6 +63,7 @@ typedef struct shv_con_ctx {
   struct ccpcp_unpack_context unpack_ctx;
   char shv_data[SHV_BUF_LEN];
   char shv_rd_data[SHV_BUF_LEN];
+  int write_err;
   int shv_len;
   int shv_send;
   int reconnects;
