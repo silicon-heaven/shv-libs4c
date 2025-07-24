@@ -39,14 +39,47 @@ enum shv_response_error_code
  */
 enum shv_con_errno
 {
-    SHV_CON_INIT,     /* Failed to init the connection */
-    SHV_PROC_THRD,    /* Unable to create the process thread */
-    SHV_TLAYER_INIT,  /* Unable to init the transport layer */
-    SHV_RECONNECTS,   /* The maximum number of reconnects to a broker reached */
-    SHV_LOGIN,        /* Unable to login to the broker */
-    SHV_CCPCP_PACK,   /* Error in the CCPCP pack context */
-    SHV_CCPCP_UNPACK, /* Error in the CCPCP unpack context */
+    SHV_PROC_THRD = 0, /* Unable to create the process thread */
+    SHV_TLAYER_INIT,   /* Unable to init the transport layer */
+    SHV_TLAYER_READ,   /* Failure reading from the transport layer */
+    SHV_RECONNECTS,    /* The maximum number of reconnects to a broker reached */
+    SHV_LOGIN,         /* Unable to login to the broker */
+    SHV_CCPCP_PACK,    /* Error in the CCPCP pack context */
+    SHV_CCPCP_UNPACK,  /* Error in the CCPCP unpack context */
+    SHV_ERRNOS_COUNT
 };
+
+static const char *shv_con_errno_strs[SHV_ERRNOS_COUNT] =
+{
+    "Process thread creation fail",
+    "Tlayer init fail",
+    "Read from tlayer fail",
+    "Too many reconnects",
+    "Login to broker fail",
+    "Error in chainpack packing",
+    "Error in chainpack unpacking"
+};
+
+/**
+ * @brief SHV Attention reason enum used in `shv_attention_signaller`
+ *        used to report SHV events to the application
+ */
+enum shv_attention_reason
+{
+    SHV_ATTENTION_ERROR /* A nonrecoverable error occured, you should inspect
+                           `err_no` in shv_con_ctx_t */
+};
+
+
+/* Forward declaration*/
+typedef struct shv_con_ctx shv_con_ctx_t;
+
+/**
+ * @brief An attention signaller used to signal the application
+ *        of some events
+ */
+typedef void (*shv_attention_signaller)(shv_con_ctx_t *shv_ctx,
+                                        enum shv_attention_reason r);
 
 /* Forward declaration */
 struct shv_node;
@@ -71,6 +104,7 @@ typedef struct shv_con_ctx {
   struct shv_thrd_ctx thrd_ctx;
   struct shv_node *root;
   struct shv_connection *connection;            /* Transport layer information */
+  shv_attention_signaller at_signlr;            /* A user defined attention signaller callback */
 } shv_con_ctx_t;
 
 struct shv_dir_res {
@@ -87,7 +121,13 @@ struct shv_str_list_it_t {
    const char * (*get_next_entry)(shv_str_list_it_t *it, int reset_to_first);
 };
 
-shv_con_ctx_t *shv_com_init(struct shv_node *root, struct shv_connection *con_info);
+static inline const char *shv_errno_str(shv_con_ctx_t *ctx)
+{
+  return shv_con_errno_strs[ctx->err_no];
+}
+
+shv_con_ctx_t *shv_com_init(struct shv_node *root, struct shv_connection *con_info,
+                            shv_attention_signaller at_signlr);
 
 void shv_com_end(shv_con_ctx_t *ctx);
 void shv_send_int(shv_con_ctx_t *shv_ctx, int rid, int num);
