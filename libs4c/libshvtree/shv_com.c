@@ -31,9 +31,9 @@
 #include <shv/chainpack/ccpon.h>
 #include <ulut/ul_utdefs.h>
 
+#include <shv/tree/shv_tree.h>
 #include <shv/tree/shv_com.h>
 #include <shv/tree/shv_com_common.h>
-#include <shv/tree/shv_tree.h>
 
 #define CHECK_STR(str) (str == NULL || strnlen(str, 100) == 0)
 

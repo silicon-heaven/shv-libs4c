@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <errno.h>
 
+#include <shv/tree/shv_tree.h>
 #include <shv/tree/shv_com.h>
 #include <shv/tree/shv_com_common.h>
 #include <shv/tree/shv_connection.h>

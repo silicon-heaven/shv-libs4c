@@ -23,7 +23,11 @@
 #include <shv/tree/shv_tree.h>
 #include <shv/tree/shv_com.h>
 #include <shv/tree/shv_com_common.h>
+#if defined (CONFIG_SHV_LIBS4C_PLATFORM_LINUX) || defined(CONFIG_SHV_LIBS4C_PLATFORM_NUTTX)
+    #include <shv/tree/shv_clayer_posix.h>
+#endif
 #include <ulut/ul_utdefs.h>
+
 
 /* Custom tree implementation */
 
@@ -295,6 +299,21 @@ shv_file_node_t *shv_tree_file_node_new(const char *child_name, const shv_dmap_t
         printf("ERROR: calloc() failed\n");
         return NULL;
     }
+    /* Allocate default file context */
+    item->fctx = calloc(1, sizeof(struct shv_file_node_fctx));
+    if (item->fctx == NULL) {
+        printf("ERROR: calloc() failed\n");
+        return NULL;
+    }
+    /* Initialize with default ops */
+#if defined (CONFIG_SHV_LIBS4C_PLATFORM_LINUX) || defined(CONFIG_SHV_LIBS4C_PLATFORM_NUTTX)
+    item->fops.opener  = shv_file_node_posix_opener;
+    item->fops.getsize = shv_file_node_posix_getsize;
+    item->fops.writer  = shv_file_node_posix_writer;
+    item->fops.reader  = shv_file_node_posix_reader;
+    item->fops.seeker  = shv_file_node_posix_seeker;
+    item->fops.crc32   = shv_file_node_posix_crc32;
+#endif
     shv_tree_node_init(&item->shv_node, child_name, dir, mode);
     return item;
 }

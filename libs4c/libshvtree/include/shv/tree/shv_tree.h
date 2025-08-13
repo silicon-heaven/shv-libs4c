@@ -80,16 +80,78 @@ typedef struct shv_node_typed_val {
   char *type_name;              /* Type of the value (int, double...) */
 } shv_node_typed_val_t;
 
+typedef struct shv_file_node shv_file_node_t;
+
 /**
- * @brief A platform dependant struct containing the file handling info
- * 
+ * @brief A platform dependant function used to open the file
+ * @param item
+ * @return 0 in case of success, -1 otherwise
  */
-struct shv_file_node_fctx;
+typedef int (*shv_file_node_opener)(shv_file_node_t *item);
+
+/**
+ * @brief A platform dependant function used to get file's current size
+ * @param item
+ * @return file's size in case of success, -1 otherwise
+ */
+typedef int (*shv_file_node_getsize)(shv_file_node_t *item);
+
+/**
+ * @brief A platform dependant function used to write count bytes from buf to a file
+ * @param item
+ * @param buf   The source buffer
+ * @param count The number of bytes to be written
+ * @warning The function must assure it does not write beyond the bounds of file_maxsize.
+ * @return written bytes in case of success, -1 otherwise
+ */
+typedef int (*shv_file_node_writer)(shv_file_node_t *item, void *buf, size_t count);
+
+/**
+ * @brief A platform dependant function used to read count bytes from a file to buf
+ * @param item
+ * @param buf   The destination buffer
+ * @param count The number of bytes to be read
+ * @warning The function must assure it does not read outside the bounds of file_maxsize.
+ * @return read bytes in case of success, -1 otherwise
+ */
+typedef int (*shv_file_node_reader)(shv_file_node_t *item, void *buf, size_t count);
+
+/**
+ * @typedef shv_file_node_seeker
+ * @brief A platform dependant function used to reposition the file offset.
+ * @param item
+ * @param offset The absolute file offset
+ * @warning The function must assure it does not seek beyond the bounds of file_maxsize.
+ * @return the new offset in case of success, -1 otherwise
+ */
+typedef int (*shv_file_node_seeker)(shv_file_node_t *item, int offset);
+
+/**
+ * @brief A function used to calculate CRC32 from start to start+size-1 specified by
+ *        the arg argument. The provided function must conform to the algorithm used
+ *        in IEEE 802.3. The reason this function is exposed is that the user can make use
+ *        of platform dependant CRC libraries (such as zlib) or HW accelerated CRC calculators.
+ * @param item
+ * @param start  The starting offset in the file
+ * @param size   The count of bytes to calculate CRC32 over
+ * @param result Pointer to the CRC32 result
+ * @return 0 in case of success, -1 otherwise
+ */
+typedef int (*shv_file_node_crc32)(shv_file_node_t *item, int start, size_t size,
+                                   uint32_t *result);
 
 typedef struct shv_file_node {
   shv_node_t shv_node;                /* Base shv_node */
   const char *name;                   /* File name, system-wise */
-  struct shv_file_node_fctx fctx;     /* Platform dependant file context */
+  void *fctx;                         /* Platform dependant file context, can be overriden */
+  struct {
+    shv_file_node_opener  opener;
+    shv_file_node_getsize getsize;
+    shv_file_node_writer  writer;
+    shv_file_node_reader  reader;
+    shv_file_node_seeker  seeker;
+    shv_file_node_crc32   crc32;
+  } fops;
 
   /* Stat method attributes */
   int file_type;                      /* Defined in shv_file_type */
@@ -112,6 +174,7 @@ typedef struct shv_file_node {
                                          take this into consideration. */
 } shv_file_node_t;
 
+typedef struct shv_con_ctx shv_con_ctx_t;
 typedef int (* shv_method_t) (shv_con_ctx_t *ctx, shv_node_t * node, int rid);
 
 typedef struct shv_method_des {
