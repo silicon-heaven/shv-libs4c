@@ -12,6 +12,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <shv/tree/shv_connection.h>
+#if defined(CONFIG_SHV_LIBS4C_PLATFORM_LINUX) || (CONFIG_SHV_LIBS4C_PLATFORM_NUTTX)
+    #include <shv/tree/shv_clayer_posix.h>
+#endif
 
 void shv_connection_init(struct shv_connection *connection, enum shv_tlayer_type tlayer)
 {
@@ -31,5 +34,11 @@ int shv_connection_tcpip_init(struct shv_connection *connection,
     
     connection->tlayer.tcpip.ip_addr = ip_addr;
     connection->tlayer.tcpip.port    = port;
+    /* Fill in the default ops */
+    connection->tops.init =      shv_tcpip_posix_init;
+    connection->tops.read =      shv_tcpip_posix_read;
+    connection->tops.write =     shv_tcpip_posix_write;
+    connection->tops.close =     shv_tcpip_posix_close;
+    connection->tops.dataready = shv_tcpip_posix_dataready;
     return 0;
 }

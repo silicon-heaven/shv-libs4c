@@ -35,6 +35,62 @@ enum shv_tlayer_canbus_pack_state
     LAST
 };
 
+/* Forward declaration */
+struct shv_connection;
+
+/**
+ * @brief Platform dependant function. Inits the transport layer
+ *        communication.
+ * 
+ * @param connection
+ * @return 0 in case of success, -1 otherwise
+ */
+typedef int (*shv_tlayer_init)(struct shv_connection *connection);
+
+/**
+ * @brief Platform dependant function. Reads at most len bytes to buf
+ *        from a given transport layer.
+ * 
+ * @param connection
+ * @param buf 
+ * @param len 
+ * @return > 0 (read bytes) in case of success, -1 in case of failure,
+ *         When 0 is returned, it indicates no available data in near future,
+ *         stopping the connection.
+ * @attention The function can be blocking.
+ */
+typedef int (*shv_tlayer_read)(struct shv_connection *connection, void *buf, size_t len);
+
+/**
+ * @brief Platform dependant function. Writes at most len bytes from buf
+ *        to the transport layer.
+ * 
+ * @param connection 
+ * @param buf 
+ * @param len 
+ * @return >= 0 (written bytes) in case of success, -1 otherwise
+ * @attention The function can be blocking.
+ */
+typedef int (*shv_tlayer_write)(struct shv_connection *sctx, void *buf, size_t len);
+
+/**
+ * @brief Platform dependant function. Terminates the transport layer connection.
+ * 
+ * @param connection 
+ * @return int 
+ */
+typedef int (*shv_tlayer_close)(struct shv_connection *connection);
+
+/**
+ * @brief Platform dependant function. Signalizes whether data are ready to be read.
+ *        A timeout in ms can be specified (in case timeout > -1)
+ * 
+ * @param connection 
+ * @param timeout in ms, anything < -1 means infinite waiting
+ * @return -1 in case of error, 0 in case the polling timeouted, 1 in case of ready data
+ */
+typedef int (*shv_tlayer_dataready)(struct shv_connection *connection, int timeout);
+
 /**
  * @brief Defines the parameters of the SHV connection to the broker.
  *
@@ -68,60 +124,14 @@ struct shv_connection
             struct shv_tlayer_canbus_ctx ctx;
         } canbus;
     } tlayer;
+    struct {
+        shv_tlayer_init      init;
+        shv_tlayer_read      read;
+        shv_tlayer_write     write;
+        shv_tlayer_close     close;
+        shv_tlayer_dataready dataready;
+    } tops; /* Transport layer ops */
 };
-
-/**
- * @brief Platform dependant function. Inits the transport layer
- *        communication.
- * 
- * @param connection
- * @return 0 in case of success, -1 otherwise
- */
-int shv_tlayer_init(struct shv_connection *connection);
-
-/**
- * @brief Platform dependant function. Reads at most len bytes to buf
- *        from a given transport layer.
- * 
- * @param connection
- * @param buf 
- * @param len 
- * @return > 0 (read bytes) in case of success, -1 in case of failure,
- *         When 0 is returned, it indicates no available data in near future,
- *         stopping the connection.
- * @attention The function can be blocking.
- */
-int shv_tlayer_read(struct shv_connection *connection, void *buf, size_t len);
-
-/**
- * @brief Platform dependant function. Writes at most len bytes from buf
- *        to the transport layer.
- * 
- * @param connection 
- * @param buf 
- * @param len 
- * @return >= 0 (written bytes) in case of success, -1 otherwise
- * @attention The function can be blocking.
- */
-int shv_tlayer_write(struct shv_connection *sctx, void *buf, size_t len);
-
-/**
- * @brief Platform dependant function. Terminates the transport layer connection.
- * 
- * @param connection 
- * @return int 
- */
-int shv_tlayer_close(struct shv_connection *connection);
-
-/**
- * @brief Platform dependant function. Signalizes whether data are ready to be read.
- *        A timeout in ms can be specified (in case timeout > -1)
- * 
- * @param connection 
- * @param timeout in ms, anything < -1 means infinite waiting
- * @return -1 in case of error, 0 in case the polling timeouted, 1 in case of ready data
- */
-int shv_tlayer_dataready(struct shv_connection *connection, int timeout);
 
 /**
  * @brief Initialize a shv_connection struct.
