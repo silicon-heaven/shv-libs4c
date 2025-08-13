@@ -101,6 +101,7 @@ int shv_file_process_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *ite
     int ret;
     ccpcp_unpack_context *ctx = &shv_ctx->unpack_ctx;
     item->platform_error = false;
+    struct shv_file_node_fctx *fctx = (struct shv_file_node_fctx *) item->fctx;
 
     do {
         cchainpack_unpack_next(ctx);
@@ -160,7 +161,7 @@ int shv_file_process_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *ite
                 item->file_offset = ctx->item.as.Int;
                 item->state = BLOB;
                 if (!item->platform_error) {
-                    ret = shv_file_node_seeker(item, item->file_offset);
+                    ret = item->fops.seeker(item, item->file_offset);
                     if (ret < 0) {
                         item->platform_error = true;
                     }
@@ -181,8 +182,8 @@ int shv_file_process_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *ite
                  * is to get the file's attributes beforehand and work with that.
                  */
                 if (!item->platform_error) {
-                    ret = shv_file_node_writer(item, ctx->item.as.String.chunk_start,
-                                               ctx->item.as.String.chunk_size);
+                    ret = item->fops.writer(item, ctx->item.as.String.chunk_start,
+                                       ctx->item.as.String.chunk_size);
                     if (ret < 0) {
                         item->platform_error = true;
                     }
@@ -358,7 +359,7 @@ int shv_file_process_crc(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
         size = item->crc_size;
     }
     if (parse_result >= 0) {
-        if (shv_file_node_crc32(item, start, size, &item->crc) < 0) {
+        if (item->fops.crc32(item, start, size, &item->crc) < 0) {
             item->platform_error = true;
         } else {
             item->platform_error = false;
