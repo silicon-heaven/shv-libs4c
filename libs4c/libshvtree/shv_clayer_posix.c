@@ -180,7 +180,7 @@ int shv_file_node_posix_crc32(shv_file_node_t *item, int start, size_t size, uin
     return 0;
 }
 
-static int serial_init(struct shv_tlayer_serial_ctx *sctx)
+int shv_serial_posix_init(struct shv_tlayer_serial_ctx *sctx)
 {
     if (sctx == NULL) {
         return -1;
@@ -217,7 +217,7 @@ error:
     return -1;
 }
 
-static int serial_read(struct shv_tlayer_serial_ctx *sctx, void *buf, size_t len)
+int shv_serial_posix_read(struct shv_tlayer_serial_ctx *sctx, void *buf, size_t len)
 {
     if (sctx == NULL || buf == NULL) {
         return -1;
@@ -226,7 +226,7 @@ static int serial_read(struct shv_tlayer_serial_ctx *sctx, void *buf, size_t len
     return read(sctx->fd, buf, len);
 }
 
-static int serial_write(struct shv_tlayer_serial_ctx *sctx, void *buf, size_t len)
+int shv_serial_posix_write(struct shv_tlayer_serial_ctx *sctx, void *buf, size_t len)
 {
     if (sctx == NULL || buf == NULL) {
         return -1;
@@ -235,7 +235,7 @@ static int serial_write(struct shv_tlayer_serial_ctx *sctx, void *buf, size_t le
     return write(sctx->fd, buf, len);
 }
 
-static int serial_close(struct shv_tlayer_serial_ctx *sctx)
+int shv_serial_posix_close(struct shv_tlayer_serial_ctx *sctx)
 {
     if (sctx == NULL) {
         return -1;
@@ -245,7 +245,16 @@ static int serial_close(struct shv_tlayer_serial_ctx *sctx)
     return close(sctx->fd);
 }
 
-static int tcpip_init(struct shv_connection *connection)
+int shv_serial_posix_dataready(struct shv_tlayer_serial_ctx *sctx, int timeout)
+{
+    /* The packed data (including byte stuffing, ETX, STX, CRC32) must be unpacked first.
+     * We can do it here. Simulate that multiple unpacking reads behave as one blocking
+     * function. Until the packet has been processed by multiple chunks and its CRC32
+     * has been checked, there will be no data in shv_rd_data.
+     */
+}
+
+int shv_tcpip_posix_init(struct shv_connection *connection)
 {
     struct sockaddr_in servaddr;
 
@@ -297,21 +306,21 @@ static int tcpip_init(struct shv_connection *connection)
     return 0;
 }
 
-static int tcpip_read(struct shv_connection *connection, void *buf, size_t len)
+int shv_tcpip_posix_read(struct shv_connection *connection, void *buf, size_t len)
 {
     return read(connection->tlayer.tcpip.ctx.sockfd, buf, len);
 }
 
-static int tcpip_write(struct shv_connection *connection, void *buf, size_t len)
+int shv_tcpip_posix_write(struct shv_connection *connection, void *buf, size_t len)
 {
     return write(connection->tlayer.tcpip.ctx.sockfd, buf, len);
 }
 
-static int tcpip_close(struct shv_tlayer_tcpip_ctx *tctx)
+int shv_tcpip_posix_close(struct shv_connection *connection)
 {
     int ret;
 
-    ret = close(tctx->sockfd);
+    ret = close(connection->tlayer.tcpip.ctx.sockfd);
     if (ret < 0) {
         fprintf(stderr, "ERROR: tcp_terminate() cannot close connection to the server, \
               errno = %d\n", errno);
@@ -322,13 +331,9 @@ static int tcpip_close(struct shv_tlayer_tcpip_ctx *tctx)
     return ret;
 }
 
-static int serial_dataready(struct shv_tlayer_serial_ctx *sctx, int timeout)
+int shv_tcpip_posix_dataready(struct shv_connection *connection, int timeout)
 {
-    return -1;
-}
-
-static int tcpip_dataready(struct shv_tlayer_tcpip_ctx *tctx, int timeout)
-{
+    struct shv_tlayer_tcpip_ctx *tctx = &connection->tlayer.tcpip.ctx;
     int ret = poll(tctx->pfds, 2, timeout);
     if (ret <= 0) {
         return ret;
@@ -349,66 +354,6 @@ static int tcpip_dataready(struct shv_tlayer_tcpip_ctx *tctx, int timeout)
         fprintf(stderr, "ERROR: error on sock's fd, errno=%d, getsockopterr=%d\n", errno, dest);
     }
     return -1;
-}
-
-int shv_tlayer_init(struct shv_connection *connection)
-{
-    switch (connection->tlayer_type) {
-    case SHV_TLAYER_TCPIP:
-        return tcpip_init(connection);
-    case SHV_TLAYER_SERIAL:
-        return serial_init(&connection->tlayer.serial.ctx);
-    default:
-        return -2;
-    }
-}
-
-int shv_tlayer_read(struct shv_connection *connection, void *buf, size_t len)
-{
-    switch (connection->tlayer_type) {
-    case SHV_TLAYER_TCPIP:
-        return tcpip_read(connection, buf, len);
-    case SHV_TLAYER_SERIAL:
-        return serial_read(&connection->tlayer.serial.ctx, buf, len);
-    default:
-        return -1;
-    }
-}
-
-int shv_tlayer_write(struct shv_connection *connection, void *buf, size_t len)
-{
-    switch (connection->tlayer_type) {
-    case SHV_TLAYER_TCPIP:
-        return tcpip_write(connection, buf, len);
-    case SHV_TLAYER_SERIAL:
-        return serial_write(&connection->tlayer.serial.ctx, buf, len);
-    default:
-        return -1;
-    }
-}
-
-int shv_tlayer_close(struct shv_connection *connection)
-{
-    switch (connection->tlayer_type) {
-    case SHV_TLAYER_TCPIP:
-        return tcpip_close(&connection->tlayer.tcpip.ctx);
-    case SHV_TLAYER_SERIAL:
-        return serial_close(&connection->tlayer.serial.ctx);
-    default:
-        return -1;
-    }
-}
-
-int shv_tlayer_dataready(struct shv_connection *connection, int timeout)
-{
-    switch (connection->tlayer_type) {
-    case SHV_TLAYER_TCPIP:
-        return tcpip_dataready(&connection->tlayer.tcpip.ctx, timeout);
-    case SHV_TLAYER_SERIAL:
-        return serial_dataready(&connection->tlayer.serial.ctx, timeout);
-    default:
-        return -1;
-    }
 }
 
 static void *__shv_process(void *arg)

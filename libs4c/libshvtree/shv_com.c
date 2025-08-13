@@ -383,7 +383,8 @@ int shv_process_input(shv_con_ctx_t * shv_ctx)
 
   struct ccpcp_unpack_context *ctx = &shv_ctx->unpack_ctx;
 
-  i = shv_tlayer_read(shv_ctx->connection, shv_ctx->shv_rd_data, sizeof(shv_ctx->shv_rd_data));
+  i = shv_ctx->connection->tops.read(shv_ctx->connection,
+                                     shv_ctx->shv_rd_data, sizeof(shv_ctx->shv_rd_data));
 
   if (i > 0)
     {
@@ -906,7 +907,7 @@ int shv_login(shv_con_ctx_t *shv_ctx)
    * wait for reply from server
    */
 
-  i = shv_tlayer_read(shv_ctx->connection, shv_ctx->shv_data, sizeof(shv_ctx->shv_data));
+  i = connection->tops.read(connection, shv_ctx->shv_data, sizeof(shv_ctx->shv_data));
   if (i <= 0)
     {
       return i;
@@ -1000,7 +1001,7 @@ int shv_login(shv_con_ctx_t *shv_ctx)
       shv_overflow_handler(&shv_ctx->pack_ctx, 0);
   }
 
-  i = shv_tlayer_read(shv_ctx->connection, shv_ctx->shv_data, sizeof(shv_ctx->shv_data));
+  i = connection->tops.read(connection, shv_ctx->shv_data, sizeof(shv_ctx->shv_data));
   if (i <= 0)
     {
       return i;
@@ -1041,18 +1042,15 @@ static inline int shv_process_communication(shv_con_ctx_t *shv_ctx)
 
     ret = shv_login(shv_ctx);
     if (ret < 0) {
-        printf("ERROR: shv_login() failed, ret = %d\n", ret);
+        fprintf(stderr, "ERROR: shv_login() failed, ret = %d\n", ret);
         shv_ctx->err_no = SHV_LOGIN;
         return -1;
     }
 
-    /* Create pthread that receives messages from the server and performs
-     * SHV operations.
-     */
-
     while (atomic_load(&shv_ctx->running)) {
         /* Set timemout to one half of shv_ctx->timeout (in ms) */
-        ret = shv_tlayer_dataready(shv_ctx->connection, (shv_ctx->timeout * 1000) / 2);
+        ret = shv_ctx->connection->tops.dataready(shv_ctx->connection,
+                                                  (shv_ctx->timeout * 1000) / 2);
 
         if (ret == 0) {
             /* Timeout, send ping or if there's request to end, break.
@@ -1094,7 +1092,7 @@ int shv_process(shv_con_ctx_t *shv_ctx)
     while (true) {
         switch (conn_state) {
         case NOT_INIT:
-            ret = shv_tlayer_init(shv_ctx->connection);
+            ret = shv_ctx->connection->tops.init(shv_ctx->connection);
             if (ret == -2) {
                 fprintf(stderr, "ERROR: failed to initialize the lowlevel transport layer!\n");
                 shv_ctx->err_no = SHV_TLAYER_INIT;
@@ -1115,7 +1113,7 @@ int shv_process(shv_con_ctx_t *shv_ctx)
                                     "Trying again in %d seconds.\n",
                                     shv_ctx->connection->reconnect_period);
                     clock_nanosleep(CLOCK_MONOTONIC, 0, &ts, NULL);
-                    ret = shv_tlayer_init(shv_ctx->connection);
+                    ret = shv_ctx->connection->tops.init(shv_ctx->connection);
                     if (ret == 0) {
                         /* Succesfull connect, go to login */
                         conn_state = CONN;
@@ -1143,7 +1141,7 @@ int shv_process(shv_con_ctx_t *shv_ctx)
             if (ret < 0) {
                 /* Something bad happened. The error should be already set in err_no. */
                 /* Close the connection mercifully. */
-                shv_tlayer_close(shv_ctx->connection);
+                shv_ctx->connection->tops.close(shv_ctx->connection);
                 return ret;
             } else if (ret == 0) {
                 /* Unable to process any further bytes. It's not an error, but it indicated
@@ -1151,7 +1149,7 @@ int shv_process(shv_con_ctx_t *shv_ctx)
                  * (if we have enough remaining retries).
                  */
 
-                shv_tlayer_close(shv_ctx->connection);
+                shv_ctx->connection->tops.close(shv_ctx->connection);
                 if (atomic_load(&shv_ctx->running)) {
                     fprintf(stderr, "WARNING: we have been disconnected!\n");
                     /* Close the connection mercifully. */

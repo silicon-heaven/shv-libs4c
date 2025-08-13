@@ -32,7 +32,7 @@ void shv_overflow_handler(struct ccpcp_pack_context *ctx, size_t size_hint)
     {
       while ((shv_ctx->write_err == 0) && (to_send > 0))
         {
-          ret = shv_tlayer_write(shv_ctx->connection, ptr_data, to_send);
+          ret = shv_ctx->connection->tops.write(shv_ctx->connection, ptr_data, to_send);
           if (ret <= 0)
             {
               printf("ERROR: Write error, ret = %d\n", ret);
@@ -60,7 +60,8 @@ size_t shv_underrflow_handler(struct ccpcp_unpack_context * ctx)
 
   shv_con_ctx_t *shv_ctx = UL_CONTAINEROF(ctx, shv_con_ctx_t, unpack_ctx);
 
-  i = shv_tlayer_read(shv_ctx->connection, shv_ctx->shv_rd_data, sizeof(shv_ctx->shv_rd_data));
+  i = shv_ctx->connection->tops.read(shv_ctx->connection,
+                                     shv_ctx->shv_rd_data, sizeof(shv_ctx->shv_rd_data));
   if (i > 0)
     {
       ctx->start = shv_ctx->shv_rd_data;

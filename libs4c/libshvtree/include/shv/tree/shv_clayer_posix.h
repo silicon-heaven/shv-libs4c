@@ -10,6 +10,7 @@
 #define SHV_FILE_POSIX_BITFLAG_OPENED ((uint32_t)(1 << 0)) /* File already opened flag */
 
 typedef struct shv_file_node shv_file_node_t;
+struct shv_connection;
 
 struct shv_file_node_fctx
 {
@@ -99,3 +100,48 @@ int shv_file_node_posix_reader(shv_file_node_t *item, void *buf, size_t count);
  * @return int
  */
 int shv_file_node_posix_crc32(shv_file_node_t *item, int start, size_t size, uint32_t *result);
+
+/**
+ * @brief POSIX shv_tcpip_init implementation
+ *
+ * @param connection
+ * @return int
+ */
+int shv_tcpip_posix_init(struct shv_connection *connection);
+
+/**
+ * @brief POSIX shv_tcpip_read implementation
+ *
+ * @param connection
+ * @param buf
+ * @param len
+ * @return int
+ */
+int shv_tcpip_posix_read(struct shv_connection *connection, void *buf, size_t len);
+
+/**
+ * @brief POSIX shv_tcpip_write implementation
+ *
+ * @param connection
+ * @param buf
+ * @param len
+ * @return int
+ */
+int shv_tcpip_posix_write(struct shv_connection *connection, void *buf, size_t len);
+
+/**
+ * @brief POSIX shv_tcpip_close implementation
+ *
+ * @param tctx
+ * @return int
+ */
+int shv_tcpip_posix_close(struct shv_connection *connection);
+
+/**
+ * @brief POSIX shv_tcpip_dataready implementation
+ *
+ * @param tctx
+ * @param timeout
+ * @return int
+ */
+int shv_tcpip_posix_dataready(struct shv_connection *connection, int timeout);
