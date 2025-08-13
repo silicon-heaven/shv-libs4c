@@ -50,6 +50,13 @@ enum shv_unpack_crc_state
   C_SIZE
 };
 
+enum shv_node_type
+{
+    SHV_BASIC_NODE,
+    SHV_TYPED_VAL_NODE,
+    SHV_FILE_NODE
+};
+
 typedef struct shv_node_list {
   int mode;                         /* Mode selection (GAVL vs GSA, static vs dynamic) */
   union {
@@ -72,6 +79,7 @@ typedef struct shv_node {
   gavl_node_t gavl_node;    /* GAVL instance */
   shv_dmap_t *dir;          /* Pointer to supported methods */
   shv_node_list_t children; /* List of node children */
+  enum shv_node_type type;  /* The type of node */
 } shv_node_t;
 
 typedef struct shv_node_typed_val {
@@ -251,9 +259,41 @@ void shv_node_list_names_it_init(shv_node_list_t *list, shv_node_list_names_it_t
 int shv_node_process(shv_con_ctx_t *shv_ctx, int rid, const char * met, const char * path);
 shv_node_t *shv_node_find(shv_node_t *node, const char * path);
 void shv_tree_add_child(shv_node_t *node, shv_node_t *child);
-shv_node_typed_val_t *shv_tree_node_typed_val_new(const char *child_name, const shv_dmap_t *dir, int mode);
 void shv_tree_node_init(shv_node_t *item, const char *child_name, const shv_dmap_t *dir, int mode);
+
+/**
+ * @brief Destroy the whole SHV tree, given the parent node
+ *
+ * @param parent
+ */
 void shv_tree_destroy(shv_node_t *parent);
 
+/**
+ * @brief Allocates and initializes a simple node
+ *
+ * @param child_name
+ * @param dir
+ * @param mode
+ * @return A nonNULL pointer on success, NULL otherwise
+ */
 shv_node_t *shv_tree_node_new(const char *child_name, const shv_dmap_t *dir, int mode);
+
+/**
+ * @brief Initialize the shv_node_typed_val_t node
+ *
+ * @param child_name
+ * @param dir
+ * @param mode
+ * @return A nonNULL pointer on success, NULL otherwise
+ */
+shv_node_typed_val_t *shv_tree_node_typed_val_new(const char *child_name, const shv_dmap_t *dir, int mode);
+
+/**
+ * @brief Allocates and initializes a file node
+ *
+ * @param child_name
+ * @param dir
+ * @param mode
+ * @return A nonNULL pointer on success, NULL otherwise
+ */
 shv_file_node_t *shv_tree_file_node_new(const char *child_name, const shv_dmap_t *dir, int mode);

@@ -219,32 +219,6 @@ void shv_tree_add_child(shv_node_t *node, shv_node_t *child)
 }
 
 /****************************************************************************
- * Name: shv_tree_node_typed_val_new
- *
- * Description:
- *   Initialize the shv_node_typed_val_t node.
- *
- ****************************************************************************/
-
-shv_node_typed_val_t *shv_tree_node_typed_val_new(const char *child_name,
-                                                  const shv_dmap_t *dir,
-                                                  int mode)
-{
-  shv_node_typed_val_t *item = malloc(sizeof(shv_node_typed_val_t));
-  if (item == NULL)
-    {
-      printf("ERROR: malloc() failed\n");
-      return NULL;
-    }
-
-  memset(item, 0, sizeof(shv_node_typed_val_t));
-
-  shv_tree_node_init(&item->shv_node, child_name, dir, mode);
-
-  return item;
-}
-
-/****************************************************************************
  * Name: shv_tree_node_init
  *
  * Description:
@@ -271,38 +245,48 @@ void shv_tree_node_init(shv_node_t *item, const char *child_name,
     }
 }
 
-/****************************************************************************
- * Name: shv_tree_node_new
- *
- * Description:
- *   Create new node shv_node_t and initialize it.
- *
- ****************************************************************************/
-
 shv_node_t *shv_tree_node_new(const char *child_name,
                               const shv_dmap_t *dir, int mode)
 {
     shv_node_t *item = calloc(1, sizeof(shv_node_t));
     if (item == NULL) {
-        printf("ERROR: malloc() failed\n");
+        fprintf(stderr, "ERROR: malloc() failed\n");
         return NULL;
     }
     shv_tree_node_init(item, child_name, dir, mode);
-
+    item->type = SHV_BASIC_NODE;
     return item;
+}
+
+shv_node_typed_val_t *shv_tree_node_typed_val_new(const char *child_name,
+                                                  const shv_dmap_t *dir,
+                                                  int mode)
+{
+  shv_node_typed_val_t *item = malloc(sizeof(shv_node_typed_val_t));
+  if (item == NULL)
+    {
+      printf("ERROR: malloc() failed\n");
+      return NULL;
+    }
+
+  memset(item, 0, sizeof(shv_node_typed_val_t));
+
+  shv_tree_node_init(&item->shv_node, child_name, dir, mode);
+
+  return item;
 }
 
 shv_file_node_t *shv_tree_file_node_new(const char *child_name, const shv_dmap_t *dir, int mode)
 {
     shv_file_node_t *item = calloc(1, sizeof(shv_file_node_t));
     if (item == NULL) {
-        printf("ERROR: calloc() failed\n");
+        fprintf(stderr, "ERROR: calloc() failed\n");
         return NULL;
     }
     /* Allocate default file context */
     item->fctx = calloc(1, sizeof(struct shv_file_node_fctx));
     if (item->fctx == NULL) {
-        printf("ERROR: calloc() failed\n");
+        fprintf(stderr, "ERROR: calloc() failed\n");
         return NULL;
     }
     /* Initialize with default ops */
@@ -314,6 +298,7 @@ shv_file_node_t *shv_tree_file_node_new(const char *child_name, const shv_dmap_t
     item->fops.crc32   = shv_file_node_posix_crc32;
 #endif
     shv_tree_node_init(&item->shv_node, child_name, dir, mode);
+    item->shv_node.type = SHV_FILE_NODE;
     return item;
 }
 
@@ -327,28 +312,31 @@ shv_file_node_t *shv_tree_file_node_new(const char *child_name, const shv_dmap_t
 
 void shv_tree_destroy(shv_node_t *parent)
 {
-  shv_node_t *child;
+    shv_node_t *child;
 
-  if (parent->children.mode & SHV_NLIST_MODE_GSA)
-    {
-      gsa_cust_for_each_cut(shv_node_list_gsa, &parent->children, child)
-        {
-          shv_tree_destroy(child);
+    if (parent->children.mode & SHV_NLIST_MODE_GSA) {
+        gsa_cust_for_each_cut(shv_node_list_gsa, &parent->children, child) {
+            shv_tree_destroy(child);
         }
-    }
-  else
-    {
-      gavl_cust_for_each_cut(shv_node_list_gavl, &parent->children, child)
-        {
-          shv_tree_destroy(child);
+    } else {
+        gavl_cust_for_each_cut(shv_node_list_gavl, &parent->children, child) {
+            shv_tree_destroy(child);
         }
     }
 
-  if ((parent->children.mode & SHV_NLIST_MODE_STATIC) == 0)
-    {
-      /* Only dynamic nodes can be freed */
-
-      free(parent);
+    if ((parent->children.mode & SHV_NLIST_MODE_STATIC) == 0) {
+        /* The deallocation must be done according to the node's type */
+        if (parent->type == SHV_BASIC_NODE) {
+            free(parent);
+        } else if (parent->type == SHV_TYPED_VAL_NODE) {
+            shv_node_typed_val_t *typed_val = UL_CONTAINEROF(parent, shv_node_typed_val_t,
+                                                             shv_node);
+            free(typed_val);
+        } else if (parent->type == SHV_FILE_NODE) {
+            shv_file_node_t *file_node = UL_CONTAINEROF(parent, shv_file_node_t, shv_node);
+            free(file_node->fctx);
+            free(file_node);
+        }
     }
 }
 
