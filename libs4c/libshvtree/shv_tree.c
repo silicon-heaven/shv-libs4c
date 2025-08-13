@@ -310,7 +310,6 @@ shv_file_node_t *shv_tree_file_node_new(const char *child_name, const shv_dmap_t
     item->fops.opener  = shv_file_node_posix_opener;
     item->fops.getsize = shv_file_node_posix_getsize;
     item->fops.writer  = shv_file_node_posix_writer;
-    item->fops.reader  = shv_file_node_posix_reader;
     item->fops.seeker  = shv_file_node_posix_seeker;
     item->fops.crc32   = shv_file_node_posix_crc32;
 #endif
