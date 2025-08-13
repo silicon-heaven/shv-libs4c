@@ -2,7 +2,8 @@
 
 #include <stddef.h>
 #include <shv/chainpack/ccpcp.h>
-#include "shv_com.h"
+
+typedef struct shv_con_ctx shv_con_ctx_t;
 
 /**
  * @brief A handler responsible for the sending of data
