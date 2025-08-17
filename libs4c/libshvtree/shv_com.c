@@ -829,7 +829,7 @@ int shv_login(shv_con_ctx_t *shv_ctx)
   int id = 0;
   const char* shv_broker_user;
   const char* shv_broker_passw;
-  char* shv_broker_devid;
+  const char* shv_broker_devid;
   const char* shv_broker_mount;
   struct shv_connection *connection = shv_ctx->connection;
 
@@ -847,16 +847,16 @@ int shv_login(shv_con_ctx_t *shv_ctx)
       return -1;
     }
 
-  shv_broker_devid = getenv("SHV_BROKER_DEV_ID");
-  if (!shv_broker_devid)
+  shv_broker_devid = connection->device_id;
+  if (CHECK_STR(shv_broker_devid))
     {
-      shv_broker_devid = "pysim";
+      shv_broker_devid = "host";
     }
 
   shv_broker_mount = connection->broker_mount;
   if (CHECK_STR(shv_broker_mount))
     {
-      shv_broker_mount = "test/pysim";
+      shv_broker_mount = "test/host";
     }
 
   ccpcp_pack_context_init(&shv_ctx->pack_ctx, shv_ctx->shv_data,
