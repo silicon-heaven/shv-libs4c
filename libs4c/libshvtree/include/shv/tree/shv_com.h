@@ -66,10 +66,12 @@ static const char *shv_con_errno_strs[SHV_ERRNOS_COUNT] =
  */
 enum shv_attention_reason
 {
-    SHV_ATTENTION_ERROR /* A nonrecoverable error occured, you should inspect
-                           `err_no` in shv_con_ctx_t */
+    SHV_ATTENTION_ERROR,        /* A nonrecoverable error occured, you should inspect
+                                   `err_no` in shv_con_ctx_t */
+    SHV_ATTENTION_CONNECTED,    /* The thread succesfully connected to a broker */
+    SHV_ATTENTION_DISCONNECTED, /* The connection was closed by the remote host */
+    SHV_ATTENTION_COUNT
 };
-
 
 /* Forward declaration*/
 typedef struct shv_con_ctx shv_con_ctx_t;
