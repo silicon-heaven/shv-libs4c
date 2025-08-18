@@ -1046,6 +1046,8 @@ static inline int shv_process_communication(shv_con_ctx_t *shv_ctx)
         shv_ctx->err_no = SHV_LOGIN;
         return -1;
     }
+    /* Signal succesful connection */
+    shv_ctx->at_signlr(shv_ctx, SHV_ATTENTION_CONNECTED);
 
     while (atomic_load(&shv_ctx->running)) {
         /* Set timemout to one half of shv_ctx->timeout (in ms) */
@@ -1148,7 +1150,7 @@ int shv_process(shv_con_ctx_t *shv_ctx)
                  * that the SHV connection has been terminated. Still, retry the connection
                  * (if we have enough remaining retries).
                  */
-
+                shv_ctx->at_signlr(shv_ctx, SHV_ATTENTION_DISCONNECTED);
                 shv_ctx->connection->tops.close(shv_ctx->connection);
                 if (atomic_load(&shv_ctx->running)) {
                     fprintf(stderr, "WARNING: we have been disconnected!\n");
@@ -1188,8 +1190,6 @@ int shv_process(shv_con_ctx_t *shv_ctx)
 shv_con_ctx_t *shv_com_init(struct shv_node *root, struct shv_connection *connection,
                             shv_attention_signaller at_signlr)
 {
-  int ret;
-
   shv_con_ctx_t *shv_ctx = (shv_con_ctx_t *)malloc(sizeof(shv_con_ctx_t));
   if (shv_ctx == NULL)
     {
@@ -1203,7 +1203,6 @@ shv_con_ctx_t *shv_com_init(struct shv_node *root, struct shv_connection *connec
 
 void shv_com_destroy(shv_con_ctx_t *shv_ctx)
 {
-    int ret;
     atomic_store(&shv_ctx->running, false);
     shv_stop_process_thread(shv_ctx);
     free(shv_ctx);
