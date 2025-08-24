@@ -60,20 +60,14 @@ int shv_file_node_posix_getsize(shv_file_node_t *item)
 
 int shv_file_node_posix_writer(shv_file_node_t *item, void *buf, size_t count)
 {
-    int fsize;
     struct shv_file_node_fctx *fctx = (struct shv_file_node_fctx*) item->fctx;
 
     if (item->fops.opener(item) >= 0) {
-        /* First, check the current file size */
-        fsize = item->fops.getsize(item);
-        if (fsize < 0)  {
-            return -1;
-        }
         /* Update count if needed. Be an ostrich and suppose st_size > 0 */
-        if (fsize >= item->file_maxsize) {
+        if (item->file_offset >= item->file_maxsize) {
             return 0;
-        } else if (fsize + count > item->file_maxsize) {
-            count = item->file_maxsize - fsize;
+        } else if (item->file_offset + count > item->file_maxsize) {
+            count = item->file_maxsize - item->file_offset;
         }
 
         return write(fctx->fd, buf, count);
@@ -83,18 +77,11 @@ int shv_file_node_posix_writer(shv_file_node_t *item, void *buf, size_t count)
 
 int shv_file_node_posix_seeker(shv_file_node_t *item, int offset)
 {
-    int fsize;
     struct shv_file_node_fctx *fctx = (struct shv_file_node_fctx*) item->fctx;
 
     if (item->fops.opener(item) >= 0) {
-        /* First, check boundaries */
-        fsize = item->fops.opener(item);
-        if (fsize < 0) {
-            return -1;
-        }
-
         /* Cap it at the maximum file boundary. */
-        if (fsize + offset >= item->file_maxsize) {
+        if (offset >= item->file_maxsize) {
             offset = item->file_maxsize;
         }
         return lseek(fctx->fd, (off_t)offset, SEEK_SET);

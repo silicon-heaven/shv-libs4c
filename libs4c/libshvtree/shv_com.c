@@ -1084,7 +1084,7 @@ static inline int shv_process_communication(shv_con_ctx_t *shv_ctx)
 int shv_process(shv_con_ctx_t *shv_ctx)
 {
     int ret;
-    const struct timespec ts = {30, 0};
+    const struct timespec ts = {shv_ctx->connection->reconnect_period, 0};
     /* A local enum to keep track of the connection */
     enum {NOT_INIT = 0, INIT_BUT_NO_CONN, CONN} conn_state = NOT_INIT;
 
@@ -1114,7 +1114,7 @@ int shv_process(shv_con_ctx_t *shv_ctx)
                     fprintf(stderr, "ERROR: can't connect to the server! "
                                     "Trying again in %d seconds.\n",
                                     shv_ctx->connection->reconnect_period);
-                    clock_nanosleep(CLOCK_MONOTONIC, 0, &ts, NULL);
+                    usleep(shv_ctx->connection->reconnect_period * 1000000);
                     ret = shv_ctx->connection->tops.init(shv_ctx->connection);
                     if (ret == 0) {
                         /* Succesfull connect, go to login */
