@@ -56,18 +56,6 @@ static void shv_typed_val_node_destructor(shv_node_t *node)
   free(typed_node);
 }
 
-/**
- * @brief File node destructor
- *
- * @param node
- */
-static void shv_file_node_destructor(shv_node_t *node)
-{
-  shv_file_node_t *file_node = UL_CONTAINEROF(node, shv_file_node_t, shv_node);
-  free(file_node->fctx);
-  shv_node_destructor(&file_node->shv_node);
-}
-
 /****************************************************************************
  * Name: shv_node_find
  *
@@ -296,32 +284,6 @@ shv_node_typed_val_t *shv_tree_node_typed_val_new(const char *child_name,
     }
     shv_tree_node_init(&item->shv_node, child_name, dir, mode);
     item->shv_node.vtable.destructor = shv_typed_val_node_destructor;
-    return item;
-}
-
-shv_file_node_t *shv_tree_file_node_new(const char *child_name, const shv_dmap_t *dir, int mode)
-{
-    shv_file_node_t *item = calloc(1, sizeof(shv_file_node_t));
-    if (item == NULL) {
-        perror("file node calloc");
-        return NULL;
-    }
-    /* Allocate default file context */
-    item->fctx = calloc(1, sizeof(struct shv_file_node_fctx));
-    if (item->fctx == NULL) {
-        perror("file node ctx calloc");
-        return NULL;
-    }
-    /* Initialize with default ops */
-#if defined (CONFIG_SHV_LIBS4C_PLATFORM_LINUX) || defined(CONFIG_SHV_LIBS4C_PLATFORM_NUTTX)
-    item->fops.opener  = shv_file_node_posix_opener;
-    item->fops.getsize = shv_file_node_posix_getsize;
-    item->fops.writer  = shv_file_node_posix_writer;
-    item->fops.seeker  = shv_file_node_posix_seeker;
-    item->fops.crc32   = shv_file_node_posix_crc32;
-#endif
-    shv_tree_node_init(&item->shv_node, child_name, dir, mode);
-    item->shv_node.vtable.destructor = shv_file_node_destructor;
     return item;
 }
 

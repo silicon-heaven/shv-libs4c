@@ -5,22 +5,22 @@
  */
 
 /**
- * @file shv_file_com.c
- * @brief The implementation of file nodes methods.
+ * @file shv_file_node.c
+ * @brief The implementation of file node and its methods
  */
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <pthread.h>
 #include <stdatomic.h>
 #include <unistd.h>
 
 #include <shv/chainpack/ccpcp.h>
 #include <shv/chainpack/cchainpack.h>
-#include <shv/tree/shv_file_com.h>
+#include <shv/tree/shv_file_node.h>
 #include <shv/tree/shv_com.h>
 #include <shv/tree/shv_com_common.h>
 #include <shv/tree/shv_tree.h>
+#include <shv/tree/shv_methods.h>
 #include <ulut/ul_utdefs.h>
 
 /* The Write method unpack state */
@@ -46,6 +46,18 @@ enum shv_unpack_crc_state
   C_LIST_END,
   C_SIZE
 };
+
+/**
+ * @brief File node destructor
+ *
+ * @param node
+ */
+static void shv_file_node_destructor(shv_node_t *node)
+{
+  shv_file_node_t *file_node = UL_CONTAINEROF(node, shv_file_node_t, shv_node);
+  free(file_node->fctx);
+  free(&file_node->shv_node);
+}
 
 void shv_file_send_stat(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
 {
@@ -440,6 +452,32 @@ int shv_file_node_stat(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
     return 0;
 }
 
+shv_file_node_t *shv_tree_file_node_new(const char *child_name, const shv_dmap_t *dir, int mode)
+{
+    shv_file_node_t *item = calloc(1, sizeof(shv_file_node_t));
+    if (item == NULL) {
+        perror("file node calloc");
+        return NULL;
+    }
+    /* Allocate default file context */
+    item->fctx = calloc(1, sizeof(struct shv_file_node_fctx));
+    if (item->fctx == NULL) {
+        perror("file node ctx calloc");
+        return NULL;
+    }
+    /* Initialize with default ops */
+#if defined (CONFIG_SHV_LIBS4C_PLATFORM_LINUX) || defined(CONFIG_SHV_LIBS4C_PLATFORM_NUTTX)
+    item->fops.opener  = shv_file_node_posix_opener;
+    item->fops.getsize = shv_file_node_posix_getsize;
+    item->fops.writer  = shv_file_node_posix_writer;
+    item->fops.seeker  = shv_file_node_posix_seeker;
+    item->fops.crc32   = shv_file_node_posix_crc32;
+#endif
+    shv_tree_node_init(&item->shv_node, child_name, dir, mode);
+    item->shv_node.vtable.destructor = shv_file_node_destructor;
+    return item;
+}
+
 const shv_method_des_t shv_dmap_item_file_node_crc =
 {
     .name = "crc",
@@ -463,3 +501,15 @@ const shv_method_des_t shv_dmap_item_file_node_size =
     .name = "size",
     .method = shv_file_node_size
 };
+
+static const shv_method_des_t * const shv_file_node_dmap_items[] =
+{
+  &shv_dmap_item_file_node_crc,
+  &shv_dmap_item_dir,
+  &shv_dmap_item_ls,
+  &shv_dmap_item_file_node_size,
+  &shv_dmap_item_file_node_stat,
+  &shv_dmap_item_file_node_write
+};
+
+const shv_dmap_t shv_file_node_dmap = SHV_CREATE_NODE_DMAP(file_node, shv_file_node_dmap_items);
