@@ -1,4 +1,14 @@
-#include <bits/time.h>
+/* SPDX-License-Identifier: LGPL-2.1-or-later OR BSD-2-Clause OR Apache-2.0
+ *
+ * Copyright (c) Stepan Pressl 2025 <pressl.stepan@gmail.com>
+ *                                  <pressste@fel.cvut.cz>
+ */
+
+/**
+ * @file shv_clayer_posix.c
+ * @brief POSIX compatibility layer for SHV
+ */
+
 #include <stdio.h>
 #include <stddef.h>
 #include <termios.h>
@@ -26,6 +36,7 @@
     #include <zlib.h>
     #include <linux/reboot.h>
     #include <sys/syscall.h>
+    #include <time.h>
 #elif defined(CONFIG_SHV_LIBS4C_PLATFORM_NUTTX)
     #include <nuttx/crc32.h>
     #include <sys/boardctl.h>
@@ -41,13 +52,11 @@ int shv_file_node_posix_opener(shv_file_node_t *item)
 {
     struct shv_file_node_fctx *fctx = (struct shv_file_node_fctx*) item->fctx;
     if (!(fctx->flags & SHV_FILE_POSIX_BITFLAG_OPENED)) {
-#if defined(CONFIG_SHV_LIBS4C_PLATFORM_LINUX) || defined(CONFIG_SHV_LIBS4C_PLATFORM_NUTTX)
         fctx->fd = open(item->name, O_RDWR | O_CREAT, 0644);
 
         if (fctx->fd < 0) {
             return -1;
         }
-#endif
         fctx->flags |= SHV_FILE_POSIX_BITFLAG_OPENED;
     }
     return 0;
