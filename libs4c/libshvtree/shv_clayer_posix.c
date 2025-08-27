@@ -1,3 +1,4 @@
+#include <bits/time.h>
 #include <stdio.h>
 #include <stddef.h>
 #include <termios.h>
@@ -23,8 +24,11 @@
 
 #if defined(CONFIG_SHV_LIBS4C_PLATFORM_LINUX)
     #include <zlib.h>
+    #include <linux/reboot.h>
+    #include <sys/syscall.h>
 #elif defined(CONFIG_SHV_LIBS4C_PLATFORM_NUTTX)
     #include <nuttx/crc32.h>
+    #include <sys/boardctl.h>
 #endif
 
 /* The whole file is common for Linux and NuttX but NuttX does not use zlib's CRC */
@@ -165,6 +169,26 @@ int shv_file_node_posix_crc32(shv_file_node_t *item, int start, size_t size, uin
     close(fctx->fd);
     fctx->flags &= ~SHV_FILE_POSIX_BITFLAG_OPENED;
     return 0;
+}
+
+int shv_dotdevice_node_posix_uptime(void)
+{
+    struct timespec ret;
+    if (clock_gettime(CLOCK_MONOTONIC, &ret) < 0) {
+        return -1;
+    }
+    return ret.tv_sec;
+}
+
+int shv_dotdevice_node_posix_reset(void)
+{
+#ifdef CONFIG_SHV_LIBS4C_PLATFORM_LINUX
+    sync();
+    //reboot(LINUX_REBOOT_CMD_RESTART); /* This is dangerous, commented */
+#endif
+#ifdef CONFIG_SHV_LIBS4C_PLATFORM_NUTTX
+    boardctl(BOARDIOC_RESET, BOARDIOC_RESETCAUSE_CPU_SOFT);
+#endif
 }
 
 int shv_serial_posix_init(struct shv_tlayer_serial_ctx *sctx)
