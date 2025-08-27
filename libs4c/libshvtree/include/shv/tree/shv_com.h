@@ -1,3 +1,15 @@
+/* SPDX-License-Identifier: LGPL-2.1-or-later OR BSD-2-Clause OR Apache-2.0
+ *
+ * Copyright (c) Michal Lenc 2022-2025 <michallenc@seznam.cz>
+ * Copyright (c) Stepan Pressl 2025 <pressl.stepan@gmail.com>
+ *                                  <pressste@fel.cvut.cz>
+ */
+
+/**
+ * @file shv_com.h
+ * @brief Main SHV communication and main SHV functions
+ */
+
 #pragma once
 
 #include <stdint.h>
@@ -19,6 +31,10 @@
 #define TAG_METHOD      10
 #define TAG_CALLER_IDS  11
 
+/**
+ * @brief SHV Method response error codes enum.
+ *
+ */
 enum shv_response_error_code
 {
     SHV_RE_METHOD_NOT_FOUND = 2,
@@ -39,7 +55,8 @@ enum shv_response_error_code
  */
 enum shv_con_errno
 {
-    SHV_PROC_THRD = 0, /* Unable to create the process thread */
+    SHV_NO_ERROR = 0,
+    SHV_PROC_THRD,     /* Unable to create the process thread */
     SHV_TLAYER_INIT,   /* Unable to init the transport layer */
     SHV_TLAYER_READ,   /* Failure reading from the transport layer */
     SHV_RECONNECTS,    /* The maximum number of reconnects to a broker reached */
@@ -51,6 +68,7 @@ enum shv_con_errno
 
 static const char *shv_con_errno_strs[SHV_ERRNOS_COUNT] =
 {
+    "",
     "Process thread creation fail",
     "Tlayer init fail",
     "Read from tlayer fail",
@@ -73,7 +91,7 @@ enum shv_attention_reason
     SHV_ATTENTION_COUNT
 };
 
-/* Forward declaration*/
+/* Forward declaration */
 typedef struct shv_con_ctx shv_con_ctx_t;
 
 /**
@@ -86,6 +104,10 @@ typedef void (*shv_attention_signaller)(shv_con_ctx_t *shv_ctx,
 /* Forward declaration */
 struct shv_node;
 
+/**
+ * @brief Main SHV Communication context.
+ *
+ */
 typedef struct shv_con_ctx {
   int stream_fd;
   int timeout;
@@ -123,9 +145,15 @@ struct shv_str_list_it_t {
    const char * (*get_next_entry)(shv_str_list_it_t *it, int reset_to_first);
 };
 
+/**
+ * @brief Get str of errno contained in ctx
+ *
+ * @param ctx
+ * @return const char*
+ */
 static inline const char *shv_errno_str(shv_con_ctx_t *ctx)
 {
-  return shv_con_errno_strs[ctx->err_no];
+    return shv_con_errno_strs[ctx->err_no];
 }
 
 void shv_send_int(shv_con_ctx_t *shv_ctx, int rid, int num);

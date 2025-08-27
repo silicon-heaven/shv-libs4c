@@ -1,3 +1,14 @@
+/* SPDX-License-Identifier: LGPL-2.1-or-later OR BSD-2-Clause OR Apache-2.0
+ *
+ * Copyright (c) Stepan Pressl 2025 <pressl.stepan@gmail.com>
+ *                                  <pressste@fel.cvut.cz>
+ */
+
+/**
+ * @file shv_com_common.h
+ * @brief Common functions used in SHV, not to be used directly
+ */
+
 #pragma once
 
 #include <stddef.h>

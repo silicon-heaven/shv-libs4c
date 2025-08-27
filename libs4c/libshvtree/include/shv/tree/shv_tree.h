@@ -1,3 +1,15 @@
+/* SPDX-License-Identifier: LGPL-2.1-or-later OR BSD-2-Clause OR Apache-2.0
+ *
+ * Copytight (c) Michal Lenc 2022-2025 <michallenc@seznam.cz>
+ * Copyright (c) Stepan Pressl 2025 <pressl.stepan@gmail.com>
+ *                                  <pressste@fel.cvut.cz>
+ */
+
+/**
+ * @file shv_tree.h
+ * @brief Definitions for SHV tree building
+ */
+
 #pragma once
 
 #include <ulut/ul_gavlcust.h>
@@ -25,13 +37,6 @@
             .alloc_count = 0\
         }\
     }
-
-enum shv_node_type
-{
-    SHV_BASIC_NODE,
-    SHV_TYPED_VAL_NODE,
-    SHV_FILE_NODE
-};
 
 typedef struct shv_node_list {
   int mode;                         /* Mode selection (GAVL vs GSA, static vs dynamic) */
