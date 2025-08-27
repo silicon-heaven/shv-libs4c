@@ -24,6 +24,30 @@
 #include <shv/tree/shv_tree.h>
 #include <ulut/ul_utdefs.h>
 
+/* The Write method unpack state */
+enum shv_unpack_write_state
+{
+  IMAP_START = 0, /* Wait for the IMAP start */
+  REQUEST_1,      /* Wait for the 1 key */
+  LIST_START,     /* Wait for the List start */
+  OFFSET,         /* Read the offset */
+  BLOB,           /* Read the blob */
+  LIST_STOP,      /* Wait for the List end */
+  IMAP_STOP       /* Wait for the IMAP end */
+};
+
+/* The Crc method unpack state */
+enum shv_unpack_crc_state
+{
+  C_IMAP_START,
+  C_IMAP_END,
+  C_REQUEST_1,
+  C_LIST_START,
+  C_OFFSET,
+  C_LIST_END,
+  C_SIZE
+};
+
 void shv_file_send_stat(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
 {
     /* SHV only supports regular files, as of July 2025 */ 

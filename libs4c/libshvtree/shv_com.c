@@ -1204,6 +1204,7 @@ shv_con_ctx_t *shv_com_init(struct shv_node *root, struct shv_connection *connec
 void shv_com_destroy(shv_con_ctx_t *shv_ctx)
 {
     atomic_store(&shv_ctx->running, false);
+    shv_tree_destroy(shv_ctx->root);
     shv_stop_process_thread(shv_ctx);
     free(shv_ctx);
 }

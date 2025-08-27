@@ -26,30 +26,6 @@
         }\
     }
 
-/* The Write method unpack state */
-enum shv_unpack_write_state
-{
-  IMAP_START = 0, /* Wait for the IMAP start */
-  REQUEST_1,      /* Wait for the 1 key */ 
-  LIST_START,     /* Wait for the List start */
-  OFFSET,         /* Read the offset */
-  BLOB,           /* Read the blob */
-  LIST_STOP,      /* Wait for the List end */
-  IMAP_STOP       /* Wait for the IMAP end */
-};
-
-/* The Crc method unpack state */
-enum shv_unpack_crc_state
-{
-  C_IMAP_START,
-  C_IMAP_END,
-  C_REQUEST_1,
-  C_LIST_START,
-  C_OFFSET,
-  C_LIST_END,
-  C_SIZE
-};
-
 enum shv_node_type
 {
     SHV_BASIC_NODE,
@@ -74,12 +50,15 @@ typedef struct shv_dmap {
   gsa_array_field_t methods;  /* GSA array of methods */
 } shv_dmap_t;
 
+typedef struct shv_node shv_node_t;
 typedef struct shv_node {
+  struct {
+    void (*destructor)(shv_node_t *this);
+  } vtable;                 /* Node vtable */
   const char *name;         /* Node name */
   gavl_node_t gavl_node;    /* GAVL instance */
   shv_dmap_t *dir;          /* Pointer to supported methods */
   shv_node_list_t children; /* List of node children */
-  enum shv_node_type type;  /* The type of node */
 } shv_node_t;
 
 typedef struct shv_node_typed_val {
@@ -168,10 +147,10 @@ typedef struct shv_file_node {
   int file_pagesize;                  /* Page size on a given filesystem/physical memory
                                          for efficient write accesses */
   
-  enum shv_unpack_write_state state;  /* Internal unpack write state */
+  unsigned int state;                 /* Internal unpack write state */
   int file_offset;                    /* Internal current file offset */
   
-  enum shv_unpack_crc_state crcstate; /* Internal unpack crc state */
+  unsigned int crcstate;              /* Internal unpack crc state */
   uint32_t crc;                       /* Internal CRC accumulator */
   int crc_offset;                     /* Internal file CRC compute region */
   int crc_size;                       /* Internal file CRC compute region */

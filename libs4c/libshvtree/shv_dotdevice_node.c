@@ -18,6 +18,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+static void shv_dotdevice_node_destructor(shv_node_t *node)
+{
+    shv_dotdevice_node_t *devnode = UL_CONTAINEROF(node, shv_dotdevice_node_t, shv_node);
+    free(devnode);
+}
+
 int shv_dotdevice_node_method_name(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
 {
     shv_dotdevice_node_t *devnode = UL_CONTAINEROF(item, shv_dotdevice_node_t, shv_node);
@@ -116,5 +122,6 @@ shv_dotdevice_node_t *shv_tree_dotdevice_node_new(const shv_dmap_t *dir, int mod
     item->devops.reset = shv_dotdevice_node_posix_reset;
     item->devops.uptime = shv_dotdevice_node_posix_uptime;
 #endif
+    item->shv_node.vtable.destructor = shv_dotdevice_node_destructor;
     return item;
 }
