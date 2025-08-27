@@ -9,6 +9,7 @@
 
 #define SHV_FILE_POSIX_BITFLAG_OPENED ((uint32_t)(1 << 0)) /* File already opened flag */
 
+typedef struct shv_dotdevice_node shv_dotdevice_node_t;
 typedef struct shv_file_node shv_file_node_t;
 struct shv_connection;
 
@@ -100,6 +101,18 @@ int shv_file_node_posix_reader(shv_file_node_t *item, void *buf, size_t count);
  * @return int
  */
 int shv_file_node_posix_crc32(shv_file_node_t *item, int start, size_t size, uint32_t *result);
+
+/**
+ * @brief POSIX shv_dotdevice_node_uptime implementation
+ * @return int
+ */
+int shv_dotdevice_node_posix_uptime(void);
+
+/**
+ * @brief POSIX shv_dotdevice_node_reset implementation
+ * @return int
+ */
+int shv_dotdevice_node_posix_reset(void);
 
 /**
  * @brief POSIX shv_tcpip_init implementation
