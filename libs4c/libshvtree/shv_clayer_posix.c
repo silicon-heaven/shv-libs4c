@@ -30,7 +30,7 @@
 #include <shv/tree/shv_connection.h>
 #include <shv/tree/shv_clayer_posix.h>
 #include <shv/tree/shv_com.h>
-#include <shv/tree/shv_file_com.h>
+#include <shv/tree/shv_file_node.h>
 
 #if defined(CONFIG_SHV_LIBS4C_PLATFORM_LINUX)
     #include <zlib.h>
