@@ -6,7 +6,7 @@
 
 /**
  * @file shv_dotdevice_com.h
- * @brief Colection of methods for .device node construction
+ * @brief Collection of methods for .device node construction
  */
 
 #pragma once

@@ -5,8 +5,8 @@
  */
 
 /**
- * @file shv_dotdevice_com.h
- * @brief Colection of methods for .device node construction
+ * @file shv_dotdevice_com.c
+ * @brief Collection of methods for .device node construction
  */
 
 #include <shv/tree/shv_dotdevice_node.h>
