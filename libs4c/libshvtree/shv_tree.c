@@ -41,6 +41,39 @@ GSA_CUST_IMP(shv_node_list_gsa, shv_node_list_t, shv_node_t,
 GSA_CUST_IMP(shv_dmap, shv_dmap_t, shv_method_des_t, shv_method_des_key_t,
 	           methods, name, shv_method_des_comp_func, 0)
 
+/**
+ * @brief Basic SHV node destructor
+ *
+ * @param node
+ */
+static void shv_node_destructor(shv_node_t *node)
+{
+  free(node);
+}
+
+/**
+ * @brief Destructor for shv_node_typed_val_t
+ *
+ * @param node
+ */
+static void shv_typed_val_node_destructor(shv_node_t *node)
+{
+  shv_node_typed_val_t *typed_node = UL_CONTAINEROF(node, shv_node_typed_val_t, shv_node);
+  free(typed_node);
+}
+
+/**
+ * @brief File node destructor
+ *
+ * @param node
+ */
+static void shv_file_node_destructor(shv_node_t *node)
+{
+  shv_file_node_t *file_node = UL_CONTAINEROF(node, shv_file_node_t, shv_node);
+  free(file_node->fctx);
+  shv_node_destructor(&file_node->shv_node);
+}
+
 /****************************************************************************
  * Name: shv_node_find
  *
@@ -250,11 +283,11 @@ shv_node_t *shv_tree_node_new(const char *child_name,
 {
     shv_node_t *item = calloc(1, sizeof(shv_node_t));
     if (item == NULL) {
-        fprintf(stderr, "ERROR: malloc() failed\n");
+        perror("node calloc");
         return NULL;
     }
     shv_tree_node_init(item, child_name, dir, mode);
-    item->type = SHV_BASIC_NODE;
+    item->vtable.destructor = shv_node_destructor;
     return item;
 }
 
@@ -262,31 +295,27 @@ shv_node_typed_val_t *shv_tree_node_typed_val_new(const char *child_name,
                                                   const shv_dmap_t *dir,
                                                   int mode)
 {
-  shv_node_typed_val_t *item = malloc(sizeof(shv_node_typed_val_t));
-  if (item == NULL)
-    {
-      printf("ERROR: malloc() failed\n");
-      return NULL;
+    shv_node_typed_val_t *item = calloc(1, sizeof(shv_node_typed_val_t));
+    if (item == NULL) {
+        printf("typed_val node calloc");
+        return NULL;
     }
-
-  memset(item, 0, sizeof(shv_node_typed_val_t));
-
-  shv_tree_node_init(&item->shv_node, child_name, dir, mode);
-
-  return item;
+    shv_tree_node_init(&item->shv_node, child_name, dir, mode);
+    item->shv_node.vtable.destructor = shv_typed_val_node_destructor;
+    return item;
 }
 
 shv_file_node_t *shv_tree_file_node_new(const char *child_name, const shv_dmap_t *dir, int mode)
 {
     shv_file_node_t *item = calloc(1, sizeof(shv_file_node_t));
     if (item == NULL) {
-        fprintf(stderr, "ERROR: calloc() failed\n");
+        perror("file node calloc");
         return NULL;
     }
     /* Allocate default file context */
     item->fctx = calloc(1, sizeof(struct shv_file_node_fctx));
     if (item->fctx == NULL) {
-        fprintf(stderr, "ERROR: calloc() failed\n");
+        perror("file node ctx calloc");
         return NULL;
     }
     /* Initialize with default ops */
@@ -298,7 +327,7 @@ shv_file_node_t *shv_tree_file_node_new(const char *child_name, const shv_dmap_t
     item->fops.crc32   = shv_file_node_posix_crc32;
 #endif
     shv_tree_node_init(&item->shv_node, child_name, dir, mode);
-    item->shv_node.type = SHV_FILE_NODE;
+    item->shv_node.vtable.destructor = shv_file_node_destructor;
     return item;
 }
 
@@ -326,17 +355,7 @@ void shv_tree_destroy(shv_node_t *parent)
 
     if ((parent->children.mode & SHV_NLIST_MODE_STATIC) == 0) {
         /* The deallocation must be done according to the node's type */
-        if (parent->type == SHV_BASIC_NODE) {
-            free(parent);
-        } else if (parent->type == SHV_TYPED_VAL_NODE) {
-            shv_node_typed_val_t *typed_val = UL_CONTAINEROF(parent, shv_node_typed_val_t,
-                                                             shv_node);
-            free(typed_val);
-        } else if (parent->type == SHV_FILE_NODE) {
-            shv_file_node_t *file_node = UL_CONTAINEROF(parent, shv_file_node_t, shv_node);
-            free(file_node->fctx);
-            free(file_node);
-        }
+        parent->vtable.destructor(parent);
     }
 }
 

@@ -128,8 +128,6 @@ static inline const char *shv_errno_str(shv_con_ctx_t *ctx)
   return shv_con_errno_strs[ctx->err_no];
 }
 
-
-void shv_com_end(shv_con_ctx_t *ctx);
 void shv_send_int(shv_con_ctx_t *shv_ctx, int rid, int num);
 void shv_send_uint(shv_con_ctx_t *shv_ctx, int rid, unsigned int num);
 void shv_send_double(shv_con_ctx_t *shv_ctx, int rid, double num);
