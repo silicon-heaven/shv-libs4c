@@ -18,20 +18,9 @@ typedef struct shv_con_ctx shv_con_ctx_t;
 /* File type identification enum */
 enum shv_file_type
 {
-    REGULAR = 0,           /* As of July 2025, the only supported file type */
+    SHV_FILE_REGULAR = 0,    /* As of July 2025, the only supported file type */
+    SHV_FILE_MTD,
     SHV_FILE_TYPE_COUNT,
-};
-
-/* Stat method keys identification enum */
-enum shv_file_node_keys
-{
-    FN_TYPE = 0,
-    FN_SIZE,
-    FN_PAGESIZE,
-    FN_ACCESSTIME,
-    FN_MODTIME,
-    FN_MAXWRITE,
-    SHV_FILE_NODE_KEYS_COUNT
 };
 
 typedef struct shv_file_node shv_file_node_t;
@@ -113,6 +102,7 @@ typedef struct shv_file_node {
                                          but not beyond the absolute maximum size */
   int file_pagesize;                  /* Page size on a given filesystem/physical memory
                                          for efficient write accesses */
+  int file_erasesize;                 /* Page erase size (only for the MTD file type) */
 
   unsigned int state;                 /* Internal unpack write state */
   int file_offset;                    /* Internal current file offset */
