@@ -26,25 +26,39 @@
 /* The Write method unpack state */
 enum shv_unpack_write_state
 {
-  IMAP_START = 0, /* Wait for the IMAP start */
-  REQUEST_1,      /* Wait for the 1 key */
-  LIST_START,     /* Wait for the List start */
-  OFFSET,         /* Read the offset */
-  BLOB,           /* Read the blob */
-  LIST_STOP,      /* Wait for the List end */
-  IMAP_STOP       /* Wait for the IMAP end */
+    IMAP_START = 0, /* Wait for the IMAP start */
+    REQUEST_1,      /* Wait for the 1 key */
+    LIST_START,     /* Wait for the List start */
+    OFFSET,         /* Read the offset */
+    BLOB,           /* Read the blob */
+    LIST_STOP,      /* Wait for the List end */
+    IMAP_STOP       /* Wait for the IMAP end */
 };
 
 /* The Crc method unpack state */
 enum shv_unpack_crc_state
 {
-  C_IMAP_START,
-  C_IMAP_END,
-  C_REQUEST_1,
-  C_LIST_START,
-  C_OFFSET,
-  C_LIST_END,
-  C_SIZE
+    C_IMAP_START,
+    C_IMAP_END,
+    C_REQUEST_1,
+    C_LIST_START,
+    C_OFFSET,
+    C_LIST_END,
+    C_SIZE
+};
+
+/* Stat method keys identification enum */
+enum shv_file_node_keys
+{
+    FN_TYPE = 0,
+    FN_SIZE,
+    FN_PAGESIZE,
+    FN_ACCESSTIME,
+    FN_MODTIME,
+    FN_MAXWRITE,
+    FN_MAXREAD,
+    FN_ERASESIZE,
+    SHV_FILE_NODE_KEYS_COUNT
 };
 
 /**
@@ -61,12 +75,6 @@ static void shv_file_node_destructor(shv_node_t *node)
 
 void shv_file_send_stat(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
 {
-    /* SHV only supports regular files, as of July 2025 */ 
-    if (item->file_type != REGULAR) {
-        shv_send_error(shv_ctx, rid, SHV_RE_INVALID_PARAMS, NULL);
-        return; 
-    }
-
     ccpcp_pack_context_init(&shv_ctx->pack_ctx,shv_ctx->shv_data, SHV_BUF_LEN,
                             shv_overflow_handler);
 
@@ -100,6 +108,15 @@ void shv_file_send_stat(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
         cchainpack_pack_int(&shv_ctx->pack_ctx, FN_MAXWRITE);
         /* 4 * PG_SIZE is reasonable */
         cchainpack_pack_int(&shv_ctx->pack_ctx, 4 * item->file_pagesize);
+
+        /* MaxRead key: read currently not implemented, send 0 */
+        cchainpack_pack_int(&shv_ctx->pack_ctx, FN_MAXREAD);
+        cchainpack_pack_int(&shv_ctx->pack_ctx, 0);
+
+        if (item->file_type == SHV_FILE_MTD) {
+            cchainpack_pack_int(&shv_ctx->pack_ctx, FN_ERASESIZE);
+            cchainpack_pack_int(&shv_ctx->pack_ctx, item->file_erasesize);
+        }
 
         cchainpack_pack_container_end(&shv_ctx->pack_ctx);
         cchainpack_pack_container_end(&shv_ctx->pack_ctx);
