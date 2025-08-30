@@ -53,8 +53,12 @@ int shv_dotdevice_node_method_reset(shv_con_ctx_t *shv_ctx, shv_node_t *item, in
     shv_dotdevice_node_t *devnode = UL_CONTAINEROF(item, shv_dotdevice_node_t, shv_node);
     shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
     shv_send_int(shv_ctx, rid, 0);
-    devnode->devops.reset();
-    return 0;
+    /* Let the response bubble through the network stack */
+    usleep(2 * 1000 * 1000);
+    if (devnode->devops.reset) {
+        devnode->devops.reset();
+    }
+    return -1; /* How the hell did you get here?!! */
 }
 
 int shv_dotdevice_node_method_uptime(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
