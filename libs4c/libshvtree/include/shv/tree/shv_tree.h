@@ -23,8 +23,8 @@
 #endif
 #include "shv_com.h"
 
-
-#define SHV_NLIST_MODE_GSA 1
+#define SHV_NLIST_MODE_GAVL   0
+#define SHV_NLIST_MODE_GSA    1
 #define SHV_NLIST_MODE_STATIC 2
 
 /* A helper macro that defines the node's methods */
