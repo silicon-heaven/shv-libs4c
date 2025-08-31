@@ -13,10 +13,15 @@
 #include <shv/tree/shv_methods.h>
 #include <ulut/ul_utdefs.h>
 #if defined(CONFIG_SHV_LIBS4C_PLATFORM_LINUX) || defined(CONFIG_SHV_LIBS4C_PLATFORM_NUTTX)
-  #include <shv/tree/shv_clayer_posix.h>
+    #include <shv/tree/shv_clayer_posix.h>
 #endif
 #include <stdio.h>
 #include <stdlib.h>
+
+/* The reset defines may not even exist! */
+#ifdef CONFIG_SHV_LIBS4C_PLATFORM_NUTTX
+    #include <nuttx/config.h>
+#endif
 
 static void shv_dotdevice_node_destructor(shv_node_t *node)
 {
@@ -57,6 +62,9 @@ int shv_dotdevice_node_method_reset(shv_con_ctx_t *shv_ctx, shv_node_t *item, in
     usleep(2 * 1000 * 1000);
     if (devnode->devops.reset) {
         devnode->devops.reset();
+    } else {
+        shv_send_error(shv_ctx, rid, SHV_RE_NOT_IMPLEMENTED, "NIMPL");
+        return 0;
     }
     return -1; /* How the hell did you get here?!! */
 }
@@ -122,9 +130,16 @@ shv_dotdevice_node_t *shv_tree_dotdevice_node_new(const shv_dmap_t *dir, int mod
     }
     shv_tree_node_init(&item->shv_node, ".device", dir, mode);
     /* Instantiate the node with default callbacks */
-#if defined(CONFIG_SHV_LIBS4C_PLATFORM_LINUX) || defined(CONFIG_SHV_LIBS4C_PLATFORM_NUTTX)
+#ifdef CONFIG_SHV_LIBS4C_PLATFORM_LINUX
     item->devops.reset = shv_dotdevice_node_posix_reset;
     item->devops.uptime = shv_dotdevice_node_posix_uptime;
+#endif
+#ifdef CONFIG_SHV_LIBS4C_PLATFORM_NUTTX
+    /* The reset method may not be implemented, if NuttX's defines are missing */
+    item->devops.uptime = shv_dotdevice_node_posix_uptime;
+#if defined(CONFIG_BOARDCTL_RESET) || defined(CONFIG_BOARDCTL_RESET_CAUSE)
+    item->devops.reset = shv_dotdevice_node_posix_reset;
+#endif
 #endif
     item->shv_node.vtable.destructor = shv_dotdevice_node_destructor;
     return item;
