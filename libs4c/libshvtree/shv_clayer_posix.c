@@ -38,6 +38,7 @@
     #include <sys/syscall.h>
     #include <time.h>
 #elif defined(CONFIG_SHV_LIBS4C_PLATFORM_NUTTX)
+    #include <nuttx/config.h>
     #include <nuttx/crc32.h>
     #include <sys/boardctl.h>
 #endif
@@ -196,7 +197,9 @@ int shv_dotdevice_node_posix_reset(void)
     //reboot(LINUX_REBOOT_CMD_RESTART); /* This is dangerous, commented */
 #endif
 #ifdef CONFIG_SHV_LIBS4C_PLATFORM_NUTTX
+#if defined(CONFIG_BOARDCTL_RESET) || defined(CONFIG_BOARDCTL_RESET_CAUSE)
     boardctl(BOARDIOC_RESET, BOARDIOC_RESETCAUSE_CPU_SOFT);
+#endif
 #endif
 }
 
