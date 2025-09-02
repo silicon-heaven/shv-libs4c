@@ -80,30 +80,45 @@ int shv_dotdevice_node_method_uptime(shv_con_ctx_t *shv_ctx, shv_node_t *item, i
 const shv_method_des_t shv_dmap_item_dotdevice_node_name =
 {
     .name = "name",
+    .flags = SHV_METHOD_GETTER,
+    .result = "s",
+    .access = SHV_ACCESS_BROWSE,
     .method = shv_dotdevice_node_method_name
 };
 
 const shv_method_des_t shv_dmap_item_dotdevice_node_version =
 {
     .name = "version",
+    .flags = SHV_METHOD_GETTER,
+    .result = "s",
+    .access = SHV_ACCESS_BROWSE,
     .method = shv_dotdevice_node_method_version
 };
 
 const shv_method_des_t shv_dmap_item_dotdevice_node_serial_number =
 {
     .name = "serialNumber",
+    .flags = SHV_METHOD_GETTER,
+    .result = "s|n",
+    .access = SHV_ACCESS_BROWSE,
     .method = shv_dotdevice_node_method_serial_number
 };
 
 const shv_method_des_t shv_dmap_item_dotdevice_node_uptime =
 {
     .name = "uptime",
+    .flags = SHV_METHOD_GETTER,
+    .result = "u|n",
+    .access = SHV_ACCESS_READ,
     .method = shv_dotdevice_node_method_uptime
 };
 
 const shv_method_des_t shv_dmap_item_dotdevice_node_reset =
 {
     .name = "reset",
+    .flags = 0,
+    .result = "",
+    .access = SHV_ACCESS_COMMAND,
     .method = shv_dotdevice_node_method_reset
 };
 

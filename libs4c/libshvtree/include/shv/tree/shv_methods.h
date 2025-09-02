@@ -23,9 +23,10 @@
 #define SHV_METHOD_GETTER (1 << 1)
 #define SHV_METHOD_SETTER (1 << 2)
 
-#define SHV_ACCESS_BROWSE (1)
-#define SHV_ACCESS_READ (8)
-#define SHV_ACCESS_WRITE (16)
+#define SHV_ACCESS_BROWSE  ((int)1)
+#define SHV_ACCESS_READ    ((int)8)
+#define SHV_ACCESS_WRITE   ((int)16)
+#define SHV_ACCESS_COMMAND ((int)24)
 
 extern const shv_method_des_t shv_dmap_item_ls;
 extern const shv_method_des_t shv_dmap_item_dir;
