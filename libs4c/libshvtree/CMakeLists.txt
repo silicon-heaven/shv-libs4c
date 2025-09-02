@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 # Evaluate the source files
-set(SRCS shv_com.c shv_file_node.c shv_methods.c shv_tree.c shv_com_common.c shv_connection.c shv_dotdevice_node.c)
+set(SRCS shv_com.c shv_file_node.c shv_methods.c shv_tree.c shv_com_common.c shv_connection.c shv_dotdevice_node.c shv_dotapp_node.c)
 if(DEFINED CONFIG_SHV_LIBS4C_PLATFORM)
     if(${CONFIG_SHV_LIBS4C_PLATFORM} STREQUAL "linux")
         find_package(ZLIB REQUIRED)
