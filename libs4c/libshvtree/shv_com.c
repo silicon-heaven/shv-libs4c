@@ -104,7 +104,6 @@ void shv_pack_head_request(shv_con_ctx_t *shv_ctx, char *met, char *path)
 int shv_unpack_head(shv_con_ctx_t * shv_ctx, int * rid, char * method,
                     char * path)
 {
-  int l;
   int i;
   bool ok;
 
@@ -115,7 +114,7 @@ int shv_unpack_head(shv_con_ctx_t * shv_ctx, int * rid, char * method,
 
   /* Unpack length */
 
-  l = cchainpack_unpack_uint_data(ctx, &ok);
+  cchainpack_unpack_uint_data(ctx, &ok);
 
   cchainpack_unpack_next(ctx);
   if (ctx->err_no != CCPCP_RC_OK) return -1;
@@ -1076,7 +1075,6 @@ static inline int shv_process_communication(shv_con_ctx_t *shv_ctx)
 int shv_process(shv_con_ctx_t *shv_ctx)
 {
     int ret;
-    const struct timespec ts = {shv_ctx->connection->reconnect_period, 0};
     /* A local enum to keep track of the connection */
     enum {NOT_INIT = 0, INIT_BUT_NO_CONN, CONN} conn_state = NOT_INIT;
 
