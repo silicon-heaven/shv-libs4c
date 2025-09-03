@@ -153,7 +153,6 @@ int shv_file_process_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *ite
     int ret;
     ccpcp_unpack_context *ctx = &shv_ctx->unpack_ctx;
     item->platform_error = false;
-    struct shv_file_node_fctx *fctx = (struct shv_file_node_fctx *) item->fctx;
 
     do {
         cchainpack_unpack_next(ctx);
@@ -294,7 +293,6 @@ int shv_file_process_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *ite
  */
 int shv_file_process_crc(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
 {
-    int ret;
     int parse_result = -1;
     size_t size;
     int start;

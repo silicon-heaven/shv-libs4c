@@ -35,6 +35,7 @@
 #if defined(CONFIG_SHV_LIBS4C_PLATFORM_LINUX)
     #include <zlib.h>
     #include <linux/reboot.h>
+    #include <sys/reboot.h>
     #include <sys/syscall.h>
     #include <time.h>
 #elif defined(CONFIG_SHV_LIBS4C_PLATFORM_NUTTX)
@@ -194,13 +195,20 @@ int shv_dotdevice_node_posix_reset(void)
 {
 #ifdef CONFIG_SHV_LIBS4C_PLATFORM_LINUX
     sync();
-    //reboot(LINUX_REBOOT_CMD_RESTART); /* This is dangerous, commented */
+    /* This is dangerous for testing, commented. */
+    if (reboot(LINUX_REBOOT_CMD_RESTART) < 0) {
+        return -1;
+    }
 #endif
 #ifdef CONFIG_SHV_LIBS4C_PLATFORM_NUTTX
 #if defined(CONFIG_BOARDCTL_RESET) || defined(CONFIG_BOARDCTL_RESET_CAUSE)
-    boardctl(BOARDIOC_RESET, BOARDIOC_RESETCAUSE_CPU_SOFT);
+    if (boardctl(BOARDIOC_RESET, BOARDIOC_RESETCAUSE_CPU_SOFT) < 0) {
+        return -1;
+    }
 #endif
 #endif
+    /* Shouldn't get here, but still... */
+    return 0;
 }
 
 int shv_serial_posix_init(struct shv_tlayer_serial_ctx *sctx)
@@ -275,6 +283,7 @@ int shv_serial_posix_dataready(struct shv_tlayer_serial_ctx *sctx, int timeout)
      * function. Until the packet has been processed by multiple chunks and its CRC32
      * has been checked, there will be no data in shv_rd_data.
      */
+    return -1;
 }
 
 int shv_tcpip_posix_init(struct shv_connection *connection)
@@ -431,7 +440,7 @@ int shv_create_process_thread(int thrd_prio, shv_con_ctx_t *ctx)
     schparam.sched_priority = thrd_prio;
     ret = pthread_attr_setschedparam(&attr, &schparam);
     RETLZ_ERROR(error);
-    ret = pthread_create(&ctx->thrd_ctx.id, NULL, __shv_process, (void *)ctx);
+    ret = pthread_create(&ctx->thrd_ctx.id, &attr, __shv_process, (void *)ctx);
     RETLZ_ERROR(error);
     return ret;
 
@@ -443,7 +452,8 @@ error:
 void shv_stop_process_thread(shv_con_ctx_t *shv_ctx)
 {
     /* Write to the pipe to simulate the instant timeout */
-    write(shv_ctx->thrd_ctx.fildes[1], "x", 1);
+    /* The write is enclosed in {} to suppress warn_unused_result warning */
+    { write(shv_ctx->thrd_ctx.fildes[1], "x", 1); }
 
     /* Wait for it to join */
     pthread_join(shv_ctx->thrd_ctx.id, NULL);
