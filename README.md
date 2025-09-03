@@ -15,6 +15,7 @@ make CONFIG_SHV_LIBS4C_PLATFORM="linux"
 ```
 to get three archive files (`libshvchainpack.a`, `libshvtree.a`, `libulut.a`) with object files under `./_compiled/lib`.
 You can then link them against your application. The headers are exported to `./_compiled/include`.
+In your app, you also need to link `zlib` (`-lz`), as this library uses the `crc32` function.
 
 ### NuttX
 The library should be <s>is</s> integrated in the NuttX mainline. To enable `shv-libs4c` support, check
