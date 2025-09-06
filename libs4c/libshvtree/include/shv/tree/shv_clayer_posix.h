@@ -21,7 +21,7 @@
 #define SHV_FILE_POSIX_BITFLAG_OPENED ((uint32_t)(1 << 0)) /* File already opened flag */
 
 /* Forward declarations */
-typedef struct shv_dotdevice_node shv_dotdevice_node_t;
+struct shv_dotdevice_node;
 struct shv_file_node;
 struct shv_connection;
 

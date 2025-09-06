@@ -14,7 +14,7 @@
 #include "shv_tree.h"
 
 /* Forward declaration */
-typedef struct shv_dotdevice_node shv_dotdevice_node_t;
+struct shv_dotdevice_node;
 
 /**
  * @brief A platform dependant function used to track time.
@@ -28,7 +28,8 @@ typedef int (*shv_dotdevice_node_uptime)(void);
  */
 typedef int (*shv_dotdevice_node_reset)(void);
 
-typedef struct shv_dotdevice_node {
+struct shv_dotdevice_node
+{
     struct shv_node shv_node;             /* Base shv_node */
     struct {
         shv_dotdevice_node_reset  reset;  /* Platform dependant reset function */
@@ -38,7 +39,7 @@ typedef struct shv_dotdevice_node {
     const char *name;                     /* */
     const char *serial_number;
     const char *version;
-} shv_dotdevice_node_t;
+};
 
 extern const struct shv_method_des shv_dmap_item_dotdevice_node_name;
 extern const struct shv_method_des shv_dmap_item_dotdevice_node_version;
@@ -59,4 +60,4 @@ extern const struct shv_dmap shv_dotdevice_dmap;
  * @param mode 
  * @return non NULL reference on success, NULL otherwise
  */
-shv_dotdevice_node_t *shv_tree_dotdevice_node_new(const struct shv_dmap *dir, int mode);
+struct shv_dotdevice_node *shv_tree_dotdevice_node_new(const struct shv_dmap *dir, int mode);
