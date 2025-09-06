@@ -116,18 +116,18 @@ shv_method_des_comp_func(const shv_method_des_key_t *a, const shv_method_des_key
 GSA_CUST_DEC(shv_dmap, struct shv_dmap, struct shv_method_des, shv_method_des_key_t,
 	methods, name, shv_method_des_comp_func)
 
-typedef struct shv_node_list_it
+struct shv_node_list_it
 {
   struct shv_node_list *node_list;
   union {
     struct shv_node *gavl_next_node;
     int gsa_next_indx;
   } list_it;
-} shv_node_list_it_t;
+};
 
-void shv_node_list_it_init(struct shv_node_list *list, shv_node_list_it_t *it);
-void shv_node_list_it_reset(shv_node_list_it_t *it);
-struct shv_node *shv_node_list_it_next(shv_node_list_it_t *it);
+void shv_node_list_it_init(struct shv_node_list *list, struct shv_node_list_it *it);
+void shv_node_list_it_reset(struct shv_node_list_it *it);
+struct shv_node *shv_node_list_it_next(struct shv_node_list_it *it);
 
 static inline int
 shv_node_list_count(struct shv_node_list *node_list)
@@ -145,7 +145,7 @@ shv_node_list_count(struct shv_node_list *node_list)
 struct shv_node_list_names_it
 {
   struct shv_str_list_it str_it;
-  shv_node_list_it_t list_it;
+  struct shv_node_list_it list_it;
 };
 
 void shv_node_list_names_it_init(struct shv_node_list *list, struct shv_node_list_names_it *names_it);

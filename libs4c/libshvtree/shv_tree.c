@@ -112,7 +112,7 @@ struct shv_node *shv_node_find(struct shv_node *node, const char * path)
  *
  ****************************************************************************/
 
-void shv_node_list_it_reset(shv_node_list_it_t *it)
+void shv_node_list_it_reset(struct shv_node_list_it *it)
 {
   if (it->node_list->mode & SHV_NLIST_MODE_GSA)
     {
@@ -132,7 +132,7 @@ void shv_node_list_it_reset(shv_node_list_it_t *it)
  *
  ****************************************************************************/
 
-void shv_node_list_it_init(struct shv_node_list *list, shv_node_list_it_t *it)
+void shv_node_list_it_init(struct shv_node_list *list, struct shv_node_list_it *it)
 {
   it->node_list = list;
   shv_node_list_it_reset(it);
@@ -146,7 +146,7 @@ void shv_node_list_it_init(struct shv_node_list *list, shv_node_list_it_t *it)
  *
  ****************************************************************************/
 
-struct shv_node *shv_node_list_it_next(shv_node_list_it_t *it)
+struct shv_node *shv_node_list_it_next(struct shv_node_list_it *it)
 {
   struct shv_node *node;
 
