@@ -77,7 +77,7 @@ int shv_dotdevice_node_method_uptime(struct shv_con_ctx *shv_ctx, struct shv_nod
     return 0;
 }
 
-const shv_method_des_t shv_dmap_item_dotdevice_node_name =
+const struct shv_method_des shv_dmap_item_dotdevice_node_name =
 {
     .name = "name",
     .flags = SHV_METHOD_GETTER,
@@ -86,7 +86,7 @@ const shv_method_des_t shv_dmap_item_dotdevice_node_name =
     .method = shv_dotdevice_node_method_name
 };
 
-const shv_method_des_t shv_dmap_item_dotdevice_node_version =
+const struct shv_method_des shv_dmap_item_dotdevice_node_version =
 {
     .name = "version",
     .flags = SHV_METHOD_GETTER,
@@ -95,7 +95,7 @@ const shv_method_des_t shv_dmap_item_dotdevice_node_version =
     .method = shv_dotdevice_node_method_version
 };
 
-const shv_method_des_t shv_dmap_item_dotdevice_node_serial_number =
+const struct shv_method_des shv_dmap_item_dotdevice_node_serial_number =
 {
     .name = "serialNumber",
     .flags = SHV_METHOD_GETTER,
@@ -104,7 +104,7 @@ const shv_method_des_t shv_dmap_item_dotdevice_node_serial_number =
     .method = shv_dotdevice_node_method_serial_number
 };
 
-const shv_method_des_t shv_dmap_item_dotdevice_node_uptime =
+const struct shv_method_des shv_dmap_item_dotdevice_node_uptime =
 {
     .name = "uptime",
     .flags = SHV_METHOD_GETTER,
@@ -113,7 +113,7 @@ const shv_method_des_t shv_dmap_item_dotdevice_node_uptime =
     .method = shv_dotdevice_node_method_uptime
 };
 
-const shv_method_des_t shv_dmap_item_dotdevice_node_reset =
+const struct shv_method_des shv_dmap_item_dotdevice_node_reset =
 {
     .name = "reset",
     .flags = 0,
@@ -122,7 +122,7 @@ const shv_method_des_t shv_dmap_item_dotdevice_node_reset =
     .method = shv_dotdevice_node_method_reset
 };
 
-static const shv_method_des_t *const shv_dmap_dotdevice_items[] =
+static const struct shv_method_des *const shv_dmap_dotdevice_items[] =
 {
     &shv_dmap_item_dir,
     &shv_dmap_item_ls,

@@ -19,12 +19,12 @@
 
 /* Method descriptors - general methods "ls" and "dir" */
 
-const shv_method_des_t shv_dmap_item_ls = {
+const struct shv_method_des shv_dmap_item_ls = {
   .name = "ls",
   .access = SHV_ACCESS_BROWSE,
   .method = shv_ls
 };
-const shv_method_des_t shv_dmap_item_dir = {
+const struct shv_method_des shv_dmap_item_dir = {
   .name = "dir",
   .access = SHV_ACCESS_BROWSE,
   .method = shv_dir
@@ -32,7 +32,7 @@ const shv_method_des_t shv_dmap_item_dir = {
 
 /* Method descriptors - methods for parameters */
 
-const shv_method_des_t shv_dmap_item_type = {
+const struct shv_method_des shv_dmap_item_type = {
   .name = "typeName",
   .flags = SHV_METHOD_GETTER,
   .result = "s",
@@ -42,14 +42,14 @@ const shv_method_des_t shv_dmap_item_type = {
 
 /* Method descriptors - methods for double values: params and inputs/outputs */
 
-const shv_method_des_t shv_double_dmap_item_get = {
+const struct shv_method_des shv_double_dmap_item_get = {
   .name = "get",
   .flags = SHV_METHOD_GETTER,
   .result = "d",
   .access = SHV_ACCESS_READ,
   .method = shv_double_get
 };
-const shv_method_des_t shv_double_dmap_item_set = {
+const struct shv_method_des shv_double_dmap_item_set = {
   .name = "set",
   .flags = SHV_METHOD_SETTER,
   .param = "d|f",
@@ -57,7 +57,7 @@ const shv_method_des_t shv_double_dmap_item_set = {
   .method = shv_double_set
 };
 
-const shv_method_des_t * const shv_double_dmap_items[] = {
+const struct shv_method_des * const shv_double_dmap_items[] = {
   &shv_dmap_item_dir,
   &shv_double_dmap_item_get,
   &shv_dmap_item_ls,
@@ -65,19 +65,19 @@ const shv_method_des_t * const shv_double_dmap_items[] = {
   &shv_dmap_item_type,
 };
 
-const shv_method_des_t * const shv_double_read_only_dmap_items[] = {
+const struct shv_method_des * const shv_double_read_only_dmap_items[] = {
   &shv_dmap_item_dir,
   &shv_double_dmap_item_get,
   &shv_dmap_item_ls,
   &shv_dmap_item_type,
 };
 
-const shv_method_des_t * const shv_dir_ls_dmap_items[] = {
+const struct shv_method_des * const shv_dir_ls_dmap_items[] = {
   &shv_dmap_item_dir,
   &shv_dmap_item_ls,
 };
 
-const shv_method_des_t * const shv_root_dmap_items[] = {
+const struct shv_method_des * const shv_root_dmap_items[] = {
   &shv_dmap_item_dir,
   &shv_dmap_item_ls,
 };

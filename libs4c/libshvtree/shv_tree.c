@@ -32,7 +32,7 @@ GSA_CUST_IMP(shv_node_list_gsa, struct shv_node_list, struct shv_node,
                        shv_node_list_key_t, list.gsa.root,
                        name, shv_node_list_comp_func, 0)
 
-GSA_CUST_IMP(shv_dmap, struct shv_dmap, shv_method_des_t, shv_method_des_key_t,
+GSA_CUST_IMP(shv_dmap, struct shv_dmap, struct shv_method_des, shv_method_des_key_t,
 	           methods, name, shv_method_des_comp_func, 0)
 
 /**
@@ -339,7 +339,7 @@ int shv_node_process(struct shv_con_ctx *shv_ctx, int rid, const char *met,
     }
 
     /* Call coresponding method */
-    const shv_method_des_t *met_des = shv_dmap_find(item->dir, &met);
+    const struct shv_method_des *met_des = shv_dmap_find(item->dir, &met);
     if (met_des == NULL) {
         shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
         snprintf(error_msg, sizeof(error_msg), "Method '%.40s' does not exist.", met);

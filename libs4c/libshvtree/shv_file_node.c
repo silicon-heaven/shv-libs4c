@@ -494,31 +494,31 @@ struct shv_file_node *shv_tree_file_node_new(const char *child_name, const struc
     return item;
 }
 
-const shv_method_des_t shv_dmap_item_file_node_crc =
+const struct shv_method_des shv_dmap_item_file_node_crc =
 {
     .name = "crc",
     .method = shv_file_node_crc
 };
 
-const shv_method_des_t shv_dmap_item_file_node_write =
+const struct shv_method_des shv_dmap_item_file_node_write =
 {
     .name = "write",
     .method = shv_file_node_write
 };
 
-const shv_method_des_t shv_dmap_item_file_node_stat =
+const struct shv_method_des shv_dmap_item_file_node_stat =
 {
     .name = "stat",
     .method = shv_file_node_stat
 };
 
-const shv_method_des_t shv_dmap_item_file_node_size =
+const struct shv_method_des shv_dmap_item_file_node_size =
 {
     .name = "size",
     .method = shv_file_node_size
 };
 
-static const shv_method_des_t * const shv_file_node_dmap_items[] =
+static const struct shv_method_des * const shv_file_node_dmap_items[] =
 {
   &shv_dmap_item_file_node_crc,
   &shv_dmap_item_dir,

@@ -62,7 +62,7 @@ int shv_dotapp_node_method_date(struct shv_con_ctx *shv_ctx, struct shv_node *it
     return 0;
 }
 
-const shv_method_des_t shv_dmap_item_dotapp_shvversionmajor =
+const struct shv_method_des shv_dmap_item_dotapp_shvversionmajor =
 {
     .name = "shvVersionMajor",
     .flags = SHV_METHOD_GETTER,
@@ -71,7 +71,7 @@ const shv_method_des_t shv_dmap_item_dotapp_shvversionmajor =
     .method = shv_dotapp_node_method_shvversionmajor
 };
 
-const shv_method_des_t shv_dmap_item_dotapp_shvversionminor =
+const struct shv_method_des shv_dmap_item_dotapp_shvversionminor =
 {
     .name = "shvVersionMinor",
     .flags = SHV_METHOD_GETTER,
@@ -80,7 +80,7 @@ const shv_method_des_t shv_dmap_item_dotapp_shvversionminor =
     .method = shv_dotapp_node_method_shvversionminor
 };
 
-const shv_method_des_t shv_dmap_item_dotapp_name =
+const struct shv_method_des shv_dmap_item_dotapp_name =
 {
     .name = "name",
     .flags = SHV_METHOD_GETTER,
@@ -89,7 +89,7 @@ const shv_method_des_t shv_dmap_item_dotapp_name =
     .method = shv_dotapp_node_method_name
 };
 
-const shv_method_des_t shv_dmap_item_dotapp_version =
+const struct shv_method_des shv_dmap_item_dotapp_version =
 {
     .name = "version",
     .flags = SHV_METHOD_GETTER,
@@ -98,7 +98,7 @@ const shv_method_des_t shv_dmap_item_dotapp_version =
     .method = shv_dotapp_node_method_version
 };
 
-const shv_method_des_t shv_dmap_item_dotapp_ping =
+const struct shv_method_des shv_dmap_item_dotapp_ping =
 {
     .name = "ping",
     .flags = 0,
@@ -107,7 +107,7 @@ const shv_method_des_t shv_dmap_item_dotapp_ping =
     .method = shv_dotapp_node_method_ping
 };
 
-const shv_method_des_t shv_dmap_item_dotapp_date =
+const struct shv_method_des shv_dmap_item_dotapp_date =
 {
     .name = "date",
     .flags = 0,
@@ -116,7 +116,7 @@ const shv_method_des_t shv_dmap_item_dotapp_date =
     .method = shv_dotapp_node_method_date
 };
 
-static const shv_method_des_t *const shv_dmap_dotdevice_items[] =
+static const struct shv_method_des *const shv_dmap_dotdevice_items[] =
 {
     &shv_dmap_item_dotapp_date,
     &shv_dmap_item_dir,

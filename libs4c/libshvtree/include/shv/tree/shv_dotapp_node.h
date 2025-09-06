@@ -29,12 +29,12 @@ typedef struct shv_dotapp_node {
     const char *version;           /* Application's version */
 } shv_dotapp_node_t;
 
-extern const shv_method_des_t shv_dmap_item_dotapp_shvversionmajor;
-extern const shv_method_des_t shv_dmap_item_dotapp_shvversionminor;
-extern const shv_method_des_t shv_dmap_item_dotapp_name;
-extern const shv_method_des_t shv_dmap_item_dotapp_version;
-extern const shv_method_des_t shv_dmap_item_dotapp_ping;
-extern const shv_method_des_t shv_dmap_item_dotapp_date;
+extern const struct shv_method_des shv_dmap_item_dotapp_shvversionmajor;
+extern const struct shv_method_des shv_dmap_item_dotapp_shvversionminor;
+extern const struct shv_method_des shv_dmap_item_dotapp_name;
+extern const struct shv_method_des shv_dmap_item_dotapp_version;
+extern const struct shv_method_des shv_dmap_item_dotapp_ping;
+extern const struct shv_method_des shv_dmap_item_dotapp_date;
 
 /**
  * @brief The dotapp method structure.

@@ -173,24 +173,24 @@ int shv_file_process_crc(struct shv_con_ctx *shv_ctx, int rid, struct shv_file_n
  * @brief A wrapper of `shv_file_process_write` to be used
  *        as the file node's write method
  */
-extern const shv_method_des_t shv_dmap_item_file_node_write;
+extern const struct shv_method_des shv_dmap_item_file_node_write;
 
 /**
  * @brief A wrapper of `shv_file_process_crc32` to be used
  *        as the file node's crc method
  */
-extern const shv_method_des_t shv_dmap_item_file_node_crc;
+extern const struct shv_method_des shv_dmap_item_file_node_crc;
 
 /**
  * @brief A wrapper to be used as the file node's size method
  */
-extern const shv_method_des_t shv_dmap_item_file_node_size;
+extern const struct shv_method_des shv_dmap_item_file_node_size;
 
 /**
  * @brief A wrapper of `shv_file_send_stat` to be used
  *        as the file node's stat method
  */
-extern const shv_method_des_t shv_dmap_item_file_node_stat;
+extern const struct shv_method_des shv_dmap_item_file_node_stat;
 
 /**
  * @brief The file node method structure.

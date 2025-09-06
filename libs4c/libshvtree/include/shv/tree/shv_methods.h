@@ -28,8 +28,8 @@
 #define SHV_ACCESS_WRITE   ((int)16)
 #define SHV_ACCESS_COMMAND ((int)24)
 
-extern const shv_method_des_t shv_dmap_item_ls;
-extern const shv_method_des_t shv_dmap_item_dir;
+extern const struct shv_method_des shv_dmap_item_ls;
+extern const struct shv_method_des shv_dmap_item_dir;
 
 extern const struct shv_dmap shv_double_dmap;
 extern const struct shv_dmap shv_double_read_only_dmap;

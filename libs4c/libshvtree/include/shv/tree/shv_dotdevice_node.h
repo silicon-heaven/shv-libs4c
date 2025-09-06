@@ -40,11 +40,11 @@ typedef struct shv_dotdevice_node {
     const char *version;
 } shv_dotdevice_node_t;
 
-extern const shv_method_des_t shv_dmap_item_dotdevice_node_name;
-extern const shv_method_des_t shv_dmap_item_dotdevice_node_version;
-extern const shv_method_des_t shv_dmap_item_dotdevice_node_serial_number;
-extern const shv_method_des_t shv_dmap_item_dotdevice_node_uptime;
-extern const shv_method_des_t shv_dmap_item_dotdevice_node_reset;
+extern const struct shv_method_des shv_dmap_item_dotdevice_node_name;
+extern const struct shv_method_des shv_dmap_item_dotdevice_node_version;
+extern const struct shv_method_des shv_dmap_item_dotdevice_node_serial_number;
+extern const struct shv_method_des shv_dmap_item_dotdevice_node_uptime;
+extern const struct shv_method_des shv_dmap_item_dotdevice_node_reset;
 
 /**
  * @brief The dotdevice method structure.

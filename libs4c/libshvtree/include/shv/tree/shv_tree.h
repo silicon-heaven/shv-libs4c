@@ -78,14 +78,15 @@ struct shv_node_typed_val
 struct shv_con_ctx;
 typedef int (* shv_method_t) (struct shv_con_ctx *ctx, struct shv_node * node, int rid);
 
-typedef struct shv_method_des {
+struct shv_method_des
+{
   const char *name;       /* Method name */
   const int flags;        /* Method flags */
   const char *param;      /* Parameter type for request */
   const char *result;     /* Result type for responses */
   const int access;       /* Access level */
   shv_method_t method;    /* Pointer to the method function */
-} shv_method_des_t;
+};
 
 typedef const char *shv_node_list_key_t;
 typedef const char *shv_method_des_key_t;
@@ -112,7 +113,7 @@ shv_method_des_comp_func(const shv_method_des_key_t *a, const shv_method_des_key
   return strcmp(*a, *b);
 }
 
-GSA_CUST_DEC(shv_dmap, struct shv_dmap, shv_method_des_t, shv_method_des_key_t,
+GSA_CUST_DEC(shv_dmap, struct shv_dmap, struct shv_method_des, shv_method_des_key_t,
 	methods, name, shv_method_des_comp_func)
 
 typedef struct shv_node_list_it
