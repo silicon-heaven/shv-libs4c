@@ -390,7 +390,7 @@ int shv_tcpip_posix_dataready(struct shv_connection *connection, int timeout)
 
 static void *__shv_process(void *arg)
 {
-    shv_con_ctx_t *shv_ctx = (shv_con_ctx_t *)arg;
+    struct shv_con_ctx *shv_ctx = (struct shv_con_ctx *)arg;
     shv_ctx->thrd_ctx.thrd_ret = shv_process(shv_ctx);
     /* Report a hard error */
     if (shv_ctx->thrd_ctx.thrd_ret == -1 && shv_ctx->at_signlr != NULL) {
@@ -399,7 +399,7 @@ static void *__shv_process(void *arg)
     return NULL;
 }
 
-int shv_create_process_thread(int thrd_prio, shv_con_ctx_t *ctx)
+int shv_create_process_thread(int thrd_prio, struct shv_con_ctx *ctx)
 {
     int ret;
     int policy;
@@ -449,7 +449,7 @@ error:
     return -1;
 }
 
-void shv_stop_process_thread(shv_con_ctx_t *shv_ctx)
+void shv_stop_process_thread(struct shv_con_ctx *shv_ctx)
 {
     /* Write to the pipe to simulate the instant timeout */
     /* The write is enclosed in {} to suppress warn_unused_result warning */

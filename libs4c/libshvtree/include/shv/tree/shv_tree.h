@@ -72,8 +72,8 @@ typedef struct shv_node_typed_val {
   char *type_name;              /* Type of the value (int, double...) */
 } shv_node_typed_val_t;
 
-typedef struct shv_con_ctx shv_con_ctx_t;
-typedef int (* shv_method_t) (shv_con_ctx_t *ctx, shv_node_t * node, int rid);
+struct shv_con_ctx;
+typedef int (* shv_method_t) (struct shv_con_ctx *ctx, shv_node_t * node, int rid);
 
 typedef struct shv_method_des {
   const char *name;       /* Method name */
@@ -146,7 +146,7 @@ void shv_node_list_names_it_init(shv_node_list_t *list, shv_node_list_names_it_t
 
 /* Public functions definition */
 
-int shv_node_process(shv_con_ctx_t *shv_ctx, int rid, const char * met, const char * path);
+int shv_node_process(struct shv_con_ctx *shv_ctx, int rid, const char * met, const char * path);
 shv_node_t *shv_node_find(shv_node_t *node, const char * path);
 void shv_tree_add_child(shv_node_t *node, shv_node_t *child);
 void shv_tree_node_init(shv_node_t *item, const char *child_name, const shv_dmap_t *dir, int mode);

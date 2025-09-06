@@ -73,7 +73,7 @@ static void shv_file_node_destructor(shv_node_t *node)
   free(&file_node->shv_node);
 }
 
-void shv_file_send_stat(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
+void shv_file_send_stat(struct shv_con_ctx *shv_ctx, int rid, shv_file_node_t *item)
 {
     ccpcp_pack_context_init(&shv_ctx->pack_ctx,shv_ctx->shv_data, SHV_BUF_LEN,
                             shv_overflow_handler);
@@ -124,7 +124,7 @@ void shv_file_send_stat(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
     }
 }
 
-void shv_file_send_size(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
+void shv_file_send_size(struct shv_con_ctx *shv_ctx, int rid, shv_file_node_t *item)
 {
     ccpcp_pack_context_init(&shv_ctx->pack_ctx,shv_ctx->shv_data, SHV_BUF_LEN,
                             shv_overflow_handler);
@@ -148,7 +148,7 @@ void shv_file_send_size(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
     }
 }
 
-int shv_file_process_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
+int shv_file_process_write(struct shv_con_ctx *shv_ctx, int rid, shv_file_node_t *item)
 {
     int ret;
     ccpcp_unpack_context *ctx = &shv_ctx->unpack_ctx;
@@ -291,7 +291,7 @@ int shv_file_process_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *ite
  * If only the first number is passed (offset), CRC is calculated until the end of the file.
  * If both numbers are passed (offset and size), CRC is calcaulted over size bytes.
  */
-int shv_file_process_crc(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
+int shv_file_process_crc(struct shv_con_ctx *shv_ctx, int rid, shv_file_node_t *item)
 {
     int parse_result = -1;
     size_t size;
@@ -419,7 +419,7 @@ int shv_file_process_crc(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item)
     return -1;
 }
 
-int shv_file_node_write(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
+int shv_file_node_write(struct shv_con_ctx *shv_ctx, shv_node_t *item, int rid)
 {
     int ret = 0;
     shv_file_node_t *file_node = UL_CONTAINEROF(item, shv_file_node_t, shv_node);
@@ -435,7 +435,7 @@ int shv_file_node_write(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
     return 0;
 }
 
-int shv_file_node_crc(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
+int shv_file_node_crc(struct shv_con_ctx *shv_ctx, shv_node_t *item, int rid)
 {
     int ret;
     shv_file_node_t *file_node = UL_CONTAINEROF(item, shv_file_node_t, shv_node);
@@ -451,7 +451,7 @@ int shv_file_node_crc(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
     return ret;
 }
 
-int shv_file_node_size(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
+int shv_file_node_size(struct shv_con_ctx *shv_ctx, shv_node_t *item, int rid)
 {
     shv_file_node_t *file_node = UL_CONTAINEROF(item, shv_file_node_t, shv_node);
     shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
@@ -459,7 +459,7 @@ int shv_file_node_size(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
     return 0;
 }
 
-int shv_file_node_stat(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
+int shv_file_node_stat(struct shv_con_ctx *shv_ctx, shv_node_t *item, int rid)
 {
     shv_file_node_t *file_node = UL_CONTAINEROF(item, shv_file_node_t, shv_node);
     shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);

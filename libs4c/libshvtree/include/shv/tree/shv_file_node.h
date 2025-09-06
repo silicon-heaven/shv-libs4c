@@ -13,7 +13,7 @@
 
 #include "shv_tree.h"
 
-typedef struct shv_con_ctx shv_con_ctx_t;
+struct shv_con_ctx;
 
 /* File type identification enum */
 enum shv_file_type
@@ -125,7 +125,7 @@ typedef struct shv_file_node {
  * @param rid 
  * @param item 
  */
-void shv_file_send_stat(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
+void shv_file_send_stat(struct shv_con_ctx *shv_ctx, int rid, shv_file_node_t *item);
 
 /**
  * @brief Reads the data from the file and sends them
@@ -134,7 +134,7 @@ void shv_file_send_stat(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
  * @param rid
  * @param item
  */
-void shv_file_send_read_data(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
+void shv_file_send_read_data(struct shv_con_ctx *shv_ctx, int rid, shv_file_node_t *item);
 
 /**
  * @brief Unpacks the incoming data and writes them to a file
@@ -144,7 +144,7 @@ void shv_file_send_read_data(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *i
  * @param item 
  * @return 0 in case of success, -1 in case of garbled data
  */
-int shv_file_process_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
+int shv_file_process_write(struct shv_con_ctx *shv_ctx, int rid, shv_file_node_t *item);
 
 /**
  * @brief Unpacks the incoming data of the read method
@@ -154,7 +154,7 @@ int shv_file_process_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *ite
  * @param item 
  * @return int 
  */
-int shv_file_process_read(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
+int shv_file_process_read(struct shv_con_ctx *shv_ctx, int rid, shv_file_node_t *item);
 
 /**
  * @brief Unpacks the desired CRC computation method and computes the CRC
@@ -164,7 +164,7 @@ int shv_file_process_read(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item
  * @param item
  * @return int
  */
-int shv_file_process_crc(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
+int shv_file_process_crc(struct shv_con_ctx *shv_ctx, int rid, shv_file_node_t *item);
 
 /**
  * @brief A wrapper of `shv_file_process_write` to be used

@@ -29,7 +29,7 @@ static void shv_dotdevice_node_destructor(shv_node_t *node)
     free(devnode);
 }
 
-int shv_dotdevice_node_method_name(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
+int shv_dotdevice_node_method_name(struct shv_con_ctx *shv_ctx, shv_node_t *item, int rid)
 {
     shv_dotdevice_node_t *devnode = UL_CONTAINEROF(item, shv_dotdevice_node_t, shv_node);
     shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
@@ -37,7 +37,7 @@ int shv_dotdevice_node_method_name(shv_con_ctx_t *shv_ctx, shv_node_t *item, int
     return 0;
 }
 
-int shv_dotdevice_node_method_version(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
+int shv_dotdevice_node_method_version(struct shv_con_ctx *shv_ctx, shv_node_t *item, int rid)
 {
     shv_dotdevice_node_t *devnode = UL_CONTAINEROF(item, shv_dotdevice_node_t, shv_node);
     shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
@@ -45,7 +45,7 @@ int shv_dotdevice_node_method_version(shv_con_ctx_t *shv_ctx, shv_node_t *item, 
     return 0;
 }
 
-int shv_dotdevice_node_method_serial_number(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
+int shv_dotdevice_node_method_serial_number(struct shv_con_ctx *shv_ctx, shv_node_t *item, int rid)
 {
     shv_dotdevice_node_t *devnode = UL_CONTAINEROF(item, shv_dotdevice_node_t, shv_node);
     shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
@@ -53,7 +53,7 @@ int shv_dotdevice_node_method_serial_number(shv_con_ctx_t *shv_ctx, shv_node_t *
     return 0;
 }
 
-int shv_dotdevice_node_method_reset(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
+int shv_dotdevice_node_method_reset(struct shv_con_ctx *shv_ctx, shv_node_t *item, int rid)
 {
     shv_dotdevice_node_t *devnode = UL_CONTAINEROF(item, shv_dotdevice_node_t, shv_node);
     shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
@@ -69,7 +69,7 @@ int shv_dotdevice_node_method_reset(shv_con_ctx_t *shv_ctx, shv_node_t *item, in
     return -1; /* How the hell did you get here?!! */
 }
 
-int shv_dotdevice_node_method_uptime(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
+int shv_dotdevice_node_method_uptime(struct shv_con_ctx *shv_ctx, shv_node_t *item, int rid)
 {
     shv_dotdevice_node_t *devnode = UL_CONTAINEROF(item, shv_dotdevice_node_t, shv_node);
     shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);

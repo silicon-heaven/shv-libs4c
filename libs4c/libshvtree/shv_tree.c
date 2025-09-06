@@ -323,7 +323,7 @@ void shv_tree_destroy(shv_node_t *parent)
  *
  ****************************************************************************/
 
-int shv_node_process(shv_con_ctx_t *shv_ctx, int rid, const char *met,
+int shv_node_process(struct shv_con_ctx *shv_ctx, int rid, const char *met,
                      const char *path)
 {
     /* If the node or method names are too long, the printed lengths is limited */
