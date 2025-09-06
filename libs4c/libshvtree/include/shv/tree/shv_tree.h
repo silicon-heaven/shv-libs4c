@@ -113,14 +113,14 @@ shv_method_des_comp_func(const shv_method_des_key_t *a, const shv_method_des_key
 GSA_CUST_DEC(shv_dmap, shv_dmap_t, shv_method_des_t, shv_method_des_key_t,
 	methods, name, shv_method_des_comp_func)
 
-struct shv_node_list_it
+typedef struct shv_node_list_it
 {
   struct shv_node_list *node_list;
   union {
     shv_node_t *gavl_next_node;
     int gsa_next_indx;
   } list_it;
-};
+} shv_node_list_it_t;
 
 void shv_node_list_it_init(struct shv_node_list *list, shv_node_list_it_t *it);
 void shv_node_list_it_reset(shv_node_list_it_t *it);
