@@ -174,10 +174,10 @@ struct shv_node *shv_node_list_it_next(shv_node_list_it_t *it)
 static const char *shv_node_list_names_get_next(struct shv_str_list_it *it,
                                                 int reset_to_first)
 {
-  shv_node_list_names_it_t *names_it;
+  struct shv_node_list_names_it *names_it;
   struct shv_node *node;
 
-  names_it = UL_CONTAINEROF(it, shv_node_list_names_it_t, str_it);
+  names_it = UL_CONTAINEROF(it, struct shv_node_list_names_it, str_it);
 
   if (reset_to_first)
     {
@@ -205,7 +205,7 @@ static const char *shv_node_list_names_get_next(struct shv_str_list_it *it,
  ****************************************************************************/
 
 void shv_node_list_names_it_init(struct shv_node_list *list,
-                                 shv_node_list_names_it_t *names_it)
+                                 struct shv_node_list_names_it *names_it)
 {
   shv_node_list_it_init(list, &names_it->list_it);
   names_it->str_it.get_next_entry = shv_node_list_names_get_next;

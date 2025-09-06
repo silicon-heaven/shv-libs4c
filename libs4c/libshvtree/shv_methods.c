@@ -111,7 +111,7 @@ const struct shv_dmap shv_root_dmap = {.methods = {.items = (void **)shv_root_dm
 int shv_ls(struct shv_con_ctx * shv_ctx, struct shv_node* item, int rid)
 {
   int count;
-  shv_node_list_names_it_t names_it;
+  struct shv_node_list_names_it names_it;
 
   shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
 

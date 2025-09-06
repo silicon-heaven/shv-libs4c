@@ -142,12 +142,13 @@ shv_node_list_count(struct shv_node_list *node_list)
     }
 }
 
-typedef struct shv_node_list_names_it_t {
+struct shv_node_list_names_it
+{
   struct shv_str_list_it str_it;
   shv_node_list_it_t list_it;
-} shv_node_list_names_it_t;
+};
 
-void shv_node_list_names_it_init(struct shv_node_list *list, shv_node_list_names_it_t *names_it);
+void shv_node_list_names_it_init(struct shv_node_list *list, struct shv_node_list_names_it *names_it);
 
 /* Public functions definition */
 
