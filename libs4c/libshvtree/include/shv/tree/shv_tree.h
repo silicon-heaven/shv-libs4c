@@ -68,11 +68,12 @@ struct shv_node
   struct shv_node_list children; /* List of node children */
 };
 
-typedef struct shv_node_typed_val {
+struct shv_node_typed_val
+{
   struct shv_node shv_node;     /* Node instance */
   void *val_ptr;                /* Double value */
   char *type_name;              /* Type of the value (int, double...) */
-} shv_node_typed_val_t;
+};
 
 struct shv_con_ctx;
 typedef int (* shv_method_t) (struct shv_con_ctx *ctx, struct shv_node * node, int rid);
@@ -172,11 +173,11 @@ void shv_tree_destroy(struct shv_node *parent);
 struct shv_node *shv_tree_node_new(const char *child_name, const struct shv_dmap *dir, int mode);
 
 /**
- * @brief Initialize the shv_node_typed_val_t node
+ * @brief Initialize the struct shv_node_typed_val node
  *
  * @param child_name
  * @param dir
  * @param mode
  * @return A nonNULL pointer on success, NULL otherwise
  */
-shv_node_typed_val_t *shv_tree_node_typed_val_new(const char *child_name, const struct shv_dmap *dir, int mode);
+struct shv_node_typed_val *shv_tree_node_typed_val_new(const char *child_name, const struct shv_dmap *dir, int mode);

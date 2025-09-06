@@ -46,13 +46,13 @@ static void shv_node_destructor(struct shv_node *node)
 }
 
 /**
- * @brief Destructor for shv_node_typed_val_t
+ * @brief Destructor for struct shv_node_typed_val
  *
  * @param node
  */
 static void shv_typed_val_node_destructor(struct shv_node *node)
 {
-  shv_node_typed_val_t *typed_node = UL_CONTAINEROF(node, shv_node_typed_val_t, shv_node);
+  struct shv_node_typed_val *typed_node = UL_CONTAINEROF(node, struct shv_node_typed_val, shv_node);
   free(typed_node);
 }
 
@@ -273,11 +273,11 @@ struct shv_node *shv_tree_node_new(const char *child_name,
     return item;
 }
 
-shv_node_typed_val_t *shv_tree_node_typed_val_new(const char *child_name,
+struct shv_node_typed_val *shv_tree_node_typed_val_new(const char *child_name,
                                                   const struct shv_dmap *dir,
                                                   int mode)
 {
-    shv_node_typed_val_t *item = calloc(1, sizeof(shv_node_typed_val_t));
+    struct shv_node_typed_val *item = calloc(1, sizeof(struct shv_node_typed_val));
     if (item == NULL) {
         printf("typed_val node calloc");
         return NULL;

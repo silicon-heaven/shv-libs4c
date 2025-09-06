@@ -179,7 +179,7 @@ int shv_type(struct shv_con_ctx * shv_ctx, struct shv_node* item, int rid)
 
   shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
 
-  shv_node_typed_val_t *item_node = UL_CONTAINEROF(item, shv_node_typed_val_t,
+  struct shv_node_typed_val *item_node = UL_CONTAINEROF(item, struct shv_node_typed_val,
                                                    shv_node);
 
   str = item_node->type_name;
@@ -203,7 +203,7 @@ int shv_double_set(struct shv_con_ctx * shv_ctx, struct shv_node* item, int rid)
 
   shv_unpack_data(&shv_ctx->unpack_ctx, 0, &shv_received);
 
-  shv_node_typed_val_t *item_node = UL_CONTAINEROF(item, shv_node_typed_val_t,
+  struct shv_node_typed_val *item_node = UL_CONTAINEROF(item, struct shv_node_typed_val,
                                                    shv_node);
 
   *(double *)item_node->val_ptr = shv_received;
@@ -228,7 +228,7 @@ int shv_double_get(struct shv_con_ctx * shv_ctx, struct shv_node* item, int rid)
 
   shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
 
-  shv_node_typed_val_t *item_node = UL_CONTAINEROF(item, shv_node_typed_val_t,
+  struct shv_node_typed_val *item_node = UL_CONTAINEROF(item, struct shv_node_typed_val,
                                                    shv_node);
 
   shv_send = *(double *)item_node->val_ptr;
