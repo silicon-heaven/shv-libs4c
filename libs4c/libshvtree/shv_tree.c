@@ -25,10 +25,10 @@
 
 /* Custom tree implementation */
 
-GAVL_CUST_NODE_INT_IMP(shv_node_list_gavl, shv_node_list_t, shv_node_t,
+GAVL_CUST_NODE_INT_IMP(shv_node_list_gavl, struct shv_node_list, shv_node_t,
                        shv_node_list_key_t, list.gavl.root, gavl_node,
                        name, shv_node_list_comp_func)
-GSA_CUST_IMP(shv_node_list_gsa, shv_node_list_t, shv_node_t,
+GSA_CUST_IMP(shv_node_list_gsa, struct shv_node_list, shv_node_t,
                        shv_node_list_key_t, list.gsa.root,
                        name, shv_node_list_comp_func, 0)
 
@@ -132,7 +132,7 @@ void shv_node_list_it_reset(shv_node_list_it_t *it)
  *
  ****************************************************************************/
 
-void shv_node_list_it_init(shv_node_list_t *list, shv_node_list_it_t *it)
+void shv_node_list_it_init(struct shv_node_list *list, shv_node_list_it_t *it)
 {
   it->node_list = list;
   shv_node_list_it_reset(it);
@@ -204,7 +204,7 @@ static const char *shv_node_list_names_get_next(struct shv_str_list_it *it,
  *
  ****************************************************************************/
 
-void shv_node_list_names_it_init(shv_node_list_t *list,
+void shv_node_list_names_it_init(struct shv_node_list *list,
                                  shv_node_list_names_it_t *names_it)
 {
   shv_node_list_it_init(list, &names_it->list_it);

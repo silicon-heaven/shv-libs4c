@@ -38,7 +38,8 @@
         }\
     }
 
-typedef struct shv_node_list {
+struct shv_node_list
+{
   int mode;                         /* Mode selection (GAVL vs GSA, static vs dynamic) */
   union {
     struct {
@@ -49,7 +50,7 @@ typedef struct shv_node_list {
       gsa_array_field_t root;       /* GSA root */
     } gsa;
   } list;
-} shv_node_list_t;
+};
 
 typedef struct shv_dmap {
   gsa_array_field_t methods;  /* GSA array of methods */
@@ -59,11 +60,11 @@ typedef struct shv_node shv_node_t;
 typedef struct shv_node {
   struct {
     void (*destructor)(shv_node_t *this);
-  } vtable;                 /* Node vtable */
-  const char *name;         /* Node name */
-  gavl_node_t gavl_node;    /* GAVL instance */
-  shv_dmap_t *dir;          /* Pointer to supported methods */
-  shv_node_list_t children; /* List of node children */
+  } vtable;                      /* Node vtable */
+  const char *name;              /* Node name */
+  gavl_node_t gavl_node;         /* GAVL instance */
+  shv_dmap_t *dir;               /* Pointer to supported methods */
+  struct shv_node_list children; /* List of node children */
 } shv_node_t;
 
 typedef struct shv_node_typed_val {
@@ -91,10 +92,10 @@ typedef const char *shv_method_des_key_t;
 /* GAVL_CUST_NODE_INT_DEC - standard custom tree with internal node */
 /* GAVL_FLES_INT_DEC      - tree with enhanced first last access speed  */
 
-GAVL_CUST_NODE_INT_DEC(shv_node_list_gavl, shv_node_list_t, shv_node_t, shv_node_list_key_t,
+GAVL_CUST_NODE_INT_DEC(shv_node_list_gavl, struct shv_node_list, shv_node_t, shv_node_list_key_t,
 	list.gavl.root, gavl_node, name, shv_node_list_comp_func)
 
-GSA_CUST_DEC(shv_node_list_gsa, shv_node_list_t, shv_node_t, shv_node_list_key_t,
+GSA_CUST_DEC(shv_node_list_gsa, struct shv_node_list, shv_node_t, shv_node_list_key_t,
 	list.gsa.root, name, shv_node_list_comp_func)
 
 static inline int
@@ -112,21 +113,21 @@ shv_method_des_comp_func(const shv_method_des_key_t *a, const shv_method_des_key
 GSA_CUST_DEC(shv_dmap, shv_dmap_t, shv_method_des_t, shv_method_des_key_t,
 	methods, name, shv_method_des_comp_func)
 
-typedef struct shv_node_list_it
+struct shv_node_list_it
 {
-  shv_node_list_t *node_list;
+  struct shv_node_list *node_list;
   union {
     shv_node_t *gavl_next_node;
     int gsa_next_indx;
   } list_it;
-} shv_node_list_it_t;
+};
 
-void shv_node_list_it_init(shv_node_list_t *list, shv_node_list_it_t *it);
+void shv_node_list_it_init(struct shv_node_list *list, shv_node_list_it_t *it);
 void shv_node_list_it_reset(shv_node_list_it_t *it);
 shv_node_t *shv_node_list_it_next(shv_node_list_it_t *it);
 
 static inline int
-shv_node_list_count(shv_node_list_t *node_list)
+shv_node_list_count(struct shv_node_list *node_list)
 {
   if (node_list->mode & SHV_NLIST_MODE_GSA)
     {
@@ -143,7 +144,7 @@ typedef struct shv_node_list_names_it_t {
   shv_node_list_it_t list_it;
 } shv_node_list_names_it_t;
 
-void shv_node_list_names_it_init(shv_node_list_t *list, shv_node_list_names_it_t *names_it);
+void shv_node_list_names_it_init(struct shv_node_list *list, shv_node_list_names_it_t *names_it);
 
 /* Public functions definition */
 
