@@ -140,10 +140,11 @@ struct shv_dir_res {
   int access;
 };
 
-typedef struct shv_str_list_it_t shv_str_list_it_t;
+/* Forward declaration */
+struct shv_str_list_it;
 
-struct shv_str_list_it_t {
-   const char * (*get_next_entry)(shv_str_list_it_t *it, int reset_to_first);
+struct shv_str_list_it {
+   const char * (*get_next_entry)(struct shv_str_list_it *it, int reset_to_first);
 };
 
 /**
@@ -162,7 +163,7 @@ void shv_send_uint(struct shv_con_ctx *shv_ctx, int rid, unsigned int num);
 void shv_send_double(struct shv_con_ctx *shv_ctx, int rid, double num);
 void shv_send_str(struct shv_con_ctx *shv_ctx, int rid, const char *str);
 void shv_send_str_list(struct shv_con_ctx *shv_ctx, int rid, int num_str, const char **str);
-void shv_send_str_list_it(struct shv_con_ctx *shv_ctx, int rid, int num_str, shv_str_list_it_t *str_it);
+void shv_send_str_list_it(struct shv_con_ctx *shv_ctx, int rid, int num_str, struct shv_str_list_it *str_it);
 void shv_send_dir(struct shv_con_ctx *shv_ctx, const struct shv_dir_res *results, int cnt, int rid);
 void shv_send_error(struct shv_con_ctx *shv_ctx, int rid, enum shv_response_error_code code,
                     const char *msg);

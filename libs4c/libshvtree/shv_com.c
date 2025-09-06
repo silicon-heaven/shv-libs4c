@@ -636,7 +636,7 @@ void shv_send_str_list(struct shv_con_ctx *shv_ctx, int rid, int num_str,
  ****************************************************************************/
 
 void shv_send_str_list_it(struct shv_con_ctx *shv_ctx, int rid, int num_str,
-                          shv_str_list_it_t *str_it)
+                          struct shv_str_list_it *str_it)
 {
   ccpcp_pack_context_init(&shv_ctx->pack_ctx,shv_ctx->shv_data, SHV_BUF_LEN,
                           shv_overflow_handler);

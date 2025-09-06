@@ -171,7 +171,7 @@ shv_node_t *shv_node_list_it_next(shv_node_list_it_t *it)
  *
  ****************************************************************************/
 
-static const char *shv_node_list_names_get_next(shv_str_list_it_t *it,
+static const char *shv_node_list_names_get_next(struct shv_str_list_it *it,
                                                 int reset_to_first)
 {
   shv_node_list_names_it_t *names_it;
