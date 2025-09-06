@@ -34,7 +34,7 @@ int shv_dotapp_node_method_shvversionminor(struct shv_con_ctx *shv_ctx, struct s
 
 int shv_dotapp_node_method_name(struct shv_con_ctx *shv_ctx, struct shv_node *item, int rid)
 {
-    shv_dotapp_node_t *appnode = UL_CONTAINEROF(item, shv_dotapp_node_t, shv_node);
+    struct shv_dotapp_node *appnode = UL_CONTAINEROF(item, struct shv_dotapp_node, shv_node);
     shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
     shv_send_str(shv_ctx, rid, appnode->name);
     return 0;
@@ -42,7 +42,7 @@ int shv_dotapp_node_method_name(struct shv_con_ctx *shv_ctx, struct shv_node *it
 
 int shv_dotapp_node_method_version(struct shv_con_ctx *shv_ctx, struct shv_node *item, int rid)
 {
-    shv_dotapp_node_t *appnode = UL_CONTAINEROF(item, shv_dotapp_node_t, shv_node);
+    struct shv_dotapp_node *appnode = UL_CONTAINEROF(item, struct shv_dotapp_node, shv_node);
     shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
     shv_send_str(shv_ctx, rid, appnode->version);
     return 0;
@@ -131,9 +131,9 @@ static const struct shv_method_des *const shv_dmap_dotdevice_items[] =
 const struct shv_dmap shv_dotapp_dmap =
     SHV_CREATE_NODE_DMAP(dotapp, shv_dmap_dotdevice_items);
 
-shv_dotapp_node_t *shv_tree_dotapp_node_new(const struct shv_dmap *dir, int mode)
+struct shv_dotapp_node *shv_tree_dotapp_node_new(const struct shv_dmap *dir, int mode)
 {
-    shv_dotapp_node_t *item = calloc(1, sizeof(shv_dotapp_node_t));
+    struct shv_dotapp_node *item = calloc(1, sizeof(struct shv_dotapp_node));
     if (item == NULL) {
         perror(".app calloc");
         return NULL;
