@@ -56,25 +56,26 @@ struct shv_dmap {
   gsa_array_field_t methods;  /* GSA array of methods */
 };
 
-typedef struct shv_node shv_node_t;
-typedef struct shv_node {
+struct shv_node;
+struct shv_node
+{
   struct {
-    void (*destructor)(shv_node_t *this);
+    void (*destructor)(struct shv_node *this);
   } vtable;                      /* Node vtable */
   const char *name;              /* Node name */
   gavl_node_t gavl_node;         /* GAVL instance */
   struct shv_dmap *dir;          /* Pointer to supported methods */
   struct shv_node_list children; /* List of node children */
-} shv_node_t;
+};
 
 typedef struct shv_node_typed_val {
-  shv_node_t shv_node;          /* Node instance */
+  struct shv_node shv_node;     /* Node instance */
   void *val_ptr;                /* Double value */
   char *type_name;              /* Type of the value (int, double...) */
 } shv_node_typed_val_t;
 
 struct shv_con_ctx;
-typedef int (* shv_method_t) (struct shv_con_ctx *ctx, shv_node_t * node, int rid);
+typedef int (* shv_method_t) (struct shv_con_ctx *ctx, struct shv_node * node, int rid);
 
 typedef struct shv_method_des {
   const char *name;       /* Method name */
@@ -92,10 +93,10 @@ typedef const char *shv_method_des_key_t;
 /* GAVL_CUST_NODE_INT_DEC - standard custom tree with internal node */
 /* GAVL_FLES_INT_DEC      - tree with enhanced first last access speed  */
 
-GAVL_CUST_NODE_INT_DEC(shv_node_list_gavl, struct shv_node_list, shv_node_t, shv_node_list_key_t,
+GAVL_CUST_NODE_INT_DEC(shv_node_list_gavl, struct shv_node_list, struct shv_node, shv_node_list_key_t,
 	list.gavl.root, gavl_node, name, shv_node_list_comp_func)
 
-GSA_CUST_DEC(shv_node_list_gsa, struct shv_node_list, shv_node_t, shv_node_list_key_t,
+GSA_CUST_DEC(shv_node_list_gsa, struct shv_node_list, struct shv_node, shv_node_list_key_t,
 	list.gsa.root, name, shv_node_list_comp_func)
 
 static inline int
@@ -117,14 +118,14 @@ typedef struct shv_node_list_it
 {
   struct shv_node_list *node_list;
   union {
-    shv_node_t *gavl_next_node;
+    struct shv_node *gavl_next_node;
     int gsa_next_indx;
   } list_it;
 } shv_node_list_it_t;
 
 void shv_node_list_it_init(struct shv_node_list *list, shv_node_list_it_t *it);
 void shv_node_list_it_reset(shv_node_list_it_t *it);
-shv_node_t *shv_node_list_it_next(shv_node_list_it_t *it);
+struct shv_node *shv_node_list_it_next(shv_node_list_it_t *it);
 
 static inline int
 shv_node_list_count(struct shv_node_list *node_list)
@@ -149,16 +150,16 @@ void shv_node_list_names_it_init(struct shv_node_list *list, shv_node_list_names
 /* Public functions definition */
 
 int shv_node_process(struct shv_con_ctx *shv_ctx, int rid, const char * met, const char * path);
-shv_node_t *shv_node_find(shv_node_t *node, const char * path);
-void shv_tree_add_child(shv_node_t *node, shv_node_t *child);
-void shv_tree_node_init(shv_node_t *item, const char *child_name, const struct shv_dmap *dir, int mode);
+struct shv_node *shv_node_find(struct shv_node *node, const char * path);
+void shv_tree_add_child(struct shv_node *node, struct shv_node *child);
+void shv_tree_node_init(struct shv_node *item, const char *child_name, const struct shv_dmap *dir, int mode);
 
 /**
  * @brief Destroy the whole SHV tree, given the parent node
  *
  * @param parent
  */
-void shv_tree_destroy(shv_node_t *parent);
+void shv_tree_destroy(struct shv_node *parent);
 
 /**
  * @brief Allocates and initializes a simple node
@@ -168,7 +169,7 @@ void shv_tree_destroy(shv_node_t *parent);
  * @param mode
  * @return A nonNULL pointer on success, NULL otherwise
  */
-shv_node_t *shv_tree_node_new(const char *child_name, const struct shv_dmap *dir, int mode);
+struct shv_node *shv_tree_node_new(const char *child_name, const struct shv_dmap *dir, int mode);
 
 /**
  * @brief Initialize the shv_node_typed_val_t node

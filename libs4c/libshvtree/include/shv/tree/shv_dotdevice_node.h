@@ -29,7 +29,7 @@ typedef int (*shv_dotdevice_node_uptime)(void);
 typedef int (*shv_dotdevice_node_reset)(void);
 
 typedef struct shv_dotdevice_node {
-    shv_node_t shv_node;                  /* Base shv_node */
+    struct shv_node shv_node;             /* Base shv_node */
     struct {
         shv_dotdevice_node_reset  reset;  /* Platform dependant reset function */
         shv_dotdevice_node_uptime uptime; /* Platform dependant uptime function */

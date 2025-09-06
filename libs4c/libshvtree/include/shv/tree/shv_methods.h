@@ -36,8 +36,8 @@ extern const struct shv_dmap shv_double_read_only_dmap;
 extern const struct shv_dmap shv_dir_ls_dmap;
 extern const struct shv_dmap shv_root_dmap;
 
-int shv_ls(struct shv_con_ctx * shv_ctx, shv_node_t* item, int rid);
-int shv_dir(struct shv_con_ctx * shv_ctx, shv_node_t* item, int rid);
-int shv_type(struct shv_con_ctx * shv_ctx, shv_node_t* item, int rid);
-int shv_double_get(struct shv_con_ctx * shv_ctx, shv_node_t* item, int rid);
-int shv_double_set(struct shv_con_ctx * shv_ctx, shv_node_t* item, int rid);
+int shv_ls(struct shv_con_ctx * shv_ctx, struct shv_node* item, int rid);
+int shv_dir(struct shv_con_ctx * shv_ctx, struct shv_node* item, int rid);
+int shv_type(struct shv_con_ctx * shv_ctx, struct shv_node* item, int rid);
+int shv_double_get(struct shv_con_ctx * shv_ctx, struct shv_node* item, int rid);
+int shv_double_set(struct shv_con_ctx * shv_ctx, struct shv_node* item, int rid);

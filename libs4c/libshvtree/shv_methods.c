@@ -108,7 +108,7 @@ const struct shv_dmap shv_root_dmap = {.methods = {.items = (void **)shv_root_dm
  *
  ****************************************************************************/
 
-int shv_ls(struct shv_con_ctx * shv_ctx, shv_node_t* item, int rid)
+int shv_ls(struct shv_con_ctx * shv_ctx, struct shv_node* item, int rid)
 {
   int count;
   shv_node_list_names_it_t names_it;
@@ -138,7 +138,7 @@ int shv_ls(struct shv_con_ctx * shv_ctx, shv_node_t* item, int rid)
  *
  ****************************************************************************/
 
-int shv_dir(struct shv_con_ctx * shv_ctx, shv_node_t* item, int rid)
+int shv_dir(struct shv_con_ctx * shv_ctx, struct shv_node* item, int rid)
 {
   int met_num;
   int i;
@@ -173,7 +173,7 @@ int shv_dir(struct shv_con_ctx * shv_ctx, shv_node_t* item, int rid)
  *
  ****************************************************************************/
 
-int shv_type(struct shv_con_ctx * shv_ctx, shv_node_t* item, int rid)
+int shv_type(struct shv_con_ctx * shv_ctx, struct shv_node* item, int rid)
 {
   const char *str;
 
@@ -197,7 +197,7 @@ int shv_type(struct shv_con_ctx * shv_ctx, shv_node_t* item, int rid)
  *
  ****************************************************************************/
 
-int shv_double_set(struct shv_con_ctx * shv_ctx, shv_node_t* item, int rid)
+int shv_double_set(struct shv_con_ctx * shv_ctx, struct shv_node* item, int rid)
 {
   double shv_received;
 
@@ -222,7 +222,7 @@ int shv_double_set(struct shv_con_ctx * shv_ctx, shv_node_t* item, int rid)
  *
  ****************************************************************************/
 
-int shv_double_get(struct shv_con_ctx * shv_ctx, shv_node_t* item, int rid)
+int shv_double_get(struct shv_con_ctx * shv_ctx, struct shv_node* item, int rid)
 {
   double shv_send;
 

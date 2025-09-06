@@ -25,10 +25,10 @@
 
 /* Custom tree implementation */
 
-GAVL_CUST_NODE_INT_IMP(shv_node_list_gavl, struct shv_node_list, shv_node_t,
+GAVL_CUST_NODE_INT_IMP(shv_node_list_gavl, struct shv_node_list, struct shv_node,
                        shv_node_list_key_t, list.gavl.root, gavl_node,
                        name, shv_node_list_comp_func)
-GSA_CUST_IMP(shv_node_list_gsa, struct shv_node_list, shv_node_t,
+GSA_CUST_IMP(shv_node_list_gsa, struct shv_node_list, struct shv_node,
                        shv_node_list_key_t, list.gsa.root,
                        name, shv_node_list_comp_func, 0)
 
@@ -40,7 +40,7 @@ GSA_CUST_IMP(shv_dmap, struct shv_dmap, shv_method_des_t, shv_method_des_key_t,
  *
  * @param node
  */
-static void shv_node_destructor(shv_node_t *node)
+static void shv_node_destructor(struct shv_node *node)
 {
   free(node);
 }
@@ -50,7 +50,7 @@ static void shv_node_destructor(shv_node_t *node)
  *
  * @param node
  */
-static void shv_typed_val_node_destructor(shv_node_t *node)
+static void shv_typed_val_node_destructor(struct shv_node *node)
 {
   shv_node_typed_val_t *typed_node = UL_CONTAINEROF(node, shv_node_typed_val_t, shv_node);
   free(typed_node);
@@ -64,7 +64,7 @@ static void shv_typed_val_node_destructor(shv_node_t *node)
  *
  ****************************************************************************/
 
-shv_node_t *shv_node_find(shv_node_t *node, const char * path)
+struct shv_node *shv_node_find(struct shv_node *node, const char * path)
 {
   if (strlen(path) == 0)
     {
@@ -146,9 +146,9 @@ void shv_node_list_it_init(struct shv_node_list *list, shv_node_list_it_t *it)
  *
  ****************************************************************************/
 
-shv_node_t *shv_node_list_it_next(shv_node_list_it_t *it)
+struct shv_node *shv_node_list_it_next(shv_node_list_it_t *it)
 {
-  shv_node_t *node;
+  struct shv_node *node;
 
   if (it->node_list->mode & SHV_NLIST_MODE_GSA)
     {
@@ -175,7 +175,7 @@ static const char *shv_node_list_names_get_next(struct shv_str_list_it *it,
                                                 int reset_to_first)
 {
   shv_node_list_names_it_t *names_it;
-  shv_node_t *node;
+  struct shv_node *node;
 
   names_it = UL_CONTAINEROF(it, shv_node_list_names_it_t, str_it);
 
@@ -219,7 +219,7 @@ void shv_node_list_names_it_init(struct shv_node_list *list,
  *
  ****************************************************************************/
 
-void shv_tree_add_child(shv_node_t *node, shv_node_t *child)
+void shv_tree_add_child(struct shv_node *node, struct shv_node *child)
 {
   if (node->children.mode & SHV_NLIST_MODE_GSA)
     {
@@ -237,11 +237,11 @@ void shv_tree_add_child(shv_node_t *node, shv_node_t *child)
  * Name: shv_tree_node_init
  *
  * Description:
- *   Initialize the shv_node_t node.
+ *   Initialize the struct shv_node node.
  *
  ****************************************************************************/
 
-void shv_tree_node_init(shv_node_t *item, const char *child_name,
+void shv_tree_node_init(struct shv_node *item, const char *child_name,
                         const struct shv_dmap *dir, int mode)
 {
   item->name = child_name;
@@ -260,10 +260,10 @@ void shv_tree_node_init(shv_node_t *item, const char *child_name,
     }
 }
 
-shv_node_t *shv_tree_node_new(const char *child_name,
+struct shv_node *shv_tree_node_new(const char *child_name,
                               const struct shv_dmap *dir, int mode)
 {
-    shv_node_t *item = calloc(1, sizeof(shv_node_t));
+    struct shv_node *item = calloc(1, sizeof(struct shv_node));
     if (item == NULL) {
         perror("node calloc");
         return NULL;
@@ -295,9 +295,9 @@ shv_node_typed_val_t *shv_tree_node_typed_val_new(const char *child_name,
  *
  ****************************************************************************/
 
-void shv_tree_destroy(shv_node_t *parent)
+void shv_tree_destroy(struct shv_node *parent)
 {
-    shv_node_t *child;
+    struct shv_node *child;
 
     if (parent->children.mode & SHV_NLIST_MODE_GSA) {
         gsa_cust_for_each_cut(shv_node_list_gsa, &parent->children, child) {
@@ -330,7 +330,7 @@ int shv_node_process(struct shv_con_ctx *shv_ctx, int rid, const char *met,
     char error_msg[80];
 
     /* Find the node */
-    shv_node_t *item = shv_node_find(shv_ctx->root, path);
+    struct shv_node *item = shv_node_find(shv_ctx->root, path);
     if (item == NULL) {
         shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
         snprintf(error_msg, sizeof(error_msg), "Node '%.40s' does not exist.", path);

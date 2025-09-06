@@ -20,7 +20,7 @@
 typedef int (*shv_dotapp_node_date)(void);
 
 typedef struct shv_dotapp_node {
-    shv_node_t shv_node;           /* Base shv_node */
+    struct shv_node shv_node;      /* Base shv_node */
     struct {
         shv_dotapp_node_date date; /* Date function callback */
     } appops;

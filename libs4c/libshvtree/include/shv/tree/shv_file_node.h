@@ -86,7 +86,7 @@ typedef int (*shv_file_node_crc32)(struct shv_file_node *item, int start, size_t
 
 struct shv_file_node
 {
-    shv_node_t shv_node;                /* Base shv_node */
+    struct shv_node shv_node;           /* Base shv_node */
     const char *name;                   /* File name, system-wise */
     void *fctx;                         /* Platform dependant file context, can be overriden */
     struct

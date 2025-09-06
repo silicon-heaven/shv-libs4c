@@ -18,21 +18,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int shv_dotapp_node_method_shvversionmajor(struct shv_con_ctx *shv_ctx, shv_node_t *item, int rid)
+int shv_dotapp_node_method_shvversionmajor(struct shv_con_ctx *shv_ctx, struct shv_node *item, int rid)
 {
     shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
     shv_send_int(shv_ctx, rid, 3);
     return 0;
 }
 
-int shv_dotapp_node_method_shvversionminor(struct shv_con_ctx *shv_ctx, shv_node_t *item, int rid)
+int shv_dotapp_node_method_shvversionminor(struct shv_con_ctx *shv_ctx, struct shv_node *item, int rid)
 {
     shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
     shv_send_int(shv_ctx, rid, 0);
     return 0;
 }
 
-int shv_dotapp_node_method_name(struct shv_con_ctx *shv_ctx, shv_node_t *item, int rid)
+int shv_dotapp_node_method_name(struct shv_con_ctx *shv_ctx, struct shv_node *item, int rid)
 {
     shv_dotapp_node_t *appnode = UL_CONTAINEROF(item, shv_dotapp_node_t, shv_node);
     shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
@@ -40,7 +40,7 @@ int shv_dotapp_node_method_name(struct shv_con_ctx *shv_ctx, shv_node_t *item, i
     return 0;
 }
 
-int shv_dotapp_node_method_version(struct shv_con_ctx *shv_ctx, shv_node_t *item, int rid)
+int shv_dotapp_node_method_version(struct shv_con_ctx *shv_ctx, struct shv_node *item, int rid)
 {
     shv_dotapp_node_t *appnode = UL_CONTAINEROF(item, shv_dotapp_node_t, shv_node);
     shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
@@ -48,14 +48,14 @@ int shv_dotapp_node_method_version(struct shv_con_ctx *shv_ctx, shv_node_t *item
     return 0;
 }
 
-int shv_dotapp_node_method_ping(struct shv_con_ctx *shv_ctx, shv_node_t *item, int rid)
+int shv_dotapp_node_method_ping(struct shv_con_ctx *shv_ctx, struct shv_node *item, int rid)
 {
     shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
     shv_send_empty_response(shv_ctx, rid);
     return 0;
 }
 
-int shv_dotapp_node_method_date(struct shv_con_ctx *shv_ctx, shv_node_t *item, int rid)
+int shv_dotapp_node_method_date(struct shv_con_ctx *shv_ctx, struct shv_node *item, int rid)
 {
     shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
     shv_send_error(shv_ctx, rid, SHV_RE_NOT_IMPLEMENTED, "shv-libs4c missing send date impl");
