@@ -467,7 +467,7 @@ int shv_file_node_stat(struct shv_con_ctx *shv_ctx, shv_node_t *item, int rid)
     return 0;
 }
 
-struct shv_file_node *shv_tree_file_node_new(const char *child_name, const shv_dmap_t *dir,
+struct shv_file_node *shv_tree_file_node_new(const char *child_name, const struct shv_dmap *dir,
                                              int mode)
 {
     struct shv_file_node *item = calloc(1, sizeof(struct shv_file_node));
@@ -528,4 +528,4 @@ static const shv_method_des_t * const shv_file_node_dmap_items[] =
   &shv_dmap_item_file_node_write
 };
 
-const shv_dmap_t shv_file_node_dmap = SHV_CREATE_NODE_DMAP(file_node, shv_file_node_dmap_items);
+const struct shv_dmap shv_file_node_dmap = SHV_CREATE_NODE_DMAP(file_node, shv_file_node_dmap_items);

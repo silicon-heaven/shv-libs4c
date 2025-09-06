@@ -82,20 +82,20 @@ const shv_method_des_t * const shv_root_dmap_items[] = {
   &shv_dmap_item_ls,
 };
 
-const shv_dmap_t shv_double_dmap = {.methods = {.items = (void **)shv_double_dmap_items,
+const struct shv_dmap shv_double_dmap = {.methods = {.items = (void **)shv_double_dmap_items,
                                                 .count = sizeof(shv_double_dmap_items)/sizeof(shv_double_dmap_items[0]),
                                                 .alloc_count = 0,
                                                }};
-const shv_dmap_t shv_double_read_only_dmap = {.methods = {.items = (void **)shv_double_read_only_dmap_items,
+const struct shv_dmap shv_double_read_only_dmap = {.methods = {.items = (void **)shv_double_read_only_dmap_items,
                                               .count = sizeof(shv_double_read_only_dmap_items)/sizeof(shv_double_read_only_dmap_items[0]),
                                               .alloc_count = 0,
                                               }};
-const shv_dmap_t shv_dir_ls_dmap = {.methods = {.items = (void **)shv_dir_ls_dmap_items,
+const struct shv_dmap shv_dir_ls_dmap = {.methods = {.items = (void **)shv_dir_ls_dmap_items,
                                                 .count = sizeof(shv_dir_ls_dmap_items)/sizeof(shv_dir_ls_dmap_items[0]),
                                                 .alloc_count = 0,
                                                }};
 
-const shv_dmap_t shv_root_dmap = {.methods = {.items = (void **)shv_root_dmap_items,
+const struct shv_dmap shv_root_dmap = {.methods = {.items = (void **)shv_root_dmap_items,
                                               .count = sizeof(shv_root_dmap_items)/sizeof(shv_root_dmap_items[0]),
                                               .alloc_count = 0,
                                              }};

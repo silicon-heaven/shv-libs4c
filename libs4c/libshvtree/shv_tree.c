@@ -32,7 +32,7 @@ GSA_CUST_IMP(shv_node_list_gsa, struct shv_node_list, shv_node_t,
                        shv_node_list_key_t, list.gsa.root,
                        name, shv_node_list_comp_func, 0)
 
-GSA_CUST_IMP(shv_dmap, shv_dmap_t, shv_method_des_t, shv_method_des_key_t,
+GSA_CUST_IMP(shv_dmap, struct shv_dmap, shv_method_des_t, shv_method_des_key_t,
 	           methods, name, shv_method_des_comp_func, 0)
 
 /**
@@ -242,10 +242,10 @@ void shv_tree_add_child(shv_node_t *node, shv_node_t *child)
  ****************************************************************************/
 
 void shv_tree_node_init(shv_node_t *item, const char *child_name,
-                        const shv_dmap_t *dir, int mode)
+                        const struct shv_dmap *dir, int mode)
 {
   item->name = child_name;
-  item->dir = UL_CAST_UNQ1(shv_dmap_t *, dir);
+  item->dir = UL_CAST_UNQ1(struct shv_dmap *, dir);
 
   item->children.mode = mode;
 
@@ -261,7 +261,7 @@ void shv_tree_node_init(shv_node_t *item, const char *child_name,
 }
 
 shv_node_t *shv_tree_node_new(const char *child_name,
-                              const shv_dmap_t *dir, int mode)
+                              const struct shv_dmap *dir, int mode)
 {
     shv_node_t *item = calloc(1, sizeof(shv_node_t));
     if (item == NULL) {
@@ -274,7 +274,7 @@ shv_node_t *shv_tree_node_new(const char *child_name,
 }
 
 shv_node_typed_val_t *shv_tree_node_typed_val_new(const char *child_name,
-                                                  const shv_dmap_t *dir,
+                                                  const struct shv_dmap *dir,
                                                   int mode)
 {
     shv_node_typed_val_t *item = calloc(1, sizeof(shv_node_typed_val_t));

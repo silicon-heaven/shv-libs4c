@@ -196,7 +196,7 @@ extern const shv_method_des_t shv_dmap_item_file_node_stat;
  * @brief The file node method structure.
  *
  */
-extern const shv_dmap_t shv_file_node_dmap;
+extern const struct shv_dmap shv_file_node_dmap;
 
 /**
  * @brief Allocates and initializes a file node
@@ -206,4 +206,4 @@ extern const shv_dmap_t shv_file_node_dmap;
  * @param mode
  * @return A nonNULL pointer on success, NULL otherwise
  */
-struct shv_file_node *shv_tree_file_node_new(const char *child_name, const shv_dmap_t *dir, int mode);
+struct shv_file_node *shv_tree_file_node_new(const char *child_name, const struct shv_dmap *dir, int mode);

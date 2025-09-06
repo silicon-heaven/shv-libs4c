@@ -128,10 +128,10 @@ static const shv_method_des_t *const shv_dmap_dotdevice_items[] =
     &shv_dmap_item_dotapp_version
 };
 
-const shv_dmap_t shv_dotapp_dmap =
+const struct shv_dmap shv_dotapp_dmap =
     SHV_CREATE_NODE_DMAP(dotapp, shv_dmap_dotdevice_items);
 
-shv_dotapp_node_t *shv_tree_dotapp_node_new(const shv_dmap_t *dir, int mode)
+shv_dotapp_node_t *shv_tree_dotapp_node_new(const struct shv_dmap *dir, int mode)
 {
     shv_dotapp_node_t *item = calloc(1, sizeof(shv_dotapp_node_t));
     if (item == NULL) {

@@ -52,9 +52,9 @@ struct shv_node_list
   } list;
 };
 
-typedef struct shv_dmap {
+struct shv_dmap {
   gsa_array_field_t methods;  /* GSA array of methods */
-} shv_dmap_t;
+};
 
 typedef struct shv_node shv_node_t;
 typedef struct shv_node {
@@ -63,7 +63,7 @@ typedef struct shv_node {
   } vtable;                      /* Node vtable */
   const char *name;              /* Node name */
   gavl_node_t gavl_node;         /* GAVL instance */
-  shv_dmap_t *dir;               /* Pointer to supported methods */
+  struct shv_dmap *dir;          /* Pointer to supported methods */
   struct shv_node_list children; /* List of node children */
 } shv_node_t;
 
@@ -110,7 +110,7 @@ shv_method_des_comp_func(const shv_method_des_key_t *a, const shv_method_des_key
   return strcmp(*a, *b);
 }
 
-GSA_CUST_DEC(shv_dmap, shv_dmap_t, shv_method_des_t, shv_method_des_key_t,
+GSA_CUST_DEC(shv_dmap, struct shv_dmap, shv_method_des_t, shv_method_des_key_t,
 	methods, name, shv_method_des_comp_func)
 
 typedef struct shv_node_list_it
@@ -151,7 +151,7 @@ void shv_node_list_names_it_init(struct shv_node_list *list, shv_node_list_names
 int shv_node_process(struct shv_con_ctx *shv_ctx, int rid, const char * met, const char * path);
 shv_node_t *shv_node_find(shv_node_t *node, const char * path);
 void shv_tree_add_child(shv_node_t *node, shv_node_t *child);
-void shv_tree_node_init(shv_node_t *item, const char *child_name, const shv_dmap_t *dir, int mode);
+void shv_tree_node_init(shv_node_t *item, const char *child_name, const struct shv_dmap *dir, int mode);
 
 /**
  * @brief Destroy the whole SHV tree, given the parent node
@@ -168,7 +168,7 @@ void shv_tree_destroy(shv_node_t *parent);
  * @param mode
  * @return A nonNULL pointer on success, NULL otherwise
  */
-shv_node_t *shv_tree_node_new(const char *child_name, const shv_dmap_t *dir, int mode);
+shv_node_t *shv_tree_node_new(const char *child_name, const struct shv_dmap *dir, int mode);
 
 /**
  * @brief Initialize the shv_node_typed_val_t node
@@ -178,4 +178,4 @@ shv_node_t *shv_tree_node_new(const char *child_name, const shv_dmap_t *dir, int
  * @param mode
  * @return A nonNULL pointer on success, NULL otherwise
  */
-shv_node_typed_val_t *shv_tree_node_typed_val_new(const char *child_name, const shv_dmap_t *dir, int mode);
+shv_node_typed_val_t *shv_tree_node_typed_val_new(const char *child_name, const struct shv_dmap *dir, int mode);

@@ -40,7 +40,7 @@ extern const shv_method_des_t shv_dmap_item_dotapp_date;
  * @brief The dotapp method structure.
  *
  */
-extern const shv_dmap_t shv_dotapp_dmap;
+extern const struct shv_dmap shv_dotapp_dmap;
 
 /**
  * @brief Allocate a new standard .app node
@@ -49,4 +49,4 @@ extern const shv_dmap_t shv_dotapp_dmap;
  * @param mode
  * @return non NULL reference on success, NULL otherwise
  */
-shv_dotapp_node_t *shv_tree_dotapp_node_new(const shv_dmap_t *dir, int mode);
+shv_dotapp_node_t *shv_tree_dotapp_node_new(const struct shv_dmap *dir, int mode);

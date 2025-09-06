@@ -31,10 +31,10 @@
 extern const shv_method_des_t shv_dmap_item_ls;
 extern const shv_method_des_t shv_dmap_item_dir;
 
-extern const shv_dmap_t shv_double_dmap;
-extern const shv_dmap_t shv_double_read_only_dmap;
-extern const shv_dmap_t shv_dir_ls_dmap;
-extern const shv_dmap_t shv_root_dmap;
+extern const struct shv_dmap shv_double_dmap;
+extern const struct shv_dmap shv_double_read_only_dmap;
+extern const struct shv_dmap shv_dir_ls_dmap;
+extern const struct shv_dmap shv_root_dmap;
 
 int shv_ls(struct shv_con_ctx * shv_ctx, shv_node_t* item, int rid);
 int shv_dir(struct shv_con_ctx * shv_ctx, shv_node_t* item, int rid);
