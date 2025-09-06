@@ -20,8 +20,9 @@
 
 #define SHV_FILE_POSIX_BITFLAG_OPENED ((uint32_t)(1 << 0)) /* File already opened flag */
 
+/* Forward declarations */
 typedef struct shv_dotdevice_node shv_dotdevice_node_t;
-typedef struct shv_file_node shv_file_node_t;
+struct shv_file_node;
 struct shv_connection;
 
 struct shv_file_node_fctx
@@ -63,7 +64,7 @@ struct shv_thrd_ctx
  * @param item
  * @return int
  */
-int shv_file_node_posix_opener(shv_file_node_t *item);
+int shv_file_node_posix_opener(struct shv_file_node *item);
 
 /**
  * @brief POSIX shv_file_node_getsize implementation
@@ -71,7 +72,7 @@ int shv_file_node_posix_opener(shv_file_node_t *item);
  * @param item
  * @return int
  */
-int shv_file_node_posix_getsize(shv_file_node_t *item);
+int shv_file_node_posix_getsize(struct shv_file_node *item);
 
 /**
  * @brief POSIX shv_file_node_writer implementation
@@ -81,7 +82,7 @@ int shv_file_node_posix_getsize(shv_file_node_t *item);
  * @param count
  * @return int
  */
-int shv_file_node_posix_writer(shv_file_node_t *item, void *buf, size_t count);
+int shv_file_node_posix_writer(struct shv_file_node *item, void *buf, size_t count);
 
 /**
  * @brief POSIX shv_file_node_seeker implementation
@@ -90,7 +91,7 @@ int shv_file_node_posix_writer(shv_file_node_t *item, void *buf, size_t count);
  * @param offset
  * @return int
  */
-int shv_file_node_posix_seeker(shv_file_node_t *item, int offset);
+int shv_file_node_posix_seeker(struct shv_file_node *item, int offset);
 
 /**
  * @brief POSIX shv_file_node_reader implementation
@@ -100,7 +101,7 @@ int shv_file_node_posix_seeker(shv_file_node_t *item, int offset);
  * @param count
  * @return int
  */
-int shv_file_node_posix_reader(shv_file_node_t *item, void *buf, size_t count);
+int shv_file_node_posix_reader(struct shv_file_node *item, void *buf, size_t count);
 
 /**
  * @brief POSIX shv_file_node_crc32 implementation
@@ -111,7 +112,7 @@ int shv_file_node_posix_reader(shv_file_node_t *item, void *buf, size_t count);
  * @param result
  * @return int
  */
-int shv_file_node_posix_crc32(shv_file_node_t *item, int start, size_t size, uint32_t *result);
+int shv_file_node_posix_crc32(struct shv_file_node *item, int start, size_t size, uint32_t *result);
 
 /**
  * @brief POSIX shv_dotdevice_node_uptime implementation
