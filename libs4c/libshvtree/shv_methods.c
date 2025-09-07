@@ -19,12 +19,12 @@
 
 /* Method descriptors - general methods "ls" and "dir" */
 
-const shv_method_des_t shv_dmap_item_ls = {
+const struct shv_method_des shv_dmap_item_ls = {
   .name = "ls",
   .access = SHV_ACCESS_BROWSE,
   .method = shv_ls
 };
-const shv_method_des_t shv_dmap_item_dir = {
+const struct shv_method_des shv_dmap_item_dir = {
   .name = "dir",
   .access = SHV_ACCESS_BROWSE,
   .method = shv_dir
@@ -32,7 +32,7 @@ const shv_method_des_t shv_dmap_item_dir = {
 
 /* Method descriptors - methods for parameters */
 
-const shv_method_des_t shv_dmap_item_type = {
+const struct shv_method_des shv_dmap_item_type = {
   .name = "typeName",
   .flags = SHV_METHOD_GETTER,
   .result = "s",
@@ -42,14 +42,14 @@ const shv_method_des_t shv_dmap_item_type = {
 
 /* Method descriptors - methods for double values: params and inputs/outputs */
 
-const shv_method_des_t shv_double_dmap_item_get = {
+const struct shv_method_des shv_double_dmap_item_get = {
   .name = "get",
   .flags = SHV_METHOD_GETTER,
   .result = "d",
   .access = SHV_ACCESS_READ,
   .method = shv_double_get
 };
-const shv_method_des_t shv_double_dmap_item_set = {
+const struct shv_method_des shv_double_dmap_item_set = {
   .name = "set",
   .flags = SHV_METHOD_SETTER,
   .param = "d|f",
@@ -57,7 +57,7 @@ const shv_method_des_t shv_double_dmap_item_set = {
   .method = shv_double_set
 };
 
-const shv_method_des_t * const shv_double_dmap_items[] = {
+const struct shv_method_des * const shv_double_dmap_items[] = {
   &shv_dmap_item_dir,
   &shv_double_dmap_item_get,
   &shv_dmap_item_ls,
@@ -65,37 +65,37 @@ const shv_method_des_t * const shv_double_dmap_items[] = {
   &shv_dmap_item_type,
 };
 
-const shv_method_des_t * const shv_double_read_only_dmap_items[] = {
+const struct shv_method_des * const shv_double_read_only_dmap_items[] = {
   &shv_dmap_item_dir,
   &shv_double_dmap_item_get,
   &shv_dmap_item_ls,
   &shv_dmap_item_type,
 };
 
-const shv_method_des_t * const shv_dir_ls_dmap_items[] = {
+const struct shv_method_des * const shv_dir_ls_dmap_items[] = {
   &shv_dmap_item_dir,
   &shv_dmap_item_ls,
 };
 
-const shv_method_des_t * const shv_root_dmap_items[] = {
+const struct shv_method_des * const shv_root_dmap_items[] = {
   &shv_dmap_item_dir,
   &shv_dmap_item_ls,
 };
 
-const shv_dmap_t shv_double_dmap = {.methods = {.items = (void **)shv_double_dmap_items,
+const struct shv_dmap shv_double_dmap = {.methods = {.items = (void **)shv_double_dmap_items,
                                                 .count = sizeof(shv_double_dmap_items)/sizeof(shv_double_dmap_items[0]),
                                                 .alloc_count = 0,
                                                }};
-const shv_dmap_t shv_double_read_only_dmap = {.methods = {.items = (void **)shv_double_read_only_dmap_items,
+const struct shv_dmap shv_double_read_only_dmap = {.methods = {.items = (void **)shv_double_read_only_dmap_items,
                                               .count = sizeof(shv_double_read_only_dmap_items)/sizeof(shv_double_read_only_dmap_items[0]),
                                               .alloc_count = 0,
                                               }};
-const shv_dmap_t shv_dir_ls_dmap = {.methods = {.items = (void **)shv_dir_ls_dmap_items,
+const struct shv_dmap shv_dir_ls_dmap = {.methods = {.items = (void **)shv_dir_ls_dmap_items,
                                                 .count = sizeof(shv_dir_ls_dmap_items)/sizeof(shv_dir_ls_dmap_items[0]),
                                                 .alloc_count = 0,
                                                }};
 
-const shv_dmap_t shv_root_dmap = {.methods = {.items = (void **)shv_root_dmap_items,
+const struct shv_dmap shv_root_dmap = {.methods = {.items = (void **)shv_root_dmap_items,
                                               .count = sizeof(shv_root_dmap_items)/sizeof(shv_root_dmap_items[0]),
                                               .alloc_count = 0,
                                              }};
@@ -108,10 +108,10 @@ const shv_dmap_t shv_root_dmap = {.methods = {.items = (void **)shv_root_dmap_it
  *
  ****************************************************************************/
 
-int shv_ls(shv_con_ctx_t * shv_ctx, shv_node_t* item, int rid)
+int shv_ls(struct shv_con_ctx * shv_ctx, struct shv_node* item, int rid)
 {
   int count;
-  shv_node_list_names_it_t names_it;
+  struct shv_node_list_names_it names_it;
 
   shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
 
@@ -138,7 +138,7 @@ int shv_ls(shv_con_ctx_t * shv_ctx, shv_node_t* item, int rid)
  *
  ****************************************************************************/
 
-int shv_dir(shv_con_ctx_t * shv_ctx, shv_node_t* item, int rid)
+int shv_dir(struct shv_con_ctx * shv_ctx, struct shv_node* item, int rid)
 {
   int met_num;
   int i;
@@ -173,13 +173,13 @@ int shv_dir(shv_con_ctx_t * shv_ctx, shv_node_t* item, int rid)
  *
  ****************************************************************************/
 
-int shv_type(shv_con_ctx_t * shv_ctx, shv_node_t* item, int rid)
+int shv_type(struct shv_con_ctx * shv_ctx, struct shv_node* item, int rid)
 {
   const char *str;
 
   shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
 
-  shv_node_typed_val_t *item_node = UL_CONTAINEROF(item, shv_node_typed_val_t,
+  struct shv_node_typed_val *item_node = UL_CONTAINEROF(item, struct shv_node_typed_val,
                                                    shv_node);
 
   str = item_node->type_name;
@@ -197,13 +197,13 @@ int shv_type(shv_con_ctx_t * shv_ctx, shv_node_t* item, int rid)
  *
  ****************************************************************************/
 
-int shv_double_set(shv_con_ctx_t * shv_ctx, shv_node_t* item, int rid)
+int shv_double_set(struct shv_con_ctx * shv_ctx, struct shv_node* item, int rid)
 {
   double shv_received;
 
   shv_unpack_data(&shv_ctx->unpack_ctx, 0, &shv_received);
 
-  shv_node_typed_val_t *item_node = UL_CONTAINEROF(item, shv_node_typed_val_t,
+  struct shv_node_typed_val *item_node = UL_CONTAINEROF(item, struct shv_node_typed_val,
                                                    shv_node);
 
   *(double *)item_node->val_ptr = shv_received;
@@ -222,13 +222,13 @@ int shv_double_set(shv_con_ctx_t * shv_ctx, shv_node_t* item, int rid)
  *
  ****************************************************************************/
 
-int shv_double_get(shv_con_ctx_t * shv_ctx, shv_node_t* item, int rid)
+int shv_double_get(struct shv_con_ctx * shv_ctx, struct shv_node* item, int rid)
 {
   double shv_send;
 
   shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
 
-  shv_node_typed_val_t *item_node = UL_CONTAINEROF(item, shv_node_typed_val_t,
+  struct shv_node_typed_val *item_node = UL_CONTAINEROF(item, struct shv_node_typed_val,
                                                    shv_node);
 
   shv_send = *(double *)item_node->val_ptr;

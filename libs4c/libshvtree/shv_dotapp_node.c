@@ -18,51 +18,51 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int shv_dotapp_node_method_shvversionmajor(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
+int shv_dotapp_node_method_shvversionmajor(struct shv_con_ctx *shv_ctx, struct shv_node *item, int rid)
 {
     shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
     shv_send_int(shv_ctx, rid, 3);
     return 0;
 }
 
-int shv_dotapp_node_method_shvversionminor(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
+int shv_dotapp_node_method_shvversionminor(struct shv_con_ctx *shv_ctx, struct shv_node *item, int rid)
 {
     shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
     shv_send_int(shv_ctx, rid, 0);
     return 0;
 }
 
-int shv_dotapp_node_method_name(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
+int shv_dotapp_node_method_name(struct shv_con_ctx *shv_ctx, struct shv_node *item, int rid)
 {
-    shv_dotapp_node_t *appnode = UL_CONTAINEROF(item, shv_dotapp_node_t, shv_node);
+    struct shv_dotapp_node *appnode = UL_CONTAINEROF(item, struct shv_dotapp_node, shv_node);
     shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
     shv_send_str(shv_ctx, rid, appnode->name);
     return 0;
 }
 
-int shv_dotapp_node_method_version(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
+int shv_dotapp_node_method_version(struct shv_con_ctx *shv_ctx, struct shv_node *item, int rid)
 {
-    shv_dotapp_node_t *appnode = UL_CONTAINEROF(item, shv_dotapp_node_t, shv_node);
+    struct shv_dotapp_node *appnode = UL_CONTAINEROF(item, struct shv_dotapp_node, shv_node);
     shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
     shv_send_str(shv_ctx, rid, appnode->version);
     return 0;
 }
 
-int shv_dotapp_node_method_ping(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
+int shv_dotapp_node_method_ping(struct shv_con_ctx *shv_ctx, struct shv_node *item, int rid)
 {
     shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
     shv_send_empty_response(shv_ctx, rid);
     return 0;
 }
 
-int shv_dotapp_node_method_date(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
+int shv_dotapp_node_method_date(struct shv_con_ctx *shv_ctx, struct shv_node *item, int rid)
 {
     shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
     shv_send_error(shv_ctx, rid, SHV_RE_NOT_IMPLEMENTED, "shv-libs4c missing send date impl");
     return 0;
 }
 
-const shv_method_des_t shv_dmap_item_dotapp_shvversionmajor =
+const struct shv_method_des shv_dmap_item_dotapp_shvversionmajor =
 {
     .name = "shvVersionMajor",
     .flags = SHV_METHOD_GETTER,
@@ -71,7 +71,7 @@ const shv_method_des_t shv_dmap_item_dotapp_shvversionmajor =
     .method = shv_dotapp_node_method_shvversionmajor
 };
 
-const shv_method_des_t shv_dmap_item_dotapp_shvversionminor =
+const struct shv_method_des shv_dmap_item_dotapp_shvversionminor =
 {
     .name = "shvVersionMinor",
     .flags = SHV_METHOD_GETTER,
@@ -80,7 +80,7 @@ const shv_method_des_t shv_dmap_item_dotapp_shvversionminor =
     .method = shv_dotapp_node_method_shvversionminor
 };
 
-const shv_method_des_t shv_dmap_item_dotapp_name =
+const struct shv_method_des shv_dmap_item_dotapp_name =
 {
     .name = "name",
     .flags = SHV_METHOD_GETTER,
@@ -89,7 +89,7 @@ const shv_method_des_t shv_dmap_item_dotapp_name =
     .method = shv_dotapp_node_method_name
 };
 
-const shv_method_des_t shv_dmap_item_dotapp_version =
+const struct shv_method_des shv_dmap_item_dotapp_version =
 {
     .name = "version",
     .flags = SHV_METHOD_GETTER,
@@ -98,7 +98,7 @@ const shv_method_des_t shv_dmap_item_dotapp_version =
     .method = shv_dotapp_node_method_version
 };
 
-const shv_method_des_t shv_dmap_item_dotapp_ping =
+const struct shv_method_des shv_dmap_item_dotapp_ping =
 {
     .name = "ping",
     .flags = 0,
@@ -107,7 +107,7 @@ const shv_method_des_t shv_dmap_item_dotapp_ping =
     .method = shv_dotapp_node_method_ping
 };
 
-const shv_method_des_t shv_dmap_item_dotapp_date =
+const struct shv_method_des shv_dmap_item_dotapp_date =
 {
     .name = "date",
     .flags = 0,
@@ -116,7 +116,7 @@ const shv_method_des_t shv_dmap_item_dotapp_date =
     .method = shv_dotapp_node_method_date
 };
 
-static const shv_method_des_t *const shv_dmap_dotdevice_items[] =
+static const struct shv_method_des *const shv_dmap_dotdevice_items[] =
 {
     &shv_dmap_item_dotapp_date,
     &shv_dmap_item_dir,
@@ -128,12 +128,12 @@ static const shv_method_des_t *const shv_dmap_dotdevice_items[] =
     &shv_dmap_item_dotapp_version
 };
 
-const shv_dmap_t shv_dotapp_dmap =
+const struct shv_dmap shv_dotapp_dmap =
     SHV_CREATE_NODE_DMAP(dotapp, shv_dmap_dotdevice_items);
 
-shv_dotapp_node_t *shv_tree_dotapp_node_new(const shv_dmap_t *dir, int mode)
+struct shv_dotapp_node *shv_tree_dotapp_node_new(const struct shv_dmap *dir, int mode)
 {
-    shv_dotapp_node_t *item = calloc(1, sizeof(shv_dotapp_node_t));
+    struct shv_dotapp_node *item = calloc(1, sizeof(struct shv_dotapp_node));
     if (item == NULL) {
         perror(".app calloc");
         return NULL;

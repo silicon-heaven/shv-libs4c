@@ -14,7 +14,7 @@
 #include "shv_tree.h"
 
 /* Forward declaration */
-typedef struct shv_dotdevice_node shv_dotdevice_node_t;
+struct shv_dotdevice_node;
 
 /**
  * @brief A platform dependant function used to track time.
@@ -28,8 +28,9 @@ typedef int (*shv_dotdevice_node_uptime)(void);
  */
 typedef int (*shv_dotdevice_node_reset)(void);
 
-typedef struct shv_dotdevice_node {
-    shv_node_t shv_node;                  /* Base shv_node */
+struct shv_dotdevice_node
+{
+    struct shv_node shv_node;             /* Base shv_node */
     struct {
         shv_dotdevice_node_reset  reset;  /* Platform dependant reset function */
         shv_dotdevice_node_uptime uptime; /* Platform dependant uptime function */
@@ -38,19 +39,19 @@ typedef struct shv_dotdevice_node {
     const char *name;                     /* */
     const char *serial_number;
     const char *version;
-} shv_dotdevice_node_t;
+};
 
-extern const shv_method_des_t shv_dmap_item_dotdevice_node_name;
-extern const shv_method_des_t shv_dmap_item_dotdevice_node_version;
-extern const shv_method_des_t shv_dmap_item_dotdevice_node_serial_number;
-extern const shv_method_des_t shv_dmap_item_dotdevice_node_uptime;
-extern const shv_method_des_t shv_dmap_item_dotdevice_node_reset;
+extern const struct shv_method_des shv_dmap_item_dotdevice_node_name;
+extern const struct shv_method_des shv_dmap_item_dotdevice_node_version;
+extern const struct shv_method_des shv_dmap_item_dotdevice_node_serial_number;
+extern const struct shv_method_des shv_dmap_item_dotdevice_node_uptime;
+extern const struct shv_method_des shv_dmap_item_dotdevice_node_reset;
 
 /**
  * @brief The dotdevice method structure.
  * 
  */
-extern const shv_dmap_t shv_dotdevice_dmap;
+extern const struct shv_dmap shv_dotdevice_dmap;
 
 /**
  * @brief Allocate a new standard .dotdevice node
@@ -59,4 +60,4 @@ extern const shv_dmap_t shv_dotdevice_dmap;
  * @param mode 
  * @return non NULL reference on success, NULL otherwise
  */
-shv_dotdevice_node_t *shv_tree_dotdevice_node_new(const shv_dmap_t *dir, int mode);
+struct shv_dotdevice_node *shv_tree_dotdevice_node_new(const struct shv_dmap *dir, int mode);

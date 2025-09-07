@@ -23,7 +23,7 @@
 void shv_overflow_handler(struct ccpcp_pack_context *ctx, size_t size_hint)
 {
 
-  shv_con_ctx_t *shv_ctx = UL_CONTAINEROF(ctx, shv_con_ctx_t, pack_ctx);
+  struct shv_con_ctx *shv_ctx = UL_CONTAINEROF(ctx, struct shv_con_ctx, pack_ctx);
   size_t to_send = ctx->current - ctx->start;
   char * ptr_data = shv_ctx->shv_data;
   int ret = 0;
@@ -58,7 +58,7 @@ size_t shv_underrflow_handler(struct ccpcp_unpack_context * ctx)
 {
   int i;
 
-  shv_con_ctx_t *shv_ctx = UL_CONTAINEROF(ctx, shv_con_ctx_t, unpack_ctx);
+  struct shv_con_ctx *shv_ctx = UL_CONTAINEROF(ctx, struct shv_con_ctx, unpack_ctx);
 
   i = shv_ctx->connection->tops.read(shv_ctx->connection,
                                      shv_ctx->shv_rd_data, sizeof(shv_ctx->shv_rd_data));
@@ -72,7 +72,7 @@ size_t shv_underrflow_handler(struct ccpcp_unpack_context * ctx)
   return i;
 }
 
-void shv_pack_head_reply(shv_con_ctx_t *shv_ctx, int rid)
+void shv_pack_head_reply(struct shv_con_ctx *shv_ctx, int rid)
 {
   cchainpack_pack_meta_begin(&shv_ctx->pack_ctx);
 
@@ -108,7 +108,7 @@ void shv_pack_head_reply(shv_con_ctx_t *shv_ctx, int rid)
  * @param shv_ctx
  * @return 0 in case of success, -1 on failure
  */
-static int shv_unpack_contskip(shv_con_ctx_t *shv_ctx)
+static int shv_unpack_contskip(struct shv_con_ctx *shv_ctx)
 {
     struct ccpcp_unpack_context *ctx = &shv_ctx->unpack_ctx;
     int level = 1;
@@ -132,7 +132,7 @@ static int shv_unpack_contskip(shv_con_ctx_t *shv_ctx)
     return 0;
 }
 
-int shv_unpack_discard(shv_con_ctx_t * shv_ctx)
+int shv_unpack_discard(struct shv_con_ctx *shv_ctx)
 {
     struct ccpcp_unpack_context *ctx = &shv_ctx->unpack_ctx;
 
