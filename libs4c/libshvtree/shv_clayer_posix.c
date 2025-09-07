@@ -50,7 +50,7 @@
 #define RETLZ_ERROR(__err_label) if (ret < 0) goto __err_label
 #define CHUNK_SIZE ((size_t)64)
 
-int shv_file_node_posix_opener(shv_file_node_t *item)
+int shv_file_node_posix_opener(struct shv_file_node *item)
 {
     struct shv_file_node_fctx *fctx = (struct shv_file_node_fctx*) item->fctx;
     if (!(fctx->flags & SHV_FILE_POSIX_BITFLAG_OPENED)) {
@@ -64,7 +64,7 @@ int shv_file_node_posix_opener(shv_file_node_t *item)
     return 0;
 }
 
-int shv_file_node_posix_getsize(shv_file_node_t *item)
+int shv_file_node_posix_getsize(struct shv_file_node *item)
 {
     struct stat st;
     if (stat(item->name, &st) < 0) {
@@ -73,7 +73,7 @@ int shv_file_node_posix_getsize(shv_file_node_t *item)
     return st.st_size;
 }
 
-int shv_file_node_posix_writer(shv_file_node_t *item, void *buf, size_t count)
+int shv_file_node_posix_writer(struct shv_file_node *item, void *buf, size_t count)
 {
     struct shv_file_node_fctx *fctx = (struct shv_file_node_fctx*) item->fctx;
 
@@ -90,7 +90,7 @@ int shv_file_node_posix_writer(shv_file_node_t *item, void *buf, size_t count)
     return -1;
 }
 
-int shv_file_node_posix_seeker(shv_file_node_t *item, int offset)
+int shv_file_node_posix_seeker(struct shv_file_node *item, int offset)
 {
     struct shv_file_node_fctx *fctx = (struct shv_file_node_fctx*) item->fctx;
 
@@ -104,7 +104,7 @@ int shv_file_node_posix_seeker(shv_file_node_t *item, int offset)
     return -1;
 }
 
-int shv_file_node_posix_crc32(shv_file_node_t *item, int start, size_t size, uint32_t *result)
+int shv_file_node_posix_crc32(struct shv_file_node *item, int start, size_t size, uint32_t *result)
 {
     /* The calculation between Linux and NuttX differs a bit. While both implementations
      * use the IEEE 802.3, the process is a bit different.
@@ -390,7 +390,7 @@ int shv_tcpip_posix_dataready(struct shv_connection *connection, int timeout)
 
 static void *__shv_process(void *arg)
 {
-    shv_con_ctx_t *shv_ctx = (shv_con_ctx_t *)arg;
+    struct shv_con_ctx *shv_ctx = (struct shv_con_ctx *)arg;
     shv_ctx->thrd_ctx.thrd_ret = shv_process(shv_ctx);
     /* Report a hard error */
     if (shv_ctx->thrd_ctx.thrd_ret == -1 && shv_ctx->at_signlr != NULL) {
@@ -399,7 +399,7 @@ static void *__shv_process(void *arg)
     return NULL;
 }
 
-int shv_create_process_thread(int thrd_prio, shv_con_ctx_t *ctx)
+int shv_create_process_thread(int thrd_prio, struct shv_con_ctx *ctx)
 {
     int ret;
     int policy;
@@ -455,7 +455,7 @@ error:
     return -1;
 }
 
-void shv_stop_process_thread(shv_con_ctx_t *shv_ctx)
+void shv_stop_process_thread(struct shv_con_ctx *shv_ctx)
 {
     /* Write to the pipe to simulate the instant timeout */
     /* The write is enclosed in {} to suppress warn_unused_result warning */

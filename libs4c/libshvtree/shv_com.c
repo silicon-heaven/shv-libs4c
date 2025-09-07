@@ -39,7 +39,7 @@
  *
  ****************************************************************************/
 
-int cid_alloc(shv_con_ctx_t * shv_ctx)
+int cid_alloc(struct shv_con_ctx * shv_ctx)
 {
   if (shv_ctx->cid_capacity < shv_ctx->cid_cnt)
     {
@@ -74,7 +74,7 @@ int cid_alloc(shv_con_ctx_t * shv_ctx)
  *
  ****************************************************************************/
 
-void shv_pack_head_request(shv_con_ctx_t *shv_ctx, char *met, char *path)
+void shv_pack_head_request(struct shv_con_ctx *shv_ctx, char *met, char *path)
 {
   cchainpack_pack_meta_begin(&shv_ctx->pack_ctx);
 
@@ -101,7 +101,7 @@ void shv_pack_head_request(shv_con_ctx_t *shv_ctx, char *met, char *path)
  *
  ****************************************************************************/
 
-int shv_unpack_head(shv_con_ctx_t * shv_ctx, int * rid, char * method,
+int shv_unpack_head(struct shv_con_ctx * shv_ctx, int * rid, char * method,
                     char * path)
 {
   int i;
@@ -365,7 +365,7 @@ int shv_unpack_data(ccpcp_unpack_context * ctx, int * v, double * d)
  *
  ****************************************************************************/
 
-int shv_process_input(shv_con_ctx_t * shv_ctx)
+int shv_process_input(struct shv_con_ctx * shv_ctx)
 {
   int i;
   int j;
@@ -415,7 +415,7 @@ int shv_process_input(shv_con_ctx_t * shv_ctx)
  *
  ****************************************************************************/
 
-void shv_send_ping(shv_con_ctx_t *shv_ctx)
+void shv_send_ping(struct shv_con_ctx *shv_ctx)
 {
   ccpcp_pack_context_init(&shv_ctx->pack_ctx, shv_ctx->shv_data, SHV_BUF_LEN,
                           shv_overflow_handler);
@@ -447,7 +447,7 @@ void shv_send_ping(shv_con_ctx_t *shv_ctx)
  *
  ****************************************************************************/
 
-void shv_send_int(shv_con_ctx_t *shv_ctx, int rid, int num)
+void shv_send_int(struct shv_con_ctx *shv_ctx, int rid, int num)
 {
   ccpcp_pack_context_init(&shv_ctx->pack_ctx, shv_ctx->shv_data, SHV_BUF_LEN,
                           shv_overflow_handler);
@@ -472,7 +472,7 @@ void shv_send_int(shv_con_ctx_t *shv_ctx, int rid, int num)
     }
 }
 
-void shv_send_uint(shv_con_ctx_t *shv_ctx, int rid, unsigned int num)
+void shv_send_uint(struct shv_con_ctx *shv_ctx, int rid, unsigned int num)
 {
   ccpcp_pack_context_init(&shv_ctx->pack_ctx, shv_ctx->shv_data, SHV_BUF_LEN,
                           shv_overflow_handler);
@@ -505,7 +505,7 @@ void shv_send_uint(shv_con_ctx_t *shv_ctx, int rid, unsigned int num)
  *
  ****************************************************************************/
 
-void shv_send_double(shv_con_ctx_t *shv_ctx, int rid, double num)
+void shv_send_double(struct shv_con_ctx *shv_ctx, int rid, double num)
 {
   ccpcp_pack_context_init(&shv_ctx->pack_ctx,shv_ctx->shv_data,
                           SHV_BUF_LEN,shv_overflow_handler);
@@ -538,7 +538,7 @@ void shv_send_double(shv_con_ctx_t *shv_ctx, int rid, double num)
  *
  ****************************************************************************/
 
-void shv_send_str(shv_con_ctx_t *shv_ctx, int rid, const char *str)
+void shv_send_str(struct shv_con_ctx *shv_ctx, int rid, const char *str)
 {
   ccpcp_pack_context_init(&shv_ctx->pack_ctx,shv_ctx->shv_data, SHV_BUF_LEN,
                           shv_overflow_handler);
@@ -563,7 +563,7 @@ void shv_send_str(shv_con_ctx_t *shv_ctx, int rid, const char *str)
     }
 }
 
-void shv_send_empty_response(shv_con_ctx_t *shv_ctx, int rid)
+void shv_send_empty_response(struct shv_con_ctx *shv_ctx, int rid)
 {
     ccpcp_pack_context_init(&shv_ctx->pack_ctx,shv_ctx->shv_data, SHV_BUF_LEN,
                             shv_overflow_handler);
@@ -594,7 +594,7 @@ void shv_send_empty_response(shv_con_ctx_t *shv_ctx, int rid)
  *
  ****************************************************************************/
 
-void shv_send_str_list(shv_con_ctx_t *shv_ctx, int rid, int num_str,
+void shv_send_str_list(struct shv_con_ctx *shv_ctx, int rid, int num_str,
                        const char **str)
 {
   ccpcp_pack_context_init(&shv_ctx->pack_ctx,shv_ctx->shv_data, SHV_BUF_LEN,
@@ -635,8 +635,8 @@ void shv_send_str_list(shv_con_ctx_t *shv_ctx, int rid, int num_str,
  *
  ****************************************************************************/
 
-void shv_send_str_list_it(shv_con_ctx_t *shv_ctx, int rid, int num_str,
-                          shv_str_list_it_t *str_it)
+void shv_send_str_list_it(struct shv_con_ctx *shv_ctx, int rid, int num_str,
+                          struct shv_str_list_it *str_it)
 {
   ccpcp_pack_context_init(&shv_ctx->pack_ctx,shv_ctx->shv_data, SHV_BUF_LEN,
                           shv_overflow_handler);
@@ -697,7 +697,7 @@ void shv_send_str_list_it(shv_con_ctx_t *shv_ctx, int rid, int num_str,
  *
  ****************************************************************************/
 
-void shv_send_dir(shv_con_ctx_t *shv_ctx, const struct shv_dir_res *results,
+void shv_send_dir(struct shv_con_ctx *shv_ctx, const struct shv_dir_res *results,
                   int cnt, int rid)
 {
   ccpcp_pack_context_init(&shv_ctx->pack_ctx,shv_ctx->shv_data, SHV_BUF_LEN,
@@ -768,7 +768,7 @@ void shv_send_dir(shv_con_ctx_t *shv_ctx, const struct shv_dir_res *results,
  *
  ****************************************************************************/
 
-void shv_send_error(shv_con_ctx_t *shv_ctx, int rid, enum shv_response_error_code code,
+void shv_send_error(struct shv_con_ctx *shv_ctx, int rid, enum shv_response_error_code code,
                     const char *msg)
 {
   ccpcp_pack_context_init(&shv_ctx->pack_ctx,shv_ctx->shv_data,
@@ -814,7 +814,7 @@ void shv_send_error(shv_con_ctx_t *shv_ctx, int rid, enum shv_response_error_cod
  *
  ****************************************************************************/
 
-int shv_login(shv_con_ctx_t *shv_ctx)
+int shv_login(struct shv_con_ctx *shv_ctx)
 {
   int i;
   int id = 0;
@@ -1005,14 +1005,14 @@ int shv_login(shv_con_ctx_t *shv_ctx)
  * Name: shv_con_ctx_init
  *
  * Description:
- *   Fill the shv_con_ctx_t with variables.
+ *   Fill the struct shv_con_ctx with variables.
  *
  ****************************************************************************/
 
-void shv_con_ctx_init(shv_con_ctx_t *shv_ctx, struct shv_node *root,
+void shv_con_ctx_init(struct shv_con_ctx *shv_ctx, struct shv_node *root,
                       struct shv_connection *connection, shv_attention_signaller at_signlr)
 {
-  memset(shv_ctx, 0, sizeof(shv_con_ctx_t));
+  memset(shv_ctx, 0, sizeof(struct shv_con_ctx));
 
   shv_ctx->root = root;
   shv_ctx->timeout = 360;
@@ -1027,7 +1027,7 @@ void shv_con_ctx_init(shv_con_ctx_t *shv_ctx, struct shv_node *root,
  * @param shv_ctx
  * @return int
  */
-static inline int shv_process_communication(shv_con_ctx_t *shv_ctx)
+static inline int shv_process_communication(struct shv_con_ctx *shv_ctx)
 {
     int ret;
 
@@ -1072,7 +1072,7 @@ static inline int shv_process_communication(shv_con_ctx_t *shv_ctx)
     return ret;
 }
 
-int shv_process(shv_con_ctx_t *shv_ctx)
+int shv_process(struct shv_con_ctx *shv_ctx)
 {
     int ret;
     /* A local enum to keep track of the connection */
@@ -1177,10 +1177,10 @@ int shv_process(shv_con_ctx_t *shv_ctx)
  *
  ****************************************************************************/
 
-shv_con_ctx_t *shv_com_init(struct shv_node *root, struct shv_connection *connection,
+struct shv_con_ctx *shv_com_init(struct shv_node *root, struct shv_connection *connection,
                             shv_attention_signaller at_signlr)
 {
-  shv_con_ctx_t *shv_ctx = (shv_con_ctx_t *)malloc(sizeof(shv_con_ctx_t));
+  struct shv_con_ctx *shv_ctx = (struct shv_con_ctx *)malloc(sizeof(struct shv_con_ctx));
   if (shv_ctx == NULL)
     {
       printf("ERROR: Failed to allocate memory for shv_ctx\n");
@@ -1191,7 +1191,7 @@ shv_con_ctx_t *shv_com_init(struct shv_node *root, struct shv_connection *connec
   return shv_ctx;
 }
 
-void shv_com_destroy(shv_con_ctx_t *shv_ctx)
+void shv_com_destroy(struct shv_con_ctx *shv_ctx)
 {
     atomic_store(&shv_ctx->running, false);
     shv_stop_process_thread(shv_ctx);

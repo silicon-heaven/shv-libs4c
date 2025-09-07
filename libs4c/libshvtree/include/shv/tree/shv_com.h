@@ -85,20 +85,20 @@ static const char *shv_con_errno_strs[SHV_ERRNOS_COUNT] =
 enum shv_attention_reason
 {
     SHV_ATTENTION_ERROR,        /* A nonrecoverable error occured, you should inspect
-                                   `err_no` in shv_con_ctx_t */
+                                   `err_no` in struct shv_con_ctx */
     SHV_ATTENTION_CONNECTED,    /* The thread succesfully connected to a broker */
     SHV_ATTENTION_DISCONNECTED, /* The connection was closed by the remote host */
     SHV_ATTENTION_COUNT
 };
 
 /* Forward declaration */
-typedef struct shv_con_ctx shv_con_ctx_t;
+struct shv_con_ctx;
 
 /**
  * @brief An attention signaller used to signal the application
  *        of some events
  */
-typedef void (*shv_attention_signaller)(shv_con_ctx_t *shv_ctx,
+typedef void (*shv_attention_signaller)(struct shv_con_ctx *shv_ctx,
                                         enum shv_attention_reason r);
 
 /* Forward declaration */
@@ -108,28 +108,29 @@ struct shv_node;
  * @brief Main SHV Communication context.
  *
  */
-typedef struct shv_con_ctx {
-  int stream_fd;
-  int timeout;
-  int rid;
-  int cid_cnt;
-  int cid_capacity;
-  int *cid_ptr;
-  enum shv_con_errno err_no;
-  struct ccpcp_pack_context pack_ctx;
-  struct ccpcp_unpack_context unpack_ctx;
-  char shv_data[SHV_BUF_LEN];
-  char shv_rd_data[SHV_BUF_LEN];
-  int write_err;
-  int shv_len;
-  int shv_send;
-  int reconnects;
-  atomic_bool running;
-  struct shv_thrd_ctx thrd_ctx;
-  struct shv_node *root;
-  struct shv_connection *connection;            /* Transport layer information */
-  shv_attention_signaller at_signlr;            /* A user defined attention signaller callback */
-} shv_con_ctx_t;
+struct shv_con_ctx
+{
+    int stream_fd;
+    int timeout;
+    int rid;
+    int cid_cnt;
+    int cid_capacity;
+    int *cid_ptr;
+    enum shv_con_errno err_no;
+    struct ccpcp_pack_context pack_ctx;
+    struct ccpcp_unpack_context unpack_ctx;
+    char shv_data[SHV_BUF_LEN];
+    char shv_rd_data[SHV_BUF_LEN];
+    int write_err;
+    int shv_len;
+    int shv_send;
+    int reconnects;
+    atomic_bool running;
+    struct shv_thrd_ctx thrd_ctx;
+    struct shv_node *root;
+    struct shv_connection *connection;            /* Transport layer information */
+    shv_attention_signaller at_signlr;            /* A user defined attention signaller callback */
+};
 
 struct shv_dir_res {
   const char *name;
@@ -139,10 +140,11 @@ struct shv_dir_res {
   int access;
 };
 
-typedef struct shv_str_list_it_t shv_str_list_it_t;
+/* Forward declaration */
+struct shv_str_list_it;
 
-struct shv_str_list_it_t {
-   const char * (*get_next_entry)(shv_str_list_it_t *it, int reset_to_first);
+struct shv_str_list_it {
+   const char * (*get_next_entry)(struct shv_str_list_it *it, int reset_to_first);
 };
 
 /**
@@ -151,22 +153,22 @@ struct shv_str_list_it_t {
  * @param ctx
  * @return const char*
  */
-static inline const char *shv_errno_str(shv_con_ctx_t *ctx)
+static inline const char *shv_errno_str(struct shv_con_ctx *ctx)
 {
     return shv_con_errno_strs[ctx->err_no];
 }
 
-void shv_send_int(shv_con_ctx_t *shv_ctx, int rid, int num);
-void shv_send_uint(shv_con_ctx_t *shv_ctx, int rid, unsigned int num);
-void shv_send_double(shv_con_ctx_t *shv_ctx, int rid, double num);
-void shv_send_str(shv_con_ctx_t *shv_ctx, int rid, const char *str);
-void shv_send_str_list(shv_con_ctx_t *shv_ctx, int rid, int num_str, const char **str);
-void shv_send_str_list_it(shv_con_ctx_t *shv_ctx, int rid, int num_str, shv_str_list_it_t *str_it);
-void shv_send_dir(shv_con_ctx_t *shv_ctx, const struct shv_dir_res *results, int cnt, int rid);
-void shv_send_error(shv_con_ctx_t *shv_ctx, int rid, enum shv_response_error_code code,
+void shv_send_int(struct shv_con_ctx *shv_ctx, int rid, int num);
+void shv_send_uint(struct shv_con_ctx *shv_ctx, int rid, unsigned int num);
+void shv_send_double(struct shv_con_ctx *shv_ctx, int rid, double num);
+void shv_send_str(struct shv_con_ctx *shv_ctx, int rid, const char *str);
+void shv_send_str_list(struct shv_con_ctx *shv_ctx, int rid, int num_str, const char **str);
+void shv_send_str_list_it(struct shv_con_ctx *shv_ctx, int rid, int num_str, struct shv_str_list_it *str_it);
+void shv_send_dir(struct shv_con_ctx *shv_ctx, const struct shv_dir_res *results, int cnt, int rid);
+void shv_send_error(struct shv_con_ctx *shv_ctx, int rid, enum shv_response_error_code code,
                     const char *msg);
-void shv_send_ping(shv_con_ctx_t *shv_ctx);
-void shv_send_empty_response(shv_con_ctx_t *shv_ctx, int rid);
+void shv_send_ping(struct shv_con_ctx *shv_ctx);
+void shv_send_empty_response(struct shv_con_ctx *shv_ctx, int rid);
 
 int shv_unpack_data(ccpcp_unpack_context * ctx, int * v, double * d);
 
@@ -178,14 +180,14 @@ int shv_unpack_data(ccpcp_unpack_context * ctx, int * v, double * d);
  *                  set thrd_prio to -1
  * @return int 0 on success, -1 on failure
  */
-int shv_create_process_thread(int thrd_prio, shv_con_ctx_t *ctx);
+int shv_create_process_thread(int thrd_prio, struct shv_con_ctx *ctx);
 
 /**
  * @brief Platform dependant function. Stops the communication processing thread.
  *
  * @param shv_ctx
  */
-void shv_stop_process_thread(shv_con_ctx_t *shv_ctx);
+void shv_stop_process_thread(struct shv_con_ctx *shv_ctx);
 
 /**
  * @brief Allocate and initialize a shv_com_ctx_t struct.
@@ -195,7 +197,7 @@ void shv_stop_process_thread(shv_con_ctx_t *shv_ctx);
  * @param at_signlr
  * @return nonNULL pointer on success, NULL on failure
  */
-shv_con_ctx_t *shv_com_init(struct shv_node *root, struct shv_connection *con_info,
+struct shv_con_ctx *shv_com_init(struct shv_node *root, struct shv_connection *con_info,
                             shv_attention_signaller at_signlr);
 
 /**
@@ -203,7 +205,7 @@ shv_con_ctx_t *shv_com_init(struct shv_node *root, struct shv_connection *con_in
  *
  * @param shv_ctx
  */
-void shv_com_destroy(shv_con_ctx_t *shv_ctx);
+void shv_com_destroy(struct shv_con_ctx *shv_ctx);
 
 /**
  * @brief Launched in a separate thread, this function handles the connection to the broker.
@@ -214,4 +216,4 @@ void shv_com_destroy(shv_con_ctx_t *shv_ctx);
  * @param shv_ctx
  * @return 0 on success, -1 on failure
  */
-int shv_process(shv_con_ctx_t *shv_ctx);
+int shv_process(struct shv_con_ctx *shv_ctx);

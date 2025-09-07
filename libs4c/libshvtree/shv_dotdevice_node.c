@@ -23,39 +23,39 @@
     #include <nuttx/config.h>
 #endif
 
-static void shv_dotdevice_node_destructor(shv_node_t *node)
+static void shv_dotdevice_node_destructor(struct shv_node *node)
 {
-    shv_dotdevice_node_t *devnode = UL_CONTAINEROF(node, shv_dotdevice_node_t, shv_node);
+    struct shv_dotdevice_node *devnode = UL_CONTAINEROF(node, struct shv_dotdevice_node, shv_node);
     free(devnode);
 }
 
-int shv_dotdevice_node_method_name(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
+int shv_dotdevice_node_method_name(struct shv_con_ctx *shv_ctx, struct shv_node *item, int rid)
 {
-    shv_dotdevice_node_t *devnode = UL_CONTAINEROF(item, shv_dotdevice_node_t, shv_node);
+    struct shv_dotdevice_node *devnode = UL_CONTAINEROF(item, struct shv_dotdevice_node, shv_node);
     shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
     shv_send_str(shv_ctx, rid, devnode->name);
     return 0;
 }
 
-int shv_dotdevice_node_method_version(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
+int shv_dotdevice_node_method_version(struct shv_con_ctx *shv_ctx, struct shv_node *item, int rid)
 {
-    shv_dotdevice_node_t *devnode = UL_CONTAINEROF(item, shv_dotdevice_node_t, shv_node);
+    struct shv_dotdevice_node *devnode = UL_CONTAINEROF(item, struct shv_dotdevice_node, shv_node);
     shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
     shv_send_str(shv_ctx, rid, devnode->version);
     return 0;
 }
 
-int shv_dotdevice_node_method_serial_number(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
+int shv_dotdevice_node_method_serial_number(struct shv_con_ctx *shv_ctx, struct shv_node *item, int rid)
 {
-    shv_dotdevice_node_t *devnode = UL_CONTAINEROF(item, shv_dotdevice_node_t, shv_node);
+    struct shv_dotdevice_node *devnode = UL_CONTAINEROF(item, struct shv_dotdevice_node, shv_node);
     shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
     shv_send_str(shv_ctx, rid, devnode->serial_number);
     return 0;
 }
 
-int shv_dotdevice_node_method_reset(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
+int shv_dotdevice_node_method_reset(struct shv_con_ctx *shv_ctx, struct shv_node *item, int rid)
 {
-    shv_dotdevice_node_t *devnode = UL_CONTAINEROF(item, shv_dotdevice_node_t, shv_node);
+    struct shv_dotdevice_node *devnode = UL_CONTAINEROF(item, struct shv_dotdevice_node, shv_node);
     shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
     shv_send_int(shv_ctx, rid, 0);
     /* Let the response bubble through the network stack */
@@ -69,15 +69,15 @@ int shv_dotdevice_node_method_reset(shv_con_ctx_t *shv_ctx, shv_node_t *item, in
     return -1; /* How the hell did you get here?!! */
 }
 
-int shv_dotdevice_node_method_uptime(shv_con_ctx_t *shv_ctx, shv_node_t *item, int rid)
+int shv_dotdevice_node_method_uptime(struct shv_con_ctx *shv_ctx, struct shv_node *item, int rid)
 {
-    shv_dotdevice_node_t *devnode = UL_CONTAINEROF(item, shv_dotdevice_node_t, shv_node);
+    struct shv_dotdevice_node *devnode = UL_CONTAINEROF(item, struct shv_dotdevice_node, shv_node);
     shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
     shv_send_int(shv_ctx, rid, devnode->devops.uptime());
     return 0;
 }
 
-const shv_method_des_t shv_dmap_item_dotdevice_node_name =
+const struct shv_method_des shv_dmap_item_dotdevice_node_name =
 {
     .name = "name",
     .flags = SHV_METHOD_GETTER,
@@ -86,7 +86,7 @@ const shv_method_des_t shv_dmap_item_dotdevice_node_name =
     .method = shv_dotdevice_node_method_name
 };
 
-const shv_method_des_t shv_dmap_item_dotdevice_node_version =
+const struct shv_method_des shv_dmap_item_dotdevice_node_version =
 {
     .name = "version",
     .flags = SHV_METHOD_GETTER,
@@ -95,7 +95,7 @@ const shv_method_des_t shv_dmap_item_dotdevice_node_version =
     .method = shv_dotdevice_node_method_version
 };
 
-const shv_method_des_t shv_dmap_item_dotdevice_node_serial_number =
+const struct shv_method_des shv_dmap_item_dotdevice_node_serial_number =
 {
     .name = "serialNumber",
     .flags = SHV_METHOD_GETTER,
@@ -104,7 +104,7 @@ const shv_method_des_t shv_dmap_item_dotdevice_node_serial_number =
     .method = shv_dotdevice_node_method_serial_number
 };
 
-const shv_method_des_t shv_dmap_item_dotdevice_node_uptime =
+const struct shv_method_des shv_dmap_item_dotdevice_node_uptime =
 {
     .name = "uptime",
     .flags = SHV_METHOD_GETTER,
@@ -113,7 +113,7 @@ const shv_method_des_t shv_dmap_item_dotdevice_node_uptime =
     .method = shv_dotdevice_node_method_uptime
 };
 
-const shv_method_des_t shv_dmap_item_dotdevice_node_reset =
+const struct shv_method_des shv_dmap_item_dotdevice_node_reset =
 {
     .name = "reset",
     .flags = 0,
@@ -122,7 +122,7 @@ const shv_method_des_t shv_dmap_item_dotdevice_node_reset =
     .method = shv_dotdevice_node_method_reset
 };
 
-static const shv_method_des_t *const shv_dmap_dotdevice_items[] =
+static const struct shv_method_des *const shv_dmap_dotdevice_items[] =
 {
     &shv_dmap_item_dir,
     &shv_dmap_item_ls,
@@ -133,12 +133,12 @@ static const shv_method_des_t *const shv_dmap_dotdevice_items[] =
     &shv_dmap_item_dotdevice_node_version
 };
 
-const shv_dmap_t shv_dotdevice_dmap =
+const struct shv_dmap shv_dotdevice_dmap =
     SHV_CREATE_NODE_DMAP(dotdevice, shv_dmap_dotdevice_items);
 
-shv_dotdevice_node_t *shv_tree_dotdevice_node_new(const shv_dmap_t *dir, int mode)
+struct shv_dotdevice_node *shv_tree_dotdevice_node_new(const struct shv_dmap *dir, int mode)
 {
-    shv_dotdevice_node_t *item = calloc(1, sizeof(shv_dotdevice_node_t));
+    struct shv_dotdevice_node *item = calloc(1, sizeof(struct shv_dotdevice_node));
     if (item == NULL) {
         perror(".device calloc");
         return NULL;

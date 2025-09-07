@@ -14,7 +14,7 @@
 #include <stddef.h>
 #include <shv/chainpack/ccpcp.h>
 
-typedef struct shv_con_ctx shv_con_ctx_t;
+struct shv_con_ctx;
 
 /**
  * @brief A handler responsible for the sending of data
@@ -39,7 +39,7 @@ size_t shv_underrflow_handler(struct ccpcp_unpack_context * ctx);
  * @param shv_ctx
  * @param rid
  */
-void shv_pack_head_reply(shv_con_ctx_t *shv_ctx, int rid);
+void shv_pack_head_reply(struct shv_con_ctx *shv_ctx, int rid);
 
 /**
  * @brief Discard data of arbitrary type (container, string, blob).
@@ -48,4 +48,4 @@ void shv_pack_head_reply(shv_con_ctx_t *shv_ctx, int rid);
  * @param shv_ctx
  * @return 0 in case of success, -1 in case of failure
  */
-int shv_unpack_discard(shv_con_ctx_t * shv_ctx);
+int shv_unpack_discard(struct shv_con_ctx * shv_ctx);

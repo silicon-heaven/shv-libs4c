@@ -19,28 +19,29 @@
  */
 typedef int (*shv_dotapp_node_date)(void);
 
-typedef struct shv_dotapp_node {
-    shv_node_t shv_node;           /* Base shv_node */
+struct shv_dotapp_node
+{
+    struct shv_node shv_node;      /* Base shv_node */
     struct {
         shv_dotapp_node_date date; /* Date function callback */
     } appops;
 
     const char *name;              /* Application's name */
     const char *version;           /* Application's version */
-} shv_dotapp_node_t;
+};
 
-extern const shv_method_des_t shv_dmap_item_dotapp_shvversionmajor;
-extern const shv_method_des_t shv_dmap_item_dotapp_shvversionminor;
-extern const shv_method_des_t shv_dmap_item_dotapp_name;
-extern const shv_method_des_t shv_dmap_item_dotapp_version;
-extern const shv_method_des_t shv_dmap_item_dotapp_ping;
-extern const shv_method_des_t shv_dmap_item_dotapp_date;
+extern const struct shv_method_des shv_dmap_item_dotapp_shvversionmajor;
+extern const struct shv_method_des shv_dmap_item_dotapp_shvversionminor;
+extern const struct shv_method_des shv_dmap_item_dotapp_name;
+extern const struct shv_method_des shv_dmap_item_dotapp_version;
+extern const struct shv_method_des shv_dmap_item_dotapp_ping;
+extern const struct shv_method_des shv_dmap_item_dotapp_date;
 
 /**
  * @brief The dotapp method structure.
  *
  */
-extern const shv_dmap_t shv_dotapp_dmap;
+extern const struct shv_dmap shv_dotapp_dmap;
 
 /**
  * @brief Allocate a new standard .app node
@@ -49,4 +50,4 @@ extern const shv_dmap_t shv_dotapp_dmap;
  * @param mode
  * @return non NULL reference on success, NULL otherwise
  */
-shv_dotapp_node_t *shv_tree_dotapp_node_new(const shv_dmap_t *dir, int mode);
+struct shv_dotapp_node *shv_tree_dotapp_node_new(const struct shv_dmap *dir, int mode);

@@ -28,16 +28,16 @@
 #define SHV_ACCESS_WRITE   ((int)16)
 #define SHV_ACCESS_COMMAND ((int)24)
 
-extern const shv_method_des_t shv_dmap_item_ls;
-extern const shv_method_des_t shv_dmap_item_dir;
+extern const struct shv_method_des shv_dmap_item_ls;
+extern const struct shv_method_des shv_dmap_item_dir;
 
-extern const shv_dmap_t shv_double_dmap;
-extern const shv_dmap_t shv_double_read_only_dmap;
-extern const shv_dmap_t shv_dir_ls_dmap;
-extern const shv_dmap_t shv_root_dmap;
+extern const struct shv_dmap shv_double_dmap;
+extern const struct shv_dmap shv_double_read_only_dmap;
+extern const struct shv_dmap shv_dir_ls_dmap;
+extern const struct shv_dmap shv_root_dmap;
 
-int shv_ls(shv_con_ctx_t * shv_ctx, shv_node_t* item, int rid);
-int shv_dir(shv_con_ctx_t * shv_ctx, shv_node_t* item, int rid);
-int shv_type(shv_con_ctx_t * shv_ctx, shv_node_t* item, int rid);
-int shv_double_get(shv_con_ctx_t * shv_ctx, shv_node_t* item, int rid);
-int shv_double_set(shv_con_ctx_t * shv_ctx, shv_node_t* item, int rid);
+int shv_ls(struct shv_con_ctx * shv_ctx, struct shv_node* item, int rid);
+int shv_dir(struct shv_con_ctx * shv_ctx, struct shv_node* item, int rid);
+int shv_type(struct shv_con_ctx * shv_ctx, struct shv_node* item, int rid);
+int shv_double_get(struct shv_con_ctx * shv_ctx, struct shv_node* item, int rid);
+int shv_double_set(struct shv_con_ctx * shv_ctx, struct shv_node* item, int rid);

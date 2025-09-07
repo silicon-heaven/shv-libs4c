@@ -13,7 +13,7 @@
 
 #include "shv_tree.h"
 
-typedef struct shv_con_ctx shv_con_ctx_t;
+struct shv_con_ctx;
 
 /* File type identification enum */
 enum shv_file_type
@@ -23,21 +23,22 @@ enum shv_file_type
     SHV_FILE_TYPE_COUNT,
 };
 
-typedef struct shv_file_node shv_file_node_t;
+/* Forward declaration */
+struct shv_file_node;
 
 /**
  * @brief A platform dependant function used to open the file
  * @param item
  * @return 0 in case of success, -1 otherwise
  */
-typedef int (*shv_file_node_opener)(shv_file_node_t *item);
+typedef int (*shv_file_node_opener)(struct shv_file_node *item);
 
 /**
  * @brief A platform dependant function used to get file's current size
  * @param item
  * @return file's size in case of success, -1 otherwise
  */
-typedef int (*shv_file_node_getsize)(shv_file_node_t *item);
+typedef int (*shv_file_node_getsize)(struct shv_file_node *item);
 
 /**
  * @brief A platform dependant function used to write count bytes from buf to a file
@@ -47,7 +48,7 @@ typedef int (*shv_file_node_getsize)(shv_file_node_t *item);
  * @warning The function must assure it does not write beyond the bounds of file_maxsize.
  * @return written bytes in case of success, -1 otherwise
  */
-typedef int (*shv_file_node_writer)(shv_file_node_t *item, void *buf, size_t count);
+typedef int (*shv_file_node_writer)(struct shv_file_node *item, void *buf, size_t count);
 
 /**
  * @brief A platform dependant function used to read count bytes from a file to buf
@@ -57,7 +58,7 @@ typedef int (*shv_file_node_writer)(shv_file_node_t *item, void *buf, size_t cou
  * @warning The function must assure it does not read outside the bounds of file_maxsize.
  * @return read bytes in case of success, -1 otherwise
  */
-typedef int (*shv_file_node_reader)(shv_file_node_t *item, void *buf, size_t count);
+typedef int (*shv_file_node_reader)(struct shv_file_node *item, void *buf, size_t count);
 
 /**
  * @typedef shv_file_node_seeker
@@ -67,7 +68,7 @@ typedef int (*shv_file_node_reader)(shv_file_node_t *item, void *buf, size_t cou
  * @warning The function must assure it does not seek beyond the bounds of file_maxsize.
  * @return the new offset in case of success, -1 otherwise
  */
-typedef int (*shv_file_node_seeker)(shv_file_node_t *item, int offset);
+typedef int (*shv_file_node_seeker)(struct shv_file_node *item, int offset);
 
 /**
  * @brief A function used to calculate CRC32 from start to start+size-1 specified by
@@ -80,43 +81,45 @@ typedef int (*shv_file_node_seeker)(shv_file_node_t *item, int offset);
  * @param result Pointer to the CRC32 result
  * @return 0 in case of success, -1 otherwise
  */
-typedef int (*shv_file_node_crc32)(shv_file_node_t *item, int start, size_t size,
+typedef int (*shv_file_node_crc32)(struct shv_file_node *item, int start, size_t size,
                                    uint32_t *result);
 
-typedef struct shv_file_node {
-  shv_node_t shv_node;                /* Base shv_node */
-  const char *name;                   /* File name, system-wise */
-  void *fctx;                         /* Platform dependant file context, can be overriden */
-  struct {
-    shv_file_node_opener  opener;
-    shv_file_node_getsize getsize;
-    shv_file_node_writer  writer;
-    shv_file_node_reader  reader;
-    shv_file_node_seeker  seeker;
-    shv_file_node_crc32   crc32;
-  } fops;
+struct shv_file_node
+{
+    struct shv_node shv_node;           /* Base shv_node */
+    const char *name;                   /* File name, system-wise */
+    void *fctx;                         /* Platform dependant file context, can be overriden */
+    struct
+    {
+        shv_file_node_opener  opener;
+        shv_file_node_getsize getsize;
+        shv_file_node_writer  writer;
+        shv_file_node_reader  reader;
+        shv_file_node_seeker  seeker;
+        shv_file_node_crc32   crc32;
+    } fops;
 
-  /* Stat method attributes */
-  int file_type;                      /* Defined in shv_file_type */
-  int file_maxsize;                   /* The implementation allows the file to grow,
-                                         but not beyond the absolute maximum size */
-  int file_pagesize;                  /* Page size on a given filesystem/physical memory
-                                         for efficient write accesses */
-  int file_erasesize;                 /* Page erase size (only for the MTD file type) */
+    /* Stat method attributes */
+    int file_type;                      /* Defined in shv_file_type */
+    int file_maxsize;                   /* The implementation allows the file to grow,
+                                           but not beyond the absolute maximum size */
+    int file_pagesize;                  /* Page size on a given filesystem/physical memory
+                                           for efficient write accesses */
+    int file_erasesize;                 /* Page erase size (only for the MTD file type) */
 
-  unsigned int state;                 /* Internal unpack write state */
-  int file_offset;                    /* Internal current file offset */
+    unsigned int state;                 /* Internal unpack write state */
+    int file_offset;                    /* Internal current file offset */
 
-  unsigned int crcstate;              /* Internal unpack crc state */
-  uint32_t crc;                       /* Internal CRC accumulator */
-  int crc_offset;                     /* Internal file CRC compute region */
-  int crc_size;                       /* Internal file CRC compute region */
+    unsigned int crcstate;              /* Internal unpack crc state */
+    uint32_t crc;                       /* Internal CRC accumulator */
+    int crc_offset;                     /* Internal file CRC compute region */
+    int crc_size;                       /* Internal file CRC compute region */
 
-  bool platform_error;                /* A flag to indicate that something bad in the platform
-                                         has happened. It does not indicate faulty data,
-                                         it only indicates that the unpack should
-                                         take this into consideration. */
-} shv_file_node_t;
+    bool platform_error;                /* A flag to indicate that something bad in the platform
+                                           has happened. It does not indicate faulty data,
+                                           it only indicates that the unpack should
+                                           take this into consideration. */
+};
 
 /**
  * @brief Packs the file's attributes and sends it
@@ -125,7 +128,7 @@ typedef struct shv_file_node {
  * @param rid 
  * @param item 
  */
-void shv_file_send_stat(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
+void shv_file_send_stat(struct shv_con_ctx *shv_ctx, int rid, struct shv_file_node *item);
 
 /**
  * @brief Reads the data from the file and sends them
@@ -134,7 +137,7 @@ void shv_file_send_stat(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
  * @param rid
  * @param item
  */
-void shv_file_send_read_data(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
+void shv_file_send_read_data(struct shv_con_ctx *shv_ctx, int rid, struct shv_file_node *item);
 
 /**
  * @brief Unpacks the incoming data and writes them to a file
@@ -144,7 +147,7 @@ void shv_file_send_read_data(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *i
  * @param item 
  * @return 0 in case of success, -1 in case of garbled data
  */
-int shv_file_process_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
+int shv_file_process_write(struct shv_con_ctx *shv_ctx, int rid, struct shv_file_node *item);
 
 /**
  * @brief Unpacks the incoming data of the read method
@@ -154,7 +157,7 @@ int shv_file_process_write(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *ite
  * @param item 
  * @return int 
  */
-int shv_file_process_read(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
+int shv_file_process_read(struct shv_con_ctx *shv_ctx, int rid, struct shv_file_node *item);
 
 /**
  * @brief Unpacks the desired CRC computation method and computes the CRC
@@ -164,36 +167,36 @@ int shv_file_process_read(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item
  * @param item
  * @return int
  */
-int shv_file_process_crc(shv_con_ctx_t *shv_ctx, int rid, shv_file_node_t *item);
+int shv_file_process_crc(struct shv_con_ctx *shv_ctx, int rid, struct shv_file_node *item);
 
 /**
  * @brief A wrapper of `shv_file_process_write` to be used
  *        as the file node's write method
  */
-extern const shv_method_des_t shv_dmap_item_file_node_write;
+extern const struct shv_method_des shv_dmap_item_file_node_write;
 
 /**
  * @brief A wrapper of `shv_file_process_crc32` to be used
  *        as the file node's crc method
  */
-extern const shv_method_des_t shv_dmap_item_file_node_crc;
+extern const struct shv_method_des shv_dmap_item_file_node_crc;
 
 /**
  * @brief A wrapper to be used as the file node's size method
  */
-extern const shv_method_des_t shv_dmap_item_file_node_size;
+extern const struct shv_method_des shv_dmap_item_file_node_size;
 
 /**
  * @brief A wrapper of `shv_file_send_stat` to be used
  *        as the file node's stat method
  */
-extern const shv_method_des_t shv_dmap_item_file_node_stat;
+extern const struct shv_method_des shv_dmap_item_file_node_stat;
 
 /**
  * @brief The file node method structure.
  *
  */
-extern const shv_dmap_t shv_file_node_dmap;
+extern const struct shv_dmap shv_file_node_dmap;
 
 /**
  * @brief Allocates and initializes a file node
@@ -203,4 +206,4 @@ extern const shv_dmap_t shv_file_node_dmap;
  * @param mode
  * @return A nonNULL pointer on success, NULL otherwise
  */
-shv_file_node_t *shv_tree_file_node_new(const char *child_name, const shv_dmap_t *dir, int mode);
+struct shv_file_node *shv_tree_file_node_new(const char *child_name, const struct shv_dmap *dir, int mode);
