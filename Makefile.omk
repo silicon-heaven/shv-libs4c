@@ -1,4 +1,4 @@
-SUBDIRS = submodule/ulut libs4c
+SUBDIRS = libs4c
 
 #nobase_include_HEADERS =
 
