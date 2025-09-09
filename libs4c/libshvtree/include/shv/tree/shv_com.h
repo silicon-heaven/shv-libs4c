@@ -175,7 +175,9 @@ int shv_unpack_data(ccpcp_unpack_context * ctx, int * v, double * d);
 /**
  * @brief Platform dependant function. Creates the communication processing thread.
  *
- * @param priority
+ * @param thrd_prio an int number that specifies the priority on the platform level,
+ *                  if you wish the OS to default to normal thread priorities and policy,
+ *                  set thrd_prio to -1
  * @return int 0 on success, -1 on failure
  */
 int shv_create_process_thread(int thrd_prio, struct shv_con_ctx *ctx);
