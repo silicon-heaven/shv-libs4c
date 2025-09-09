@@ -404,6 +404,7 @@ int shv_create_process_thread(int thrd_prio, shv_con_ctx_t *ctx)
     int ret;
     int policy;
     pthread_attr_t attr;
+    pthread_attr_t *pattr;
     struct sched_param schparam;
 
     /* Create the pipe to the dataready function. The poll function is used but we expect
@@ -429,18 +430,23 @@ int shv_create_process_thread(int thrd_prio, shv_con_ctx_t *ctx)
         return -2;
     }
 
-    ret = pthread_attr_init(&attr);
-    RETLZ_ERROR(error);
-    ret = pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
-    RETLZ_ERROR(error);
-    ret = pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
-    RETLZ_ERROR(error);
-    ret = pthread_getschedparam(pthread_self(), &policy, &schparam);
-    RETLZ_ERROR(error);
-    schparam.sched_priority = thrd_prio;
-    ret = pthread_attr_setschedparam(&attr, &schparam);
-    RETLZ_ERROR(error);
-    ret = pthread_create(&ctx->thrd_ctx.id, &attr, __shv_process, (void *)ctx);
+    if (thrd_prio != -1) {
+        ret = pthread_attr_init(&attr);
+        RETLZ_ERROR(error);
+        ret = pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
+        RETLZ_ERROR(error);
+        ret = pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
+        RETLZ_ERROR(error);
+        ret = pthread_getschedparam(pthread_self(), &policy, &schparam);
+        RETLZ_ERROR(error);
+        schparam.sched_priority = thrd_prio;
+        ret = pthread_attr_setschedparam(&attr, &schparam);
+        RETLZ_ERROR(error);
+        pattr = &attr;
+    } else {
+        pattr = NULL;
+    }
+    ret = pthread_create(&ctx->thrd_ctx.id, pattr, __shv_process, (void *)ctx);
     RETLZ_ERROR(error);
     return ret;
 
