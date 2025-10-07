@@ -82,9 +82,9 @@ void shv_pack_head_reply(struct shv_con_ctx *shv_ctx, int rid)
   cchainpack_pack_int(&shv_ctx->pack_ctx, TAG_REQUEST_ID);
   cchainpack_pack_int(&shv_ctx->pack_ctx, rid);
 
+  cchainpack_pack_int(&shv_ctx->pack_ctx, TAG_CALLER_IDS);
   if (shv_ctx->cid_cnt == 1)
     {
-      cchainpack_pack_int(&shv_ctx->pack_ctx, TAG_CALLER_IDS);
       cchainpack_pack_int(&shv_ctx->pack_ctx, shv_ctx->cid_ptr[0]);
     }
   else
