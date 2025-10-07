@@ -1097,34 +1097,39 @@ int shv_process(struct shv_con_ctx *shv_ctx)
                 break;
             }
         case INIT_BUT_NO_CONN:
-            if (ret == -1) {
-                if (atomic_load(&shv_ctx->running) &&
-                    ((shv_ctx->connection->reconnect_retries <= 0) ||
-                    (shv_ctx->reconnects < shv_ctx->connection->reconnect_retries))) {
-                    fprintf(stderr, "ERROR: can't connect to the server! "
-                                    "Trying again in %d seconds.\n",
-                                    shv_ctx->connection->reconnect_period);
-                    usleep(shv_ctx->connection->reconnect_period * 1000000);
-                    ret = shv_ctx->connection->tops.init(shv_ctx->connection);
-                    if (ret == 0) {
-                        /* Succesfull connect, go to login */
-                        conn_state = CONN;
-                    } else if (ret == -2) {
-                        /* Something bad happened */
-                        fprintf(stderr,
-                                "ERROR: failed to initialize the lowlevel transport layer!\n");
-                        shv_ctx->err_no = SHV_TLAYER_INIT;
-                        return -1;
-                    } else if (ret == -1) {
-                        /* Another unsuccesful connect */
-                        shv_ctx->reconnects += 1;
-                        if ((shv_ctx->connection->reconnect_retries > 0) &&
-                           (shv_ctx->reconnects >= shv_ctx->connection->reconnect_retries)) {
-                            fprintf(stderr, "ERROR: maximum number of reconnects reached!\n");
-                            shv_ctx->err_no = SHV_RECONNECTS;
-                            return -1;
-                        }
-                    }
+            if (!atomic_load(&shv_ctx->running)) {
+                fprintf(stderr, "ERROR: not connected and request to finish\n");
+                return 0;
+            }
+            if ((shv_ctx->connection->reconnect_retries > 0) &&
+                (shv_ctx->reconnects >= shv_ctx->connection->reconnect_retries)) {
+                shv_ctx->err_no = SHV_RECONNECTS;
+                fprintf(stderr, "ERROR: maximum number of reconnects reached!\n");
+                return -1;
+            }
+
+            fprintf(stderr, "ERROR: can't connect to the server! "
+                            "Trying again in %d seconds.\n",
+                            shv_ctx->connection->reconnect_period);
+            usleep(shv_ctx->connection->reconnect_period * 1000000);
+            ret = shv_ctx->connection->tops.init(shv_ctx->connection);
+            if (ret == 0) {
+                /* Succesfull connect, go to login */
+                conn_state = CONN;
+            } else if (ret == -2) {
+                /* Something bad happened */
+                fprintf(stderr,
+                        "ERROR: failed to initialize the lowlevel transport layer!\n");
+                shv_ctx->err_no = SHV_TLAYER_INIT;
+                return -1;
+            } else if (ret == -1) {
+                /* Another unsuccesful connect */
+                shv_ctx->reconnects += 1;
+                if ((shv_ctx->connection->reconnect_retries > 0) &&
+                    (shv_ctx->reconnects >= shv_ctx->connection->reconnect_retries)) {
+                    fprintf(stderr, "ERROR: maximum number of reconnects reached!\n");
+                    shv_ctx->err_no = SHV_RECONNECTS;
+                    return -1;
                 }
             }
             break;
