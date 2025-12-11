@@ -42,10 +42,27 @@ size_t shv_underrflow_handler(struct ccpcp_unpack_context * ctx);
 void shv_pack_head_reply(struct shv_con_ctx *shv_ctx, int rid);
 
 /**
+ * @brief Skip all data until `levels` of container ends are reached.
+ *
+ * @param shv_ctx
+ * @param levels
+ * @return 0 in case of success, -1 in case of failure
+ */
+int shv_unpack_cont_discard_levels(struct shv_con_ctx *shv_ctx, int levels);
+
+/**
  * @brief Discard data of arbitrary type (container, string, blob).
- *        Also discards all data in a container, if the unpacking happens in a container.
+ *        Also discards all data in a container up to the container's end.
  *
  * @param shv_ctx
  * @return 0 in case of success, -1 in case of failure
  */
-int shv_unpack_discard(struct shv_con_ctx * shv_ctx);
+int shv_unpack_discard(struct shv_con_ctx *shv_ctx);
+
+/**
+ * @brief Skips next item (integer, blobs, string, container with arbitrary data, etc.).
+ *
+ * @param shv_ctx
+ * @return int
+ */
+int shv_unpack_skip(struct shv_con_ctx *shv_ctx);

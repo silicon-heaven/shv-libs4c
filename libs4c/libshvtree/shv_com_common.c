@@ -101,17 +101,9 @@ void shv_pack_head_reply(struct shv_con_ctx *shv_ctx, int rid)
   cchainpack_pack_container_end(&shv_ctx->pack_ctx);
 }
 
-
-/**
- * @brief Skip data inside a container
- *
- * @param shv_ctx
- * @return 0 in case of success, -1 on failure
- */
-static int shv_unpack_contskip(struct shv_con_ctx *shv_ctx)
+int shv_unpack_cont_discard_levels(struct shv_con_ctx *shv_ctx, int levels)
 {
     struct ccpcp_unpack_context *ctx = &shv_ctx->unpack_ctx;
-    int level = 1;
 
     do {
         cchainpack_unpack_next(ctx);
@@ -123,11 +115,11 @@ static int shv_unpack_contskip(struct shv_con_ctx *shv_ctx)
             (ctx->item.type == CCPCP_ITEM_LIST) ||
             (ctx->item.type == CCPCP_ITEM_MAP) ||
             (ctx->item.type == CCPCP_ITEM_IMAP)) {
-            level++;
+            levels++;
         } else if (ctx->item.type == CCPCP_ITEM_CONTAINER_END) {
-            level--;
+            levels--;
         }
-    } while (level);
+    } while (levels);
 
     return 0;
 }
@@ -140,7 +132,7 @@ int shv_unpack_discard(struct shv_con_ctx *shv_ctx)
         (ctx->item.type == CCPCP_ITEM_LIST) ||
         (ctx->item.type == CCPCP_ITEM_MAP) ||
         (ctx->item.type == CCPCP_ITEM_IMAP)) {
-        return shv_unpack_contskip(shv_ctx);
+        return shv_unpack_cont_discard_levels(shv_ctx, 1);
     } else {
         if ((ctx->item.type == CCPCP_ITEM_BLOB) ||
             (ctx->item.type == CCPCP_ITEM_STRING)) {
@@ -153,5 +145,17 @@ int shv_unpack_discard(struct shv_con_ctx *shv_ctx)
         }
     }
 
+    return 0;
+}
+
+int shv_unpack_skip(struct shv_con_ctx *shv_ctx)
+{
+    struct ccpcp_unpack_context *ctx = &shv_ctx->unpack_ctx;
+
+    cchainpack_unpack_next(ctx);
+    if (ctx->err_no != CCPCP_RC_OK) {
+        return -1;
+    }
+    shv_unpack_discard(shv_ctx);
     return 0;
 }
