@@ -169,27 +169,28 @@ int shv_file_process_write(struct shv_con_ctx *shv_ctx, int rid, struct shv_file
             break;
         }
         case REQUEST_1: {
-            // wait for UInt or Int (namely number 1)
+            // We are looking for the PARAM Key
             if (ctx->item.type == CCPCP_ITEM_INT) {
                 if (ctx->item.as.Int == 1) {
                     item->state = LIST_START;
                 } else {
-                    // something different received
-                    shv_unpack_discard(shv_ctx);
-                    ctx->err_no = CCPCP_RC_LOGICAL_ERROR;
-                    item->state = IMAP_START;
+                    // PARAM key not received, skip following data that comes after it.
+                    // This is data that should be ignored, and not cause any errors.
+                    shv_unpack_skip(shv_ctx);
+                    // Also finish the container end.
+                    item->state = IMAP_STOP;
                 }
             } else if (ctx->item.type == CCPCP_ITEM_UINT) {
                 if (ctx->item.as.UInt == 1) {
                     item->state = LIST_START;
                 } else {
-                    // something different received
-                    shv_unpack_discard(shv_ctx);
-                    ctx->err_no = CCPCP_RC_LOGICAL_ERROR;
-                    item->state = IMAP_START;
+                    // PARAM key not received, skip following data that comes after it.
+                    // This is data that should be ignored, and not cause any errors.
+                    shv_unpack_skip(shv_ctx);
+                    // Also finish the container end.
+                    item->state = IMAP_STOP;
                 }
             } else {
-                // Int or UInt expected!
                 shv_unpack_discard(shv_ctx);
                 ctx->err_no = CCPCP_RC_LOGICAL_ERROR;
                 item->state = IMAP_START;
