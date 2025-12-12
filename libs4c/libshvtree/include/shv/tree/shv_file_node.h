@@ -119,6 +119,8 @@ struct shv_file_node
                                            has happened. It does not indicate faulty data,
                                            it only indicates that the unpack should
                                            take this into consideration. */
+    bool ignored;                       /* TEMPORARY hack: indication of a message that
+                                           should be ignored. Used internally. */
 };
 
 /**

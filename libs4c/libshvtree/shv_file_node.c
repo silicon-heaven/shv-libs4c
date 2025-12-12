@@ -61,6 +61,15 @@ enum shv_file_node_keys
     SHV_FILE_NODE_KEYS_COUNT
 };
 
+enum shv_crc_parse_result
+{
+    PARSE_ERROR = -1,
+    WHOLE_FILE,
+    OFFSET_ONLY,
+    OFFSET_AND_SIZE,
+    IGNORE
+};
+
 /**
  * @brief File node destructor
  *
@@ -153,6 +162,7 @@ int shv_file_process_write(struct shv_con_ctx *shv_ctx, int rid, struct shv_file
     int ret;
     ccpcp_unpack_context *ctx = &shv_ctx->unpack_ctx;
     item->platform_error = false;
+    item->ignored = false;
 
     do {
         cchainpack_unpack_next(ctx);
@@ -179,6 +189,7 @@ int shv_file_process_write(struct shv_con_ctx *shv_ctx, int rid, struct shv_file
                     shv_unpack_skip(shv_ctx);
                     // Also finish the container end.
                     item->state = IMAP_STOP;
+                    item->ignored = true;
                 }
             } else if (ctx->item.type == CCPCP_ITEM_UINT) {
                 if (ctx->item.as.UInt == 1) {
@@ -294,14 +305,16 @@ int shv_file_process_write(struct shv_con_ctx *shv_ctx, int rid, struct shv_file
  */
 int shv_file_process_crc(struct shv_con_ctx *shv_ctx, int rid, struct shv_file_node *item)
 {
-    int parse_result = -1;
+    int parse_result = PARSE_ERROR;
     size_t size;
     int start;
     ccpcp_unpack_context *ctx = &shv_ctx->unpack_ctx;
+    item->ignored = false;
 
     do {
         /* The parsed result is ready */
-        if (parse_result >= 0) {
+        if (parse_result == WHOLE_FILE || parse_result == OFFSET_ONLY ||
+            parse_result == OFFSET_AND_SIZE) {
             break;
         }
 
@@ -322,18 +335,24 @@ int shv_file_process_crc(struct shv_con_ctx *shv_ctx, int rid, struct shv_file_n
         case C_IMAP_END:
             if (ctx->item.type == CCPCP_ITEM_CONTAINER_END) {
                 item->crcstate = C_IMAP_START;
-                /* decide on what was parsed */
-                if (item->crc_offset == -1) {
-                    /* Not even offset was passed, calculate over the whole file */
-                    parse_result = 0;
-                } else {
-                    if (item->crc_size == -1) {
-                        /* Only the offset was passed */
-                        parse_result = 1;
+                /* decide on what was parsed (IGNORE indicates an ignored message) */
+                if (parse_result != IGNORE) {
+                    if (item->crc_offset == -1) {
+                        /* Not even offset was passed, calculate over the whole file */
+                        parse_result = WHOLE_FILE;
                     } else {
-                        /* Both number were passed */
-                        parse_result = 2;
+                        if (item->crc_size == -1) {
+                            /* Only the offset was passed */
+                            parse_result = OFFSET_ONLY;
+                        } else {
+                            /* Both number were passed */
+                            parse_result = OFFSET_AND_SIZE;
+                        }
                     }
+                } else {
+                    /* The message should be ignored, but cont end must be unpacked. Then return. */
+                    item->ignored = true;
+                    return 0;
                 }
                 break;
             } else {
@@ -344,15 +363,21 @@ int shv_file_process_crc(struct shv_con_ctx *shv_ctx, int rid, struct shv_file_n
                 if (ctx->item.as.Int == 1) {
                     item->crcstate = C_LIST_START;
                 } else {
-                    shv_unpack_discard(shv_ctx);
-                    ctx->err_no = CCPCP_RC_LOGICAL_ERROR;
+                    /* The same story like in the Write method (ignore the message).
+                     * Let it finish the container. */
+                    parse_result = IGNORE;
+                    shv_unpack_skip(shv_ctx);
+                    item->crcstate = C_IMAP_END;
                 }
             } else if (ctx->item.type == CCPCP_ITEM_UINT) {
                 if (ctx->item.as.UInt == 1) {
                     item->crcstate = C_LIST_START;
                 } else {
-                    shv_unpack_discard(shv_ctx);
-                    ctx->err_no = CCPCP_RC_LOGICAL_ERROR;
+                    /* The same story like in the Write method (ignore the message).
+                     * Let it finish the container. */
+                    parse_result = IGNORE;
+                    shv_unpack_skip(shv_ctx);
+                    item->crcstate = C_IMAP_END;
                 }
             } else {
                 shv_unpack_discard(shv_ctx);
@@ -399,17 +424,23 @@ int shv_file_process_crc(struct shv_con_ctx *shv_ctx, int rid, struct shv_file_n
     /* In case of 0 and 1, the file can be much smaller than file_maxsize.
      * But suppose the crc32 calculator does not go beyond the actual file size.
      */
-    if (parse_result == 0) {
+    switch (parse_result) {
+    case WHOLE_FILE:
         start = 0;
         size = item->file_maxsize;
-    } else if (parse_result == 1) {
+        break;
+    case OFFSET_ONLY:
         start = item->crc_offset;
         size = item->file_maxsize - item->crc_offset;
-    } else if (parse_result == 2) {
+        break;
+    case OFFSET_AND_SIZE:
         start = item->crc_offset;
         size = item->crc_size;
+        break;
+    default:
+        return -1;
     }
-    if (parse_result >= 0) {
+    if (parse_result >= WHOLE_FILE) {
         if (item->fops.crc32(item, start, size, &item->crc) < 0) {
             item->platform_error = true;
         } else {
@@ -425,13 +456,15 @@ int shv_file_node_write(struct shv_con_ctx *shv_ctx, struct shv_node *item, int 
     int ret = 0;
     struct shv_file_node *file_node = UL_CONTAINEROF(item, struct shv_file_node, shv_node);
     ret = shv_file_process_write(shv_ctx, rid, file_node);
-    if (ret < 0) {
+    if (ret < WHOLE_FILE) {
         shv_send_error(shv_ctx, rid, SHV_RE_INVALID_PARAMS, "Garbled data");
     } else if (file_node->platform_error) {
         /* It is an error, but not protocol wise. Just inform the other end. */
         shv_send_error(shv_ctx, rid, SHV_RE_PLATFORM_ERROR, "I/O Error");
     } else {
-        shv_send_empty_response(shv_ctx, rid);
+        if (!file_node->ignored) {
+            shv_send_empty_response(shv_ctx, rid);
+        }
     }
     return 0;
 }
@@ -441,13 +474,15 @@ int shv_file_node_crc(struct shv_con_ctx *shv_ctx, struct shv_node *item, int ri
     int ret;
     struct shv_file_node *file_node = UL_CONTAINEROF(item, struct shv_file_node, shv_node);
     ret = shv_file_process_crc(shv_ctx, rid, file_node);
-    if (ret < 0) {
+    if (ret < WHOLE_FILE) {
         shv_send_error(shv_ctx, rid, SHV_RE_INVALID_PARAMS, "Garbled data");
     } else if (file_node->platform_error) {
         /* It is an error, but not protocol wise. Just inform the other end. */
         shv_send_error(shv_ctx, rid, SHV_RE_PLATFORM_ERROR, "I/O Error");
     } else {
-        shv_send_uint(shv_ctx, rid, file_node->crc);
+        if (!file_node->ignored) {
+            shv_send_uint(shv_ctx, rid, file_node->crc);
+        }
     }
     return ret;
 }
