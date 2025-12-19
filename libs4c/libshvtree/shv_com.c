@@ -1202,3 +1202,11 @@ void shv_com_destroy(struct shv_con_ctx *shv_ctx)
     shv_stop_process_thread(shv_ctx);
     free(shv_ctx);
 }
+
+void shv_com_connection_close(struct shv_con_ctx *shv_ctx)
+{
+    if (shv_ctx == NULL || shv_ctx->connection == NULL) {
+        return;
+    }
+    shv_ctx->connection->tops.close(shv_ctx->connection);
+}

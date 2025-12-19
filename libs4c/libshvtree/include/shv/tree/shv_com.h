@@ -208,6 +208,13 @@ struct shv_con_ctx *shv_com_init(struct shv_node *root, struct shv_connection *c
 void shv_com_destroy(struct shv_con_ctx *shv_ctx);
 
 /**
+ * @brief Close the communication with the other side.
+ *
+ * @param shv_ctx
+ */
+void shv_com_connection_close(struct shv_con_ctx *shv_ctx);
+
+/**
  * @brief Launched in a separate thread, this function handles the connection to the broker.
  *        Firstly, it tries to connect to the broker every shv_connection.reconnect_period seconds.
  *        If it connects to the broker, it communicates with it.

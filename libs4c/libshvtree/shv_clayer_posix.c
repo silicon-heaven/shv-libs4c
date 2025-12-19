@@ -359,6 +359,7 @@ int shv_tcpip_posix_close(struct shv_connection *connection)
     } else if (ret == 0) {
         fprintf(stderr, "Client successfully disconnected.\n");
     }
+    connection->tlayer.tcpip.ctx.sockfd = -1;
 
     return ret;
 }
