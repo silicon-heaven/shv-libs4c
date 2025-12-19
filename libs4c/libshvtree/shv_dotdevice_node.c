@@ -58,6 +58,7 @@ int shv_dotdevice_node_method_reset(struct shv_con_ctx *shv_ctx, struct shv_node
     struct shv_dotdevice_node *devnode = UL_CONTAINEROF(item, struct shv_dotdevice_node, shv_node);
     shv_unpack_data(&shv_ctx->unpack_ctx, 0, 0);
     shv_send_int(shv_ctx, rid, 0);
+    shv_com_connection_close(shv_ctx);
     /* Let the response bubble through the network stack */
     usleep(2 * 1000 * 1000);
     if (devnode->devops.reset) {
