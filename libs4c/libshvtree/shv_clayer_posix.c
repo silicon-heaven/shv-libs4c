@@ -408,12 +408,20 @@ int shv_create_process_thread(int thrd_prio, struct shv_con_ctx *ctx)
     pthread_attr_t *pattr;
     struct sched_param schparam;
 
+#ifdef CONFIG_SHV_LIBS4C_USE_SOCKETPAIR_FOR_NOTIFY
+    /* Alternative to use on systems without pipe support (i.e. RTEMS) */
+    if (socketpair(AF_LOCAL, SOCK_STREAM, 0, ctx->thrd_ctx.fildes) < 0) {
+        fprintf(stderr, "shv_create_process_thread: socketpair failed\n");
+        return -1;
+    }
+#else /*CONFIG_SHV_LIBS4C_USE_SOCKETPAIR_FOR_NOTIFY*/
     /* Create the pipe to the dataready function. The poll function is used but we expect
      * very large timeouts to be used in the SHV application.
      */
     if (pipe(ctx->thrd_ctx.fildes) < 0) {
         return -1;
     }
+#endif /*CONFIG_SHV_LIBS4C_USE_SOCKETPAIR_FOR_NOTIFY*/
 
     /* Do a bit of hacking - in this case, the connection is specified,
      * so we should have no problem assigning to pfds[1].

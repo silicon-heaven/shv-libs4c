@@ -29,14 +29,23 @@ ifeq ($(CONFIG_SHV_LIBS4C_PLATFORM), linux)
     DEFS += -DCONFIG_SHV_LIBS4C_PLATFORM_LINUX
     shvtree_SOURCES += shv_clayer_posix.c
     renamed_include_HEADERS += include/shv/tree/shv_clayer_posix.h->shv/tree/shv_clayer_posix.h
-else
-    ifeq ($(CONFIG_SHV_LIBS4C_PLATFORM), nuttx)
-        DEFS += -DCONFIG_SHV_LIBS4C_PLATFORM_NUTTX
-        shvtree_SOURCES += shv_clayer_posix.c
-        renamed_include_HEADERS += include/shv/tree/shv_clayer_posix.h->shv/tree/shv_clayer_posix.h
-    else
-        $(error Define CONFIG_SHV_LIBS4C_PLATFORM: either "linux" or "nuttx")
-    endif
+    shv_platform_known := 1
+endif
+ifeq ($(CONFIG_SHV_LIBS4C_PLATFORM), nuttx)
+    DEFS += -DCONFIG_SHV_LIBS4C_PLATFORM_NUTTX
+    shvtree_SOURCES += shv_clayer_posix.c
+    renamed_include_HEADERS += include/shv/tree/shv_clayer_posix.h->shv/tree/shv_clayer_posix.h
+    shv_platform_known := 1
+endif
+ifeq ($(CONFIG_SHV_LIBS4C_PLATFORM), rtems)
+    DEFS += -DCONFIG_SHV_LIBS4C_PLATFORM_RTEMS
+    DEFS += -DCONFIG_SHV_LIBS4C_USE_SOCKETPAIR_FOR_NOTIFY
+    shvtree_SOURCES += shv_clayer_posix.c
+    renamed_include_HEADERS += include/shv/tree/shv_clayer_posix.h->shv/tree/shv_clayer_posix.h
+    shv_platform_known := 1
+endif
+ifeq ($(shv_platform_known),)
+    $(error Define CONFIG_SHV_LIBS4C_PLATFORM: either "linux", "nuttx" or "rtems")
 endif
 
 lib_LOADLIBES += ulut m
